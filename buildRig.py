@@ -1,20 +1,12 @@
 import maya.cmds as cmds
-import autoRigTool.legModule as legModule
-import autoRigTool.armModule as armModule
-import autoRigTool.ikfkSpineModule as ikfkSpineModule
-import autoRigTool.shapes as shapes
-import autoRigTool.handModule as handModule
-import autoRigTool.faceModule as faceModule
-import autoRigTool.limbModule as limbModule
+import AutoRigger.modules.ikfkSpineModule as ikfkSpineModule
+import AutoRigger.shapes as shapes
+import AutoRigger.modules.limbModule as limbModule
 import importlib
 
 importlib.reload(ikfkSpineModule)
-importlib.reload(armModule)
-importlib.reload(legModule)
 importlib.reload(shapes)
-importlib.reload(handModule)
 importlib.reload(limbModule)
-importlib.reload(faceModule)
 
 
 def build():
