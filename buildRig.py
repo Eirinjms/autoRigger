@@ -1,21 +1,21 @@
 import maya.cmds as cmds
-import AutoRigger.modules.ikfkSpineModule as ikfkSpineModule
-import AutoRigger.shapes as shapes
-import AutoRigger.modules.limbModule as limbModule
+import autoRigger.modules.spineModule as spineModule
+import autoRigger.modules.limbModule as limbModule
+import autoRigger.modules.faceModule as faceModule
+import autoRigger.shapes as shapes
 import importlib
 
-importlib.reload(ikfkSpineModule)
+importlib.reload(spineModule)
 importlib.reload(shapes)
+importlib.reload(faceModule)
 importlib.reload(limbModule)
 
 
 def build():
-    #leg and arm module use side = "L" or "R", and then int for the polevector distance, true or false for foot and hand) spine uses "ik" or "noIk"
-    ikfkSpineModule.build()
-    armModule.ikfkBuild("L", 5, True)
-    armModule.ikfkBuild("R", 5, True)
-    legModule.ikfkBuild("L", 5, False)
-    legModule.ikfkBuild("R", 5, False)
+    #limbmodule uses side and 
+    spineModule.build()
+    limbModule.build_limb_set(sides = ["L", "R"], 
+                              limbs = ["leg", "arm"])
     faceModule.headBuild()
 
     #Create global ctrl

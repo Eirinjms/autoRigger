@@ -1,12 +1,12 @@
 import maya.cmds as cmds
-from autoRigTool import shapes as shapes
-import autoRigTool.sizes as sizes
+import autoRigger.shapes as shapes
+import autoRigger.sizes as sizes
 
 import importlib
 importlib.reload(shapes)
 importlib.reload(sizes)
 
-size = sizes.doomguy
+size = sizes.bipedal
 
 def build():
     suffix = ['_JNT','_LOC', '_CTRL', '_CON', '_IKH', '_FKIK', '_BLND', '_GRP', '_REV', '_CURVE']
@@ -16,8 +16,6 @@ def build():
     fkIK = ['_FK_JNT', '_IK_JNT']
     jointsNEW = ['spineJA', 'spineJB', 'spineJEnd']
 
-
-    joints = jointsNEW
     #########################################################################
 
     #duplicating the joint chains
@@ -115,7 +113,7 @@ def build():
     cmds.setAttr(f"{iKctrlCurve}.inheritsTransform", 0)
 
     ikSpline = cmds.ikHandle(ccv = False, sol="ikSplineSolver", c = iKctrlCurve, sj = ikJoints[0], ee = ikJoints[-1], rtm = False, n = f"spine{suffix[4]}")
-    curveJoints = ikJoints
+    curveJoints = ikJoints[0::2]
 
     jointName = ['hip_', 'middle_', 'shoulders_']    
 
@@ -161,7 +159,7 @@ def build():
     cmds.connectAttr(f"{ikCtrls[0]}.rotateX", f"{ikSpline[0]}.roll")
     cmds.connectAttr(f"{ikCtrls[0]}.rotateX", f"{md}.input1X")
     cmds.connectAttr(f"{md}.outputX", f"{pma}.input1D[0]")
-    cmds.connectAttr(f"{ikCtrls[2]}.rotateX", f"{pma}.input1D[1]")
+    cmds.connectAttr(f"{ikCtrls[-1]}.rotateX", f"{pma}.input1D[1]")
     cmds.connectAttr(f"{pma}.output1D", f"{ikSpline[0]}.twist")
 
 

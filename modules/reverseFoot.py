@@ -1,52 +1,59 @@
 import maya.cmds as cmds
-import autoRigTool.shapes as shapes
-import autoRigTool.naming as naming
-import autoRigTool.sizes as sizes
+import autoRigger.shapes as shapes
+import autoRigger.naming as naming
+import autoRigger.sizes as sizes
 import importlib
 
 importlib.reload(shapes)
 
-def build(side, ikHandle, ikCtrl, switch):
+def build(side, ikHandle, ikCtrl, switch, joints):
+    size = sizes.bipedal
     suffix = naming.suffix
     prefix = naming.prefix
-    joints = ['legJC', 'legJD', 'legJEnd', 'ball', 'toe']
     locs = ['frontFoot', 'backOfHeel', 'innerSideFoot', 'outerSideFoot']
     con = ["_paCON", '_poCON', '_oCON', '_aimCon']
 
-    prefixSide = f"{side}_"
+    toeJoints = ['legJD', 'legJEnd']
+    for jnt in toeJoints:
+        joints.append(jnt)
+
+    print(joints)
+
+
 
 #########################
 #Reverse foot ctrl setup
 #########################
 
     #pivot LOCS (alr existign in scene)
-    frontLoc = f"{prefixSide}{locs[0]}{suffix['locator']}"
-    backLoc = f"{prefixSide}{locs[1]}{suffix['locator']}"
-    innerLoc = f"{prefixSide}{locs[2]}{suffix['locator']}"
-    outerLoc = f"{prefixSide}{locs[3]}{suffix['locator']}"
+    frontLoc = f"{side}{locs[0]}{suffix['locator']}"
+    backLoc = f"{side}{locs[1]}{suffix['locator']}"
+    innerLoc = f"{side}{locs[2]}{suffix['locator']}"
+    outerLoc = f"{side}{locs[3]}{suffix['locator']}"
 
-    ankleJnt = f"{prefixSide}{joints[0]}{suffix['joint']}"
-    ballJnt = f"{prefixSide}{joints[1]}{suffix['joint']}"
-    toeJnt = f"{prefixSide}{joints[2]}{suffix['joint']}"
+    ankleJnt = f"{side}{joints[2]}{suffix['joint']}"
+    ballJnt = f"{side}{joints[3]}{suffix['joint']}"
+    toeJnt = f"{side}{joints[4]}{suffix['joint']}"
 
-    ballLoc = cmds.spaceLocator(n = f"{prefixSide}{joints[3]}{suffix['locator']}")[0]
-    toeLoc = cmds.spaceLocator(n = f"{prefixSide}{joints[4]}{suffix['locator']}")[0]
-    cmds.delete(cmds.parentConstraint(ballJnt, ballLoc, mo = False))
-    cmds.delete(cmds.parentConstraint(ballJnt, toeLoc, mo = False))
+    ballLoc = cmds.spaceLocator(n = f"{side}{joints[3]}{suffix['locator']}")[0]
+    toeLoc = cmds.spaceLocator(n = f"{side}{joints[4]}{suffix['locator']}")[0]
+
+    cmds.matchTransform(ballLoc, ballJnt, pos = True, rot = True)
+    cmds.matchTransform(toeLoc, ballJnt, pos = True, rot = True)
     
-    #REMOVE WHEN USED FOR CHARACTERS WITH STRAIGHT FEET
-    #cmds.xform(ballLoc, toeLoc, ro = (0,10,0), os = True)
+    #REMOVE WHEN USED FOR CHARACTERS WITH STRAIGHT FEET (ADD AS A CHECKBOX?)
+    cmds.xform(ballLoc, toeLoc, ro = (0,10,0), os = True)
 
     #Delete rotation valeus from locs 
     cmds.makeIdentity(ballLoc, toeLoc, apply = True, r = True)
 
     #unparent the OG ikh from the chain
     cmds.parent(ikHandle,  w = True)
-    cmds.delete(f"{ikHandle.replace('IKH', 'IK')}{con[1]}")
+    cmds.delete(f"{side}{joints[0]}{naming.fkik[1]}{suffix['pointCon']}")
 
     #IKS
-    ballIk = cmds.ikHandle(n = f"{prefixSide}{joints[3]}{suffix['ikHandle']}", sj = ankleJnt, ee = ballJnt)[0]
-    toeIk = cmds.ikHandle(n = f"{prefixSide}{joints[4]}{suffix['ikHandle']}", sj = ballJnt, ee = toeJnt)[0]
+    ballIk = cmds.ikHandle(n = f"{side}{joints[3]}{suffix['ikHandle']}", sj = ankleJnt, ee = ballJnt)[0]
+    toeIk = cmds.ikHandle(n = f"{side}{joints[4]}{suffix['ikHandle']}", sj = ballJnt, ee = toeJnt)[0]
 
     #Hierarchy
     cmds.parent(toeIk, toeLoc)
@@ -58,17 +65,17 @@ def build(side, ikHandle, ikCtrl, switch):
 #CTRLS
 #########################
 
-    sliderCtrl = shapes.squareCtrl(name = f"{prefixSide}foot{suffix['control']}", size = 1)
-    borderCtrl = shapes.squareCtrl(name = f"{prefixSide}footBorder{suffix['control']}", size = 3)
+    sliderCtrl = shapes.squareCtrl(name = f"{side}foot{suffix['control']}", size = 1)
+    borderCtrl = shapes.squareCtrl(name = f"{side}footBorder{suffix['control']}", size = 3)
 
     
     cmds.transformLimits(sliderCtrl, tz = (-2, 2), tx = (-2, 2))
     cmds.transformLimits(sliderCtrl, etz = (True, True), etx = (True, True))
 
 
-    footCtrlGrp = cmds.group(sliderCtrl, borderCtrl, n = f"{prefixSide}foot{suffix['control']}{suffix['group']}")
+    footCtrlGrp = cmds.group(sliderCtrl, borderCtrl, n = f"{side}foot{suffix['control']}{suffix['group']}")
 
-    cmds.delete(cmds.parentConstraint(frontLoc,footCtrlGrp, mo = False))
+    cmds.matchTransform(footCtrlGrp, frontLoc, pos = True, rot = True)    
 
     cmds.xform(footCtrlGrp, t = (1,0,7), r = True)
 
@@ -84,7 +91,7 @@ def build(side, ikHandle, ikCtrl, switch):
     driverX = f"{sliderCtrl}.translateX"
     driverZ = f"{sliderCtrl}.translateZ"
     
-    if side == 'L':
+    if side.startswith("L"):
         cmds.setDrivenKeyframe(frontLoc, at = 'rotateX', cd = driverZ, dv = 2, v = 70)
         cmds.setDrivenKeyframe(frontLoc, at = 'rotateX', cd = driverZ, dv = 0, v = 0)
         cmds.setDrivenKeyframe(backLoc, at = 'rotateX', cd = driverZ, dv = -2, v = -70)
@@ -143,5 +150,5 @@ def build(side, ikHandle, ikCtrl, switch):
 
 
 
-    revFootGrp = cmds.group(backLoc, n = f"{prefixSide}revFoot{suffix['group']}")
+    revFootGrp = cmds.group(backLoc, n = f"{side}revFoot{suffix['group']}")
     cmds.parent(revFootGrp, footCtrlGrp, ikCtrl)

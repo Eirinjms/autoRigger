@@ -1,33 +1,28 @@
 import maya.cmds as cmds
-import autoRigTool.naming as naming
-import autoRigTool.sizes as sizes
+import autoRigger.naming as naming
+import autoRigger.sizes as sizes
 
 import importlib
 importlib.reload(sizes)
 
-size = sizes.femaleSentinel
-
 def build(side):
-
+    size = sizes.bipedal
     suffix = naming.suffix
     fingers = ['indexFng', 'middleFng', 'pinkyFng', 'thumb']
     
-    wristJoint = cmds.ls(f"{side}_armJD_JNT")[0]
+    wristJoint = f"{side}armJD_JNT"
     wrist = cmds.spaceLocator(n = f"{side}hand{suffix['locator']}")
     cmds.parentConstraint(wristJoint, wrist, mo = False, n = f"{side}hand{suffix['parentCon']}")
 
     for fng in fingers:
         index = 'ABC'
-        fingerjoints = [f"{side}_{fng}J{i}{suffix['joint']}" for i in index]
-        print(fingerjoints)
+        fingerjoints = [f"{side}{fng}J{i}{suffix['joint']}" for i in index]
 
         fkLocs = []
         fkGrps = []
         fkCtrls = []
 
-        count = 0
-
-        for joint in fingerjoints:
+        for count, joint in enumerate(fingerjoints):
             fkLoc = cmds.spaceLocator(n = joint.replace(suffix['joint'], suffix['locator']))[0]
             fkLocs.append(fkLoc)
 
@@ -50,8 +45,6 @@ def build(side):
             if count >0:
                 cmds.parent(fkLocs[count], fkCtrls[count-1])
 
-            count =  count + 1
-
             if 'JA' in fkLoc: 
                 cmds.parent(fkLoc, wrist)
             else: 
@@ -64,7 +57,7 @@ def build(side):
     ##################################################################
 
     fistCtrl = cmds.circle(n = f"{side}fist{suffix['control']}", r = 5, nr = (0,1,0))[0]
-    cmds.delete(cmds.parentConstraint(f"{side}_{fingers[1]}JA{suffix['joint']}", fistCtrl, mo = False))
+    cmds.delete(cmds.parentConstraint(f"{side}{fingers[1]}JA{suffix['joint']}", fistCtrl, mo = False))
     cmds.addAttr(fistCtrl, ln = 'FIST', at = 'enum', en = "__________ ", k = True)
 
 

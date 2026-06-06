@@ -1,0 +1,16 @@
+bipedal = {
+ "FKlegs" : 10,
+ "IKlegs" : 7,
+ "IKswitchLegs" : 6,
+ "PVlegs" : -3,
+ "FKarms" : 10,
+ "IKarms" : 5,
+ "IKswitchArm" : 5,
+ "PVarms" : 2,
+ "clavs" : 7,
+ "IKspineX" : 6,
+ "IKspineY" : 15,
+ "IKspineZ" : 15,
+ "FKspine" : 20,
+ "fingers" : 2,
+}
