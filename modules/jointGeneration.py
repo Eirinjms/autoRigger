@@ -1,6 +1,7 @@
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
 import autoRigger.naming as naming
+import json
 import importlib
 
 importlib.reload(naming)
@@ -45,65 +46,72 @@ class jointGeneration():
         cmds.group(joints, n = "Skeleton_GRP") 
 
 
-joints = cmds.ls(sl = True)
+    def seperate_module_from_hierarchy(self, joint: str) -> dict:
+            '''
+        This function creates a dictionary harvesting 
+        modules from the overall joint one.
 
-locs = []
-for jnt in joints:
-    jnt_pos = cmds.xform(jnt, q = True, ws = True, t = True)
-    print(jnt_pos)
-    loc = cmds.spaceLocator(p = jnt_pos, n = jnt.replace("JNT", "GUIDE"))[0]
-    locs.append(loc)
+        Parameters:
+        Joint - name of joint
 
-cmds.group(locs) 
-
-joints = cmds.ls(sl = True)
-savedHierarchy = {}
-
-for joint in joints:
-
-    parent = cmds.listRelatives(
-        joint,
-        parent=True,
-        type='joint'
-    )
-
-    savedHierarchy[joint] = parent[0] if parent else None
-print(savedHierarchy)
-
-cmds.parent(joints, w = True) 
-
-for child, parent in savedHierarchy.items():
-
-    if parent:
-        cmds.parent(child, parent)
+        Returns: 
+            Hierarchy dictionary
+        '''    
 
 
+def get_joint_hierarchy(joint: str) -> dict:
+    '''
+    This function creates a dictionary containing: 
+        - Position
+        - Orientation
+        - Parent
+        - Child
 
+    Parameters:
+    Joint - name of joint
 
+    Returns: 
+        Hierarchy dictionary
+    '''
+    joint_pos = cmds.xform(joint, q = True, ws = True, t = True)
 
-joints = cmds.ls(sl = True)
-savedHierarchy = {}
+    children = cmds.listRelatives(
+    joint,
+    children =True,
+    type='joint')
 
-for joint in joints:
+    parents = cmds.listRelatives(
+    joint,
+    parent =True,
+    type='joint')
 
-    parent = cmds.listRelatives(
-        joint,
-        parent=True,
-        type='joint'
-    )
+    joint_orientation = cmds.getAttr(f"{joint}.jointOrient")[0]
 
-    savedHierarchy[joint] = parent[0] if parent else None
+    joint_data = {
+        "pos" : joint_pos,
+        "orientation" : joint_orientation,
+        "parent" : parents[0] if parents else None,
+        "children" : {}
+    }
 
+    if children: 
+        for c in children:
+            joint_data['children'][c] = get_joint_hierarchy(c)
+    return joint_data
 
-cmds.parent(joints, w = True) 
-locs = []
-for jnt in joints:
-    jnt_pos = cmds.xform(jnt, q = True, ws = True, t = True)
-    loc = cmds.spaceLocator(p = jnt_pos, n = jnt.replace("JNT", "GUIDE"))[0]
-    locs.append(loc)
+def build_skeleton_dict(rootjoint: str):
+    return {rootjoint : get_joint_hierarchy(rootjoint)}
 
-for child, parent in savedHierarchy.items():
-    childeGuide = child.replace("JNT", "GUIDE")
-    if parent:
-        parentGuide = parent.replace("JNT", "GUIDE")
-        cmds.parent(childeGuide, parentGuide)
+result = build_skeleton_dict('root_JA_JNT')
+print(result)
+
+def build_json(filepath):
+#build JSON
+    filepath = r"C:\Users\Eirso\OneDrive\Dokumenter\Escape_MA\Module_5\Specialization\scripts\hierarchy.json"
+    with open(filepath, "w") as fil:
+        json.dump(result, fil, indent = 4)
+    with open(filepath, "r") as fil:
+        smth = json.load(fil)
+    print(smth) 
+
+"insert something that allows you to select file placement in the final UI oen. "
