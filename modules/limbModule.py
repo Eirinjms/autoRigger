@@ -120,8 +120,7 @@ class limbBuild:
             self.fkCtrls.append(fkCtrl)
             
             cmds.parent(fkCtrl, fkLoc)
-            cmds.delete(cmds.parentConstraint(joint, fkLoc, mo = False))
-            
+ 
             cmds.matchTransform(fkLoc, joint, pos = True, rot = True)
 
             cmds.orientConstraint(fkCtrl, joint, 
