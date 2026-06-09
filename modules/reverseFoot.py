@@ -140,11 +140,12 @@ def build(side, ikHandle, ikCtrl, switch, joints):
     for attr in attrs: 
         cmds.setAttr(f"{borderCtrl}.{attr}", l = True, k = False, cb = False)
 
+    attrsNew = attrs[:]
     attrsX = ['tx', 'tz']
     for obj in attrsX:
-        attrs.remove(obj)
+        attrsNew.remove(obj)
 
-    for attr in attrs: 
+    for attr in attrsNew: 
         cmds.setAttr(f"{sliderCtrl}.{attr}", l = True, k = False, cb = False)
 
 
