@@ -1,4 +1,4 @@
-import maya.cmds as cmds
+import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
 import autoRigger.modules.spineModule as spineModule
 import autoRigger.modules.limbModule as limbModule
 import autoRigger.modules.faceModule as faceModule

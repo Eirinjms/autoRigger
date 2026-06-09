@@ -3,6 +3,8 @@ bipedal = {
  "IKlegs" : 7,
  "IKswitchLegs" : 6,
  "PVlegs" : -3,
+ "pvLegDistance" : 15,
+ "pvArmDistance" : 10,
  "FKarms" : 10,
  "IKarms" : 5,
  "IKswitchArm" : 5,

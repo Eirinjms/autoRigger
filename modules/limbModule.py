@@ -1,5 +1,5 @@
-import maya.cmds as cmds
-import maya.api.OpenMaya as om
+import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
+import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports] 
 import autoRigger.shapes as shapes
 import autoRigger.modules.reverseFoot as reverseFoot
 import autoRigger.modules.handModule as handModule
@@ -13,7 +13,7 @@ importlib.reload(handModule)
 importlib.reload(reverseFoot)
 
 class limbBuild:
-    def __init__(self, side, limbType, pvDistance):
+    def __init__(self, side, limbType):
 
         side = side.upper()
         limbType = limbType.lower()
@@ -27,12 +27,15 @@ class limbBuild:
         
         self.suffix = naming.suffix
 
+        if limbType == "arm":
+            self.pvDistance = self.size['pvArmDistance']
+        else:
+            self.pvDistance = self.size['pvLegDistance']        
+
         self.fkIK = naming.fkik
         self.attrs = naming.attrs
 
         self.side = f"{side}_"
-
-        self.pvDistance = pvDistance
 
         self.limbType = limbType
 
@@ -47,16 +50,15 @@ class limbBuild:
 
 
     def dupeJoints(self):
+        '''
+        Duplicating the bind joint chain to create the
+        IK and FK chains
+
+        '''
         self.fkJoints = []
         self.ikJoints = []
 
         count = 0
-
-        #########################################################################
-
-        #duplicating the joint chains
-
-        #########################################################################
 
         for i in self.fkIK:
             for joint in self.joints:
@@ -81,11 +83,9 @@ class limbBuild:
 
 
     def fkSetup(self):
-        #########################################################################
-
-        #FK setup
-
-        #########################################################################
+        '''
+        The FK setup for selected limb, creates a parented chain
+        '''
 
         self.fkLocs = []
         self.fkCtrls = []
@@ -132,11 +132,9 @@ class limbBuild:
 
 
     def ikSetup(self):
-        #########################################################################
-
-        #IK setup
-
-        #########################################################################
+        '''
+        The IK setup for selected limb, creates the solver + control
+        '''
 
         self.ikHandle = cmds.ikHandle(n = self.ikJoints[0].replace(self.fkIK[1], self.suffix ['ikHandle']), 
                                  sj = self.ikJoints[0], 
@@ -168,11 +166,10 @@ class limbBuild:
                               mo = False)
 
     def ikFkSwitch(self):
-        #########################################################################
-
-        #Create switch
-
-        #########################################################################
+        '''
+        Creates the IKFK switch and connects it to the ankle/wrist
+        '''
+        
         if self.limbType == "leg":
             size = self.size['IKswitchLegs']
         if self.limbType == "arm":
@@ -219,11 +216,10 @@ class limbBuild:
                          cb = False)
 
     def ikfkBlends(self):
-        #########################################################################
-
-        #Blends
-
-        #########################################################################
+        '''
+        Creates the IKFK blends, of selected variatiants
+        e.g scale, rotate, translate
+        '''
 
         value = ['rotate', 'scale']
 
@@ -241,6 +237,10 @@ class limbBuild:
 
 
     def ikfkGroups(self):
+        '''
+        Grouping the IK and FK into their own groups and setups up visibility
+        '''
+
         #########################################################################
         self.fkGrp = cmds.group(n = f"{self.side}{self.limbType}{self.fkIK[0]}{self.suffix['group']}", em = True)
         self.ikGrp = cmds.group(n = f"{self.side}{self.limbType}{self.fkIK[1]}{self.suffix['group']}", em = True)
@@ -261,12 +261,10 @@ class limbBuild:
 
 
     def findpoleVector(self):
-        #########################################################################
-
-        #PoleVector
-
-        #########################################################################
-
+        '''
+        Calculates a pole vector position using the plane defined by
+        the start, mid, and end joints. 
+        '''
         self.H = om.MVector(cmds.xform(f"{self.side}{self.joints[0]}{self.suffix['joint']}", q = True, ws = True, t = True))
         self.K = om.MVector(cmds.xform(f"{self.side}{self.joints[1]}{self.suffix['joint']}", q = True, ws = True, t = True))
         self.A = om.MVector(cmds.xform(f"{self.side}{self.joints[2]}{self.suffix['joint']}", q = True, ws = True, t = True))
@@ -283,6 +281,9 @@ class limbBuild:
         self.pv = (projK * self.pvDistance) + self.K
 
     def createPoleVector(self):
+        '''
+        Creates the poleVector control and parents it  
+        '''
 
         self.pvLoc = cmds.spaceLocator(p = self.pv, n = f"{self.side}{self.limbType}_PV_LOC")[0]
         cmds.xform(self.pvLoc, cp = True)
@@ -305,6 +306,10 @@ class limbBuild:
 
 
     def poleVectorVisualization(self):
+        '''
+        Enables a visualization of the polevector, creating a polygon 
+        '''
+
         self.findpoleVector()
         joint_positions = []
         for joint in [self.H, 
@@ -316,45 +321,50 @@ class limbBuild:
                                           n = f"{self.side}{self.limbType}_PV_VIS")[0]
 
     def clavicle(self):
-            self.clavJnt = f"{self.side}armJA{self.suffix['joint']}"
+        '''
+        Calculates a pole vector position using the plane defined by
+        the start, mid, and end joints. 
+        '''            
 
-            self.clavCtrl = cmds.circle(
-                n = f"{self.side}armJA{self.suffix['control']}",
-                r = self.size['clavs'],
-                nr = (0,1,0))[0]
+        self.clavJnt = f"{self.side}armJA{self.suffix['joint']}"
 
-            self.clavLoc = cmds.spaceLocator(
-                n=f"{self.side}armJA{self.suffix['locator']}")[0]
+        self.clavCtrl = cmds.circle(
+            n = f"{self.side}armJA{self.suffix['control']}",
+            r = self.size['clavs'],
+            nr = (0,1,0))[0]
 
-            cmds.parent(self.clavCtrl, self.clavLoc)
+        self.clavLoc = cmds.spaceLocator(
+            n=f"{self.side}armJA{self.suffix['locator']}")[0]
 
-            cmds.matchTransform(self.clavLoc, self.clavJnt, pos = True, rot = True)
+        cmds.parent(self.clavCtrl, self.clavLoc)
 
-            cmds.orientConstraint(
-                self.clavCtrl,
-                self.clavJnt,
-                mo=True,
-                n=f"{self.side}armJA{self.suffix['orientCon']}")
+        cmds.matchTransform(self.clavLoc, self.clavJnt, pos = True, rot = True)
 
-            cmds.makeIdentity(self.clavCtrl, apply=True, t=True, r=True)
+        cmds.orientConstraint(
+            self.clavCtrl,
+            self.clavJnt,
+            mo=True,
+            n=f"{self.side}armJA{self.suffix['orientCon']}")
 
-            shape = cmds.listRelatives(self.clavCtrl, shapes=True, type="nurbsCurve")[0]
-            cvs = cmds.ls(shape + ".cv[*]", fl=True)
+        cmds.makeIdentity(self.clavCtrl, apply=True, t=True, r=True)
 
+        shape = cmds.listRelatives(self.clavCtrl, shapes=True, type="nurbsCurve")[0]
+        cvs = cmds.ls(shape + ".cv[*]", fl=True)
+
+        if self.side == 'L_':
+            cmds.xform(cvs, t=(10,6,0), ro=(0,0,-20), r=True)
+        else:
+            cmds.xform(cvs, t=(-10,-6,0), ro=(0,0,-20), r=True)
+
+        for i in [1,5]:
+            cv = cvs[i]
             if self.side == 'L_':
-                cmds.xform(cvs, t=(10,6,0), ro=(0,0,-20), r=True)
+                cmds.xform(cv, t=(0,-5,0), os=True, r=True)
             else:
-                cmds.xform(cvs, t=(-10,-6,0), ro=(0,0,-20), r=True)
+                cmds.xform(cv, t=(0,5,0), os=True, r=True)
 
-            for i in [1,5]:
-                cv = cvs[i]
-                if self.side == 'L_':
-                    cmds.xform(cv, t=(0,-5,0), os=True, r=True)
-                else:
-                    cmds.xform(cv, t=(0,5,0), os=True, r=True)
-
-            # parent into FK chain
-            cmds.parent(self.fkGrp, self.clavCtrl)
+        # parent into FK chain
+        cmds.parent(self.fkGrp, self.clavCtrl)
 
     def cleanup(self):
         #########################################################################
@@ -547,10 +557,6 @@ class limbBuild:
 def build_limb_set(sides, limbs):   
     for side in sides:
         for limb in limbs:
-            if limb == 'arm':
-                pv = 10
-            elif limb == 'leg':
-                pv = 15
-            limbBuild(side, limb, pv).buildLimb()
+            limbBuild(side, limb).buildLimb()
 
         

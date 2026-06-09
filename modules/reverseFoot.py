@@ -1,4 +1,4 @@
-import maya.cmds as cmds
+import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
 import autoRigger.shapes as shapes
 import autoRigger.naming as naming
 import autoRigger.sizes as sizes
@@ -7,23 +7,24 @@ import importlib
 importlib.reload(shapes)
 
 def build(side, ikHandle, ikCtrl, switch, joints):
+    '''
+    Builds a reverse foot system based on existing locators.
+        
+    Parameters: 
+        passed in from limbModule
+    
+    '''
     size = sizes.bipedal
+    attrs = naming.attrs
     suffix = naming.suffix
     prefix = naming.prefix
     locs = ['frontFoot', 'backOfHeel', 'innerSideFoot', 'outerSideFoot']
-    con = ["_paCON", '_poCON', '_oCON', '_aimCon']
-
     toeJoints = ['legJD', 'legJEnd']
+
     for jnt in toeJoints:
         joints.append(jnt)
 
     print(joints)
-
-
-
-#########################
-#Reverse foot ctrl setup
-#########################
 
     #pivot LOCS (alr existign in scene)
     frontLoc = f"{side}{locs[0]}{suffix['locator']}"
@@ -130,22 +131,20 @@ def build(side, ikHandle, ikCtrl, switch, joints):
     cmds.setDrivenKeyframe(toeLoc, at = 'rotateX', cd = driverToe, dv = 1, v = -60)
 
 
-
-
 #########################
 #cleanup
 #########################
 
     cmds.hide(ballIk, toeIk)
 
-    attrs = ["tx", "tz", "ty","rx","ry","rz","sx","sy","sz"]
-
     for attr in attrs: 
         cmds.setAttr(f"{borderCtrl}.{attr}", l = True, k = False, cb = False)
 
-    attrsX = ["ty","rx","ry","rz","sx","sy","sz"]
+    attrsX = ['tx', 'tz']
+    for obj in attrsX:
+        attrs.remove(obj)
 
-    for attr in attrsX: 
+    for attr in attrs: 
         cmds.setAttr(f"{sliderCtrl}.{attr}", l = True, k = False, cb = False)
 
 

@@ -1,7 +1,8 @@
-import maya.cmds as cmds
-import maya.api.OpenMaya as om
+import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
+import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports] 
 import autoRigger.naming as naming
 import json
+import os
 import importlib
 
 importlib.reload(naming)
@@ -47,7 +48,7 @@ class jointGeneration():
 
 
     def seperate_module_from_hierarchy(self, joint: str) -> dict:
-            '''
+        '''
         This function creates a dictionary harvesting 
         modules from the overall joint one.
 
@@ -115,3 +116,14 @@ def build_json(filepath):
     print(smth) 
 
 "insert something that allows you to select file placement in the final UI oen. "
+
+
+#allows u to save the hierarchy to the users preset folder :3 
+mayaDir = cmds.internalVar(userAppDir=True)
+
+presetDir = os.path.join(
+    mayaDir,
+    "scripts",
+    "autoRigger",
+    "presets"
+)
