@@ -14,6 +14,17 @@ importlib.reload(reverseFoot)
 
 class limbBuild:
     def __init__(self, side, limbType):
+        '''
+        Builds an IK/FK limb rig including:
+            - IK/FK blending
+            - polevector
+            - clavicle for arm
+            - endlimb: hand or reverse feet. 
+
+        parameters: 
+            side (str):'L' or 'R'
+            limbType (str): 'leg' or 'arm'
+        '''
 
         side = side.upper()
         limbType = limbType.lower()
@@ -34,6 +45,7 @@ class limbBuild:
 
         self.fkIK = naming.fkik
         self.attrs = naming.attrs
+        self.prefix = naming.prefix
 
         self.side = f"{side}_"
 
@@ -367,11 +379,12 @@ class limbBuild:
         cmds.parent(self.fkGrp, self.clavCtrl)
 
     def cleanup(self):
-        #########################################################################
-
-        # Clean up
-
-        #########################################################################
+        '''
+        Minor cleanup:
+            - hides fk/ik joints + ik handle
+            - creates a group for the ik switch to parent the bindlocator
+        
+        '''
         IkswitchCtrl = cmds.group(em = True, w = True,n = f"{self.side}{self.limbType}_IK_switch{self.suffix['group']}") 
 
         cmds.parent(self.ikBNDLoc, IkswitchCtrl)
@@ -379,7 +392,13 @@ class limbBuild:
         cmds.hide(self.fkJoints, self.ikJoints, self.ikHandle)
 
         
-    def endlimb(self):
+    def endlimb(self):  
+        '''
+        Creates the endlimb depending on limbType:
+            'leg' creates reverseFoot
+            'arm' creates hand
+
+        '''
         if self.limbType == 'leg':
             reverseFoot.build(self.side, self.ikHandle, self.ikCtrl, self.switch, self.joints)
         if self.limbType == 'arm':
@@ -387,26 +406,35 @@ class limbBuild:
 
 
     def spaceSwitch(self):
+        '''
+        Creates the spaceswitches for selected limb
+        
+        Parameters: 
+            spineJnt: passed on from the spine module
+        returns: alot of things im gnna guess. 
+        '''
 
         spineJnt = "C_spineJA_JNT"
-        #spineLoc = "spineJA_BND_LOC"
+
+
+        hiploc_name = f"hipSpace{self.suffix['locator']}"
+        if cmds.objExists(hiploc_name) == True:
+            hipLoc = hiploc_name
+        else: 
+            hipLoc = cmds.spaceLocator(p = cmds.xform(spineJnt,q = True, t = True), n = hiploc_name)[0]
 
         if self.limbType == 'leg':
 
-
             cmds.addAttr(self.switch, ln = 'SPACES', at = "enum", en = "____________", k = True)
-
-            hipLoc = cmds.spaceLocator(p = cmds.xform('C_spineJA_JNT',q = True, t = True), n = f"{self.side}leg_hipSpace{self.suffix['locator']}")[0]
-            cmds.matchTransform(hipLoc, spineJnt, pos = True, rot = True)
+            #cmds.matchTransform(hipLoc, spineJnt, pos = True, rot = True)
             
             poConPV = cmds.parentConstraint(hipLoc, self.ikLoc, mo = True, n = f"{self.side}legPV_SpaceSwitch{self.suffix['parentCon']}")[0]
-
             
             cmds.addAttr(self.switch, ln = "Foot_Follow", at = "enum", en = "World : Hip", k = True)
 
             driverPV = f"{self.switch}.Foot_Follow"
 
-            drivenPV = f"{poConPV}.{self.side}leg_hipSpace_LOCW0"
+            drivenPV = f"{poConPV}.{hipLoc}W0"
 
             cmds.setDrivenKeyframe(drivenPV, at = 'switchAttr', cd = driverPV, dv = 0, v = 0)
             cmds.setDrivenKeyframe(drivenPV, at = 'switchAttr', cd = driverPV, dv = 1, v = 1)
@@ -415,14 +443,12 @@ class limbBuild:
             
         #Make the locators
             worldLoc = cmds.spaceLocator(n =f"{self.side}arm_worldSpace{self.suffix['locator']}" )[0]
-            hipLoc = cmds.spaceLocator(n = f"{self.side}arm_hipSpace{self.suffix['locator']}")[0]
             clavSpaceLoc = cmds.spaceLocator(n = f"{self.side}arm_clavSpace{self.suffix['locator']}")[0]
             localSpaceLoc = cmds.spaceLocator(n = f"{self.side}arm_localSpace{self.suffix['locator']}")[0]
 
             cmds.parent(self.ikLoc, localSpaceLoc)
             cmds.parent(localSpaceLoc, self.ikGrp)
 
-            cmds.matchTransform(hipLoc, spineJnt, pos = True, rot = True)
             cmds.matchTransform(clavSpaceLoc, self.clavJnt, pos = True, rot = True)
             cmds.matchTransform(worldLoc, f"{self.side}{self.joints[2]}{self.suffix['joint']}", pos = True, rot = True)
 
@@ -439,12 +465,19 @@ class limbBuild:
         
             cmds.addAttr(self.switch, ln = "Hand_Follow", at = "enum", en = " World : Clavicle : Hip ", k = True)
 
-            spaces = ["worldSpace", "clavSpace", "hipSpace"]
+            space_names = ["worldSpace", "clavSpace", "hipSpace"]
+            spaces = []
+            for space in space_names:
+                if space == space_names[2]:
+                    name = f"{paCon}.{space}"
+                else:
+                    name = f"{paCon}.{self.side}arm_{space}"
+                spaces.append(name)
 
             driver = f"{self.switch}.Hand_Follow"
 
             for i, name in enumerate(spaces):
-                driven = f"{paCon}.{self.side}arm_{name}_LOCW{i}"
+                driven = f"{name}_LOCW{i}"
                 
                 for dv in range(len(spaces)):
                     v = 1 if dv == i else 0
