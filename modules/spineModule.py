@@ -1,12 +1,11 @@
-import maya.cmds as cmds
+import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
 import autoRigger.shapes as shapes
-import autoRigger.sizes as sizes
+import autoRigger.config as config
 
 import importlib
 importlib.reload(shapes)
-importlib.reload(sizes)
 
-size = sizes.bipedal
+size = config.bipedal
 
 def build():
     suffix = ['_JNT','_LOC', '_CTRL', '_CON', '_IKH', '_FKIK', '_BLND', '_GRP', '_REV', '_CURVE']
@@ -15,6 +14,10 @@ def build():
     con = ['_paCON', '_poCON', '_oCON']
     fkIK = ['_FK_JNT', '_IK_JNT']
     jointsNEW = ['spineJA', 'spineJB', 'spineJEnd']
+
+    def rotationOrder(self, itemList):
+        for item in itemList: 
+            cmds.setAttr(f"{item}.rotateOrder", config.rotationOrder.XYZ.value)   
 
     #########################################################################
 

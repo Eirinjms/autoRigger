@@ -1,13 +1,18 @@
-import maya.cmds as cmds
-import autoRigger.naming as naming
-import autoRigger.sizes as sizes
+import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
+import autoRigger.config as config
+import string
+
 
 import importlib
-importlib.reload(sizes)
+importlib.reload(config)
+
+def rotationOrder(item):
+    cmds.setAttr(f"{item}.rotateOrder", config.rotationOrder.ZYX.value) 
 
 def build(side):
-    size = sizes.bipedal
-    suffix = naming.suffix
+    size = config.bipedal
+    suffix = config.suffix
+    attrs = config.attrs
     fingers = ['indexFng', 'middleFng', 'pinkyFng', 'thumb']
     
     wristJoint = f"{side}armJD_JNT"
@@ -15,7 +20,7 @@ def build(side):
     cmds.parentConstraint(wristJoint, wrist, mo = False, n = f"{side}hand{suffix['parentCon']}")
 
     for fng in fingers:
-        index = 'ABC'
+        index = string.ascii_uppercase[:3]
         fingerjoints = [f"{side}{fng}J{i}{suffix['joint']}" for i in index]
 
         fkLocs = []
@@ -24,16 +29,20 @@ def build(side):
 
         for count, joint in enumerate(fingerjoints):
             fkLoc = cmds.spaceLocator(n = joint.replace(suffix['joint'], suffix['locator']))[0]
+            rotationOrder(fkLoc)
             fkLocs.append(fkLoc)
 
             OffsetGrp = cmds.group(n = joint.replace(suffix['joint'], suffix['offsetGrp']), em = True)
+            rotationOrder(OffsetGrp)
             fkGrps.append(OffsetGrp)
 
             if 'thumbJA' in joint:
                 fkCtrl = cmds.circle(n = joint.replace(suffix['joint'], suffix['control']), r = size['fingers'] + 1, nr = (1,0,0))[0]
+                rotationOrder(fkCtrl)
                 fkCtrls.append(fkCtrl)
             else: 
                 fkCtrl = cmds.circle(n = joint.replace(suffix['joint'], suffix['control']), r = size['fingers'], nr = (1,0,0))[0]
+                rotationOrder(fkCtrl)
                 fkCtrls.append(fkCtrl)
                 
             cmds.parent(fkCtrl, OffsetGrp)
@@ -233,8 +242,6 @@ def build(side):
     #finalCleanup
 
     cmds.parentConstraint(wrist[0], fistCtrl, mo=True, n = f"{side}fist{suffix['parentCon']}")
-
-    attrs = ["tx","ty","tz","rx","ry","rz","sx","sy","sz"]
 
     for attr in attrs: 
         cmds.setAttr(f"{fistCtrl}.{attr}", l = True, k = False, cb = False)

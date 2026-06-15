@@ -1,7 +1,6 @@
 import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
 import autoRigger.shapes as shapes
-import autoRigger.naming as naming
-import autoRigger.sizes as sizes
+import autoRigger.config as config
 import importlib
 
 importlib.reload(shapes)
@@ -14,10 +13,10 @@ def build(side, ikHandle, ikCtrl, switch, joints):
         passed in from limbModule
     
     '''
-    size = sizes.bipedal
-    attrs = naming.attrs
-    suffix = naming.suffix
-    prefix = naming.prefix
+    size = config.bipedal
+    attrs = config.attrs
+    suffix = config.suffix
+    prefix = config.prefix
     locs = ['frontFoot', 'backOfHeel', 'innerSideFoot', 'outerSideFoot']
     toeJoints = ['legJD', 'legJEnd']
 
@@ -50,7 +49,7 @@ def build(side, ikHandle, ikCtrl, switch, joints):
 
     #unparent the OG ikh from the chain
     cmds.parent(ikHandle,  w = True)
-    cmds.delete(f"{side}{joints[0]}{naming.fkik[1]}{suffix['pointCon']}")
+    cmds.delete(f"{side}{joints[0]}{config.fkik[1]}{suffix['pointCon']}")
 
     #IKS
     ballIk = cmds.ikHandle(n = f"{side}{joints[3]}{suffix['ikHandle']}", sj = ankleJnt, ee = ballJnt)[0]

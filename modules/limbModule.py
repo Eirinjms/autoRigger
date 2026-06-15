@@ -3,12 +3,10 @@ import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports]
 import autoRigger.shapes as shapes
 import autoRigger.modules.reverseFoot as reverseFoot
 import autoRigger.modules.handModule as handModule
-import autoRigger.naming as naming
-import autoRigger.sizes as sizes
+import autoRigger.config as config
 import importlib
 
-importlib.reload(naming)
-importlib.reload(sizes)
+importlib.reload(config)
 importlib.reload(handModule)
 importlib.reload(reverseFoot)
 
@@ -34,18 +32,18 @@ class limbBuild:
         if limbType not in ['arm', 'leg']:
             cmds.error('Please Choose either arm or leg')
 
-        self.size = sizes.bipedal
+        self.size = config.bipedal
         
-        self.suffix = naming.suffix
+        self.suffix = config.suffix
 
         if limbType == "arm":
             self.pvDistance = self.size['pvArmDistance']
         else:
             self.pvDistance = self.size['pvLegDistance']        
 
-        self.fkIK = naming.fkik
-        self.attrs = naming.attrs
-        self.prefix = naming.prefix
+        self.fkIK = config.fkik
+        self.attrs = config.attrs
+        self.prefix = config.prefix
 
         self.side = f"{side}_"
 
@@ -58,8 +56,10 @@ class limbBuild:
             index = 'ABC'
 
         self.joints = [f"{self.limbType}J{i}" for i in index]
-        
-
+    
+    def rotationOrder(self, itemList):
+        for item in itemList: 
+            cmds.setAttr(f"{item}.rotateOrder", config.rotationOrder.XYZ.value) 
 
     def dupeJoints(self):
         '''
@@ -91,8 +91,7 @@ class limbBuild:
                     if count > 0:
                         cmds.parent(self.ikJoints[count], self.ikJoints[count-1])
 
-                count = count + 1    
-
+                count = count + 1   
 
     def fkSetup(self):
         '''
