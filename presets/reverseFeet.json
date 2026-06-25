@@ -1,0 +1,41 @@
+{
+    "L_backOfHeel_LOC": {
+        "pos": [
+            9.792542771003557,
+            0.0,
+            -11.54164738188427
+        ],
+        "parent": null,
+        "children": {
+            "L_frontFoot_LOC": {
+                "pos": [
+                    13.036624616512945,
+                    0.0,
+                    13.642198147168008
+                ],
+                "parent": "L_backOfHeel_LOC",
+                "children": {
+                    "L_outerSideFoot_LOC": {
+                        "pos": [
+                            15.191365260943291,
+                            0.0,
+                            -1.2359605465490358
+                        ],
+                        "parent": "L_frontFoot_LOC",
+                        "children": {
+                            "L_innerSideFoot_LOC": {
+                                "pos": [
+                                    7.697602469599746,
+                                    0.0,
+                                    1.2036586941777525
+                                ],
+                                "parent": "L_outerSideFoot_LOC",
+                                "children": {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
