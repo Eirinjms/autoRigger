@@ -483,10 +483,7 @@ class limbBuild:
                     cmds.setDrivenKeyframe(driven, cd=driver, dv=dv, v=v)
 
         #########################################################################
-
         #pv spaceswitch
-
-        #########################################################################
 
         pvSpaceLoc = cmds.spaceLocator(n = f"{self.side}{self.limbType}_pv_Space{self.suffix['locator']}")[0]
         
@@ -506,18 +503,14 @@ class limbBuild:
         cmds.setDrivenKeyframe(drivenPV, at = 'switchAttr', cd = driverPV, dv = 1, v = 1)
 
     def squashNstretch(self):
-        ##############################################################################
 
-        #squash and stretch
-
-        ##############################################################################
         startJnt = cmds.xform(self.ikJoints[0], q = True, ws = True, t = True)
         midJnt = cmds.xform(self.ikJoints[1], q = True, ws = True, t = True)
         endJnt = cmds.xform(self.ikJoints[2], q = True, ws = True, t = True)
 
-        a1 = cmds.curve(d = 1, ep = [startJnt, midJnt], n = f"{self.side}leg_a1Curve")
-        a2 = cmds.curve(d = 1, ep = [midJnt, endJnt], n = f"{self.side}leg_a2Curve")
-        b =  cmds.curve(d = 1, ep = [startJnt, endJnt], n = f"{self.side}leg_bCurve")
+        a1 = cmds.curve(d = 1, ep = [startJnt, midJnt], n = f"{self.side}{self.limbType}_a1Curve")
+        a2 = cmds.curve(d = 1, ep = [midJnt, endJnt], n = f"{self.side}{self.limbType}_a2Curve")
+        b =  cmds.curve(d = 1, ep = [startJnt, endJnt], n = f"{self.side}{self.limbType}_bCurve")
 
         cmds.select(f"{b}.cv[1]")
 
