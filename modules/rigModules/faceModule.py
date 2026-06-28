@@ -1,4 +1,4 @@
-import maya.cmds as cmds
+import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
 import autoRigger.shapes as shapes
 
 #Creating lists for later use

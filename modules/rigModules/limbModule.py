@@ -56,10 +56,10 @@ class limbBuild:
             index = 'ABC'
 
         self.joints = [f"{self.limbType}J{i}" for i in index]
-    
-    def rotationOrder(self, itemList):
-        for item in itemList: 
-            cmds.setAttr(f"{item}.rotateOrder", config.rotationOrder.XYZ.value) 
+        
+    def rotationOrder(self, itemList, rotOrder):
+        for item in itemList:
+            cmds.setAttr(f"{item}.rotateOrder", rotOrder.value)
 
     def dupeJoints(self):
         '''
@@ -404,9 +404,9 @@ class limbBuild:
             handModule.build(self.side)
 
 
-    def spaceSwitch(self):
+    def legSpaceSwitch(self):
         '''
-        Creates the spaceswitches for selected limb
+        Creates the spaceswitches for legs
         
         Parameters: 
             spineJnt: passed on from the spine module
@@ -418,73 +418,86 @@ class limbBuild:
 
         hiploc_name = f"hipSpace{self.suffix['locator']}"
         if cmds.objExists(hiploc_name) == True:
-            hipLoc = hiploc_name
+            self.hipLoc = hiploc_name
         else: 
-            hipLoc = cmds.spaceLocator(p = cmds.xform(spineJnt,q = True, t = True), n = hiploc_name)[0]
+            self.hipLoc = cmds.spaceLocator(p = cmds.xform(spineJnt,q = True, t = True), n = hiploc_name)[0]
 
         if self.limbType == 'leg':
 
             cmds.addAttr(self.switch, ln = 'SPACES', at = "enum", en = "____________", k = True)
             #cmds.matchTransform(hipLoc, spineJnt, pos = True, rot = True)
             
-            poConPV = cmds.parentConstraint(hipLoc, self.ikLoc, mo = True, n = f"{self.side}legPV_SpaceSwitch{self.suffix['parentCon']}")[0]
+            poConPV = cmds.parentConstraint(self.hipLoc, self.ikLoc, mo = True, n = f"{self.side}legPV_SpaceSwitch{self.suffix['parentCon']}")[0]
             
             cmds.addAttr(self.switch, ln = "Foot_Follow", at = "enum", en = "World : Hip", k = True)
 
             driverPV = f"{self.switch}.Foot_Follow"
 
-            drivenPV = f"{poConPV}.{hipLoc}W0"
+            drivenPV = f"{poConPV}.{self.hipLoc}W0"
 
             cmds.setDrivenKeyframe(drivenPV, at = 'switchAttr', cd = driverPV, dv = 0, v = 0)
             cmds.setDrivenKeyframe(drivenPV, at = 'switchAttr', cd = driverPV, dv = 1, v = 1)
 
-        if self.limbType == 'arm':
-            
-        #Make the locators
-            worldLoc = cmds.spaceLocator(n =f"{self.side}arm_worldSpace{self.suffix['locator']}" )[0]
-            clavSpaceLoc = cmds.spaceLocator(n = f"{self.side}arm_clavSpace{self.suffix['locator']}")[0]
-            localSpaceLoc = cmds.spaceLocator(n = f"{self.side}arm_localSpace{self.suffix['locator']}")[0]
-
-            cmds.parent(self.ikLoc, localSpaceLoc)
-            cmds.parent(localSpaceLoc, self.ikGrp)
-
-            cmds.matchTransform(clavSpaceLoc, self.clavJnt, pos = True, rot = True)
-            cmds.matchTransform(worldLoc, f"{self.side}{self.joints[2]}{self.suffix['joint']}", pos = True, rot = True)
-
-            #cmds.parent(hipLoc, spineLoc)
-            cmds.parent(clavSpaceLoc, self.clavCtrl)
-
-            paCon = cmds.parentConstraint(worldLoc, clavSpaceLoc, hipLoc, self.ikLoc, mo = True, n = f"{self.side}spaceSwitch{self.suffix['parentCon']}")[0]
-
-            cmds.parent(worldLoc, self.ikGrp)
-
-            #make the switch
-
-            cmds.addAttr(self.switch, ln = 'SPACES', at = "enum", en = "____________", k = True)
+    def armSpaceSwitch(self):
+        '''
+        Creates the spaceswitches for arms
         
-            cmds.addAttr(self.switch, ln = "Hand_Follow", at = "enum", en = " World : Clavicle : Hip ", k = True)
+        Parameters: 
+            spineJnt: passed on from the spine module
+        returns: alot of things im gnna guess. 
+        '''
 
-            space_names = ["worldSpace", "clavSpace", "hipSpace"]
-            spaces = []
-            for space in space_names:
-                if space == space_names[2]:
-                    name = f"{paCon}.{space}"
-                else:
-                    name = f"{paCon}.{self.side}arm_{space}"
-                spaces.append(name)
+        #Make the locators
+        hipLoc = "hipSpace_LOC"
+        worldLoc = cmds.spaceLocator(n =f"{self.side}arm_worldSpace{self.suffix['locator']}" )[0]
+        clavSpaceLoc = cmds.spaceLocator(n = f"{self.side}arm_clavSpace{self.suffix['locator']}")[0]
+        localSpaceLoc = cmds.spaceLocator(n = f"{self.side}arm_localSpace{self.suffix['locator']}")[0]
 
-            driver = f"{self.switch}.Hand_Follow"
+        cmds.parent(self.ikLoc, localSpaceLoc)
+        cmds.parent(localSpaceLoc, self.ikGrp)
 
-            for i, name in enumerate(spaces):
-                driven = f"{name}_LOCW{i}"
-                
-                for dv in range(len(spaces)):
-                    v = 1 if dv == i else 0
-                    cmds.setDrivenKeyframe(driven, cd=driver, dv=dv, v=v)
+        cmds.matchTransform(clavSpaceLoc, self.clavJnt, pos = True, rot = True)
+        cmds.matchTransform(worldLoc, f"{self.side}{self.joints[2]}{self.suffix['joint']}", pos = True, rot = True)
 
-        #########################################################################
-        #pv spaceswitch
+        #cmds.parent(hipLoc, spineLoc)
+        cmds.parent(clavSpaceLoc, self.clavCtrl)
 
+        paCon = cmds.parentConstraint(worldLoc, clavSpaceLoc, hipLoc, self.ikLoc, mo = True, n = f"{self.side}spaceSwitch{self.suffix['parentCon']}")[0]
+
+        cmds.parent(worldLoc, self.ikGrp)
+
+        #make the switch
+
+        cmds.addAttr(self.switch, ln = 'SPACES', at = "enum", en = "____________", k = True)
+    
+        cmds.addAttr(self.switch, ln = "Hand_Follow", at = "enum", en = " World : Clavicle : Hip ", k = True)
+
+        space_names = ["worldSpace", "clavSpace", "hipSpace"]
+        spaces = []
+        for space in space_names:
+            if space == space_names[2]:
+                name = f"{paCon}.{space}"
+            else:
+                name = f"{paCon}.{self.side}arm_{space}"
+            spaces.append(name)
+
+        driver = f"{self.switch}.Hand_Follow"
+
+        for i, name in enumerate(spaces):
+            driven = f"{name}_LOCW{i}"
+            
+            for dv in range(len(spaces)):
+                v = 1 if dv == i else 0
+                cmds.setDrivenKeyframe(driven, cd=driver, dv=dv, v=v)
+
+    def poleVectorSpaceSwitch(self):
+        '''
+        Creates the spaceswitches for the polevector for specified limb
+        
+        Parameters: 
+            spineJnt: passed on from the spine module
+        returns: alot of things im gnna guess. 
+        '''
         pvSpaceLoc = cmds.spaceLocator(n = f"{self.side}{self.limbType}_pv_Space{self.suffix['locator']}")[0]
         
         cmds.delete(cmds.parentConstraint(self.pvLoc, pvSpaceLoc, mo = 0))
@@ -559,7 +572,7 @@ class limbBuild:
         curveGrp = cmds.group(a1, a2, b, n = f"{self.side}{self.limbType}ScaleCurves{self.suffix['group']}", p = self.ikGrp)
         cmds.hide(curveGrp, ikCluster[1])
 
-    def buildLimb(self):
+    def buildLimb(self, stretch = True):
         self.dupeJoints()
         self.fkSetup()
         self.ikSetup()
@@ -568,20 +581,36 @@ class limbBuild:
         self.ikfkGroups()
         self.findpoleVector()
         self.createPoleVector()
-
-        if self.limbType == 'arm':
-            self.clavicle()
         
         self.endlimb()
-        self.spaceSwitch()
-        self.squashNstretch()
+        if self.limbType == 'arm':
+            self.clavicle()
+            self.armSpaceSwitch()
+
+        else: 
+            self.legSpaceSwitch()
+
+        self.poleVectorSpaceSwitch()
+
+        if stretch: 
+            self.squashNstretch()
+            
         self.cleanup()
         shapes.ctrlColour()
         print("Building:", self.side, self.limbType)
 
-def build_limb_set(sides, limbs):   
+def build_limb_set(sides: list, limbs: list):   
+    """
+    A wrapper function that allows you to list up limbs and sides to build.
+
+        Parameters: 
+            sides : List, expects "L" and "R"
+            limb : List, expects "arm" and "leg"
+    """
     for side in sides:
         for limb in limbs:
             limbBuild(side, limb).buildLimb()
+    
+    print("All Limbs built")
 
         
