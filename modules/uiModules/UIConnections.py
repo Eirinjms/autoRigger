@@ -9,13 +9,17 @@ import json
 import maya.cmds as cmds # pyright: ignore[reportMissingImports]
 import maya.mel as mel # pyright: ignore[reportMissingImports]
 import maya.OpenMayaUI as om # pyright: ignore[reportMissingImports]
-import autoRigger.buildRig as buildRig
+import autoRigger.modules.builderModules.buildRig as buildRig
 import autoRigger.utils.config as config
 import autoRigger.modules.builderModules.jointGeneration as jointGen
+import importlib
+
+importlib.reload(jointGen)
 
 
 def getMayaWindow():
-    return wrapInstance(int(om.MQtUtil.mainWindow()), QtWidgets.QWidget)
+    mayaWindow = wrapInstance(int(om.MQtUtil.mainWindow()), QtWidgets.QWidget)
+    return mayaWindow
 
 
 class AutoRiggerUI(QtWidgets.QDialog):
@@ -56,37 +60,49 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         rigBuildBtn = self.ui.findChild(QtWidgets.QPushButton, "buildRigButton")
 
-        #locator buttons
+
+        #-----------------------------------locator buttons -----------------------------------------------#
         createLocBtn = self.ui.findChild(QtWidgets.QPushButton, "GenerateLocators_Bipedal")
         importPresetBtn = self.ui.findChild(QtWidgets.QPushButton, "ImportPreset_Locators")
         slider = self.ui.findChild(QtWidgets.QSlider, "horizontalSlider_7")
         self.sizeLabel = self.ui.findChild(QtWidgets.QLabel, "TwistJoint_Number_2")
         self.locatorSymmetry = self.ui.findChild(QtWidgets.QCheckBox, "LocatorSymmetry_Bipedal")
         
-        #joint Buttons
+        #-----------------------------------joint buttons -----------------------------------------------#
         generateJointsBtn = self.ui.findChild(QtWidgets.QPushButton, "GenerateJoints_Bipedal")
         unparentJointsBtn = self.ui.findChild(QtWidgets.QPushButton, "UnparentJointHierarchy_Bipedal")
         reparentJointsBtn = self.ui.findChild(QtWidgets.QPushButton, "ReparentJointHierarchy_Bipedal")
 
         importRevFeetLocsBtn = self.ui.findChild(QtWidgets.QPushButton, "ImportPreset_reverseFeet_Locators")
 
-        exportJoints =  self.ui.findChild(QtWidgets.QPushButton, "ImportPreset_reverseFeet_Locators")
+        exportJoints =  self.ui.findChild(QtWidgets.QPushButton, "ExportJoints_JSON_Bttn")
+        self.exportJointsFilename = self.ui.findChild(QtWidgets.QLineEdit, "exportJointsFilename_text")
 
-        #joint text areas
+        mirrorOrientationBtn = self.ui.findChild(QtWidgets.QPushButton, "mirrorJointOrientation_Btn")
+        self.leftToRight = self.ui.findChild(QtWidgets.QRadioButton, "jointMirror_leftToRight_radio")
+        self.rightToLeft = self.ui.findChild(QtWidgets.QRadioButton, "jointMirror_rightToLeft_radio")
+
+        #-----------------------------------joint text areas -----------------------------------------------#
         self.importPresetText = self.ui.findChild(QtWidgets.QLineEdit, "ImportPreset_LineEdit")
         self.revFeetTextBox = self.ui.findChild(QtWidgets.QLineEdit, "reverseFeet_Locators_editLine")
 
         self.revFeetSymmetry = self.ui.findChild(QtWidgets.QCheckBox, "LocatorSymmetry_ReverseFeet")
         self.MirrorRevFeet = self.ui.findChild(QtWidgets.QPushButton, "MirrorReverseFeet")
 
+
+        #-----------------------------------connections -----------------------------------------------#
+
         if rigBuildBtn:
             rigBuildBtn.clicked.connect(self.buildRigButton)
+
+        if exportJoints:
+            exportJoints.clicked.connect(self.exportJointsjson)
         
-        #locator buttons
+        #-----------------------------------Locator connections -----------------------------------------------#
         if createLocBtn:
             createLocBtn.clicked.connect(self.buildLocators)
         if importPresetBtn:
-            importPresetBtn.clicked.connect(lambda : self.importPreset(self.importPresetText))
+            importPresetBtn.clicked.connect(lambda : self.importPreset(self.importPresetText, True))
         if generateJointsBtn:
             generateJointsBtn.clicked.connect(self.generateJoints)
 
@@ -99,7 +115,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.locatorSymmetry.toggled.connect(self.symmetryToggle)
 
         
-        #Rev feet
+
+        #-----------------------------------rev feet connections -----------------------------------------------#
         if self.MirrorRevFeet: 
             self.MirrorRevFeet.clicked.connect(lambda : self.mirrorLocators("L_backOfHeel_LOC"))
 
@@ -107,14 +124,18 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.MirrorRevFeet.toggled.connect(self.symmetryToggle)
 
         if importRevFeetLocsBtn:
-            importRevFeetLocsBtn.clicked.connect(lambda: self.importPreset(self.revFeetTextBox))            
+            importRevFeetLocsBtn.clicked.connect(lambda: self.importPreset(self.revFeetTextBox, storeLocators = False))            
 
-        #joint buttons
+
+        #-----------------------------------joint connections -----------------------------------------------
         if unparentJointsBtn:
             unparentJointsBtn.clicked.connect(self.unparentJointHierarchy)
 
         if reparentJointsBtn:
             reparentJointsBtn.clicked.connect(self.reparentJointHierarchy)
+
+        if mirrorOrientationBtn:
+            mirrorOrientationBtn.clicked.connect(self.mirrorOrientation)
             
 
 
@@ -124,7 +145,21 @@ class AutoRiggerUI(QtWidgets.QDialog):
             protected=True,
         )
 
-    def importPreset(self, textBox):
+    def exportJointsjson(self):
+        file_name = self.exportJointsFilename.text()
+        exp = jointGen.jointGeneration()
+        exp.jointExportJSON(file_name)
+    
+
+    def importPreset(self, textBox, storeLocators : bool):
+        """
+        the function doing thangs
+
+            Parameters: 
+                textBox : which UI box you wanna fill
+                storeLocators(bool) : if you want to append to the loc list
+        
+        """
         folder = config.find_file_path("presets")
         print(folder)
         filePath, _ = QFileDialog.getOpenFileName(
@@ -148,39 +183,33 @@ class AutoRiggerUI(QtWidgets.QDialog):
             return
 
         print(f"Loaded preset: {filePath}")
-        self.applyPreset(presetData)
+        self.applyPreset(presetData, storeLocators)
     
-    def applyPreset(self, presetData):
+    def applyPreset(self, presetData, storeLocators):
         """Recreates the locator hierarchy from the loaded JSON dict.
         
             Parameters: 
                 presetData : JSON file
         """
         
-
         cmds.undoInfo(openChunk = True)
         for root_name, root_data in presetData.items():
-            self.build_locator(root_name, root_data, self.locatorList)
+            self.build_locator(root_name, root_data, self.locatorList, storeLocators)
         cmds.undoInfo(closeChunk = True)
 
         cmds.select(self.locatorList, r = True)
         cmds.makeIdentity(apply = True, t = True)
-
-    def getGuidePos(self, locator):
-        shape = cmds.listRelatives(locator, shapes=True, type="locator")[0]
-        transformPos = cmds.xform(locator, q=True, ws=True, t=True)
-        localPos = cmds.getAttr(f"{shape}.localPosition")[0]
-
-        return localPos
     
     def build_joint(self, locator: str, parent=None):
         '''
-        Recursively creates joints from a locator hierarchy, matching position
-        and naming (GUIDE replaced with JNT).
+        Creates a joint per given locator. 
 
         Parameters:
             locator (str): Locator transform to convert into a joint
             parent (str): Parent joint name, if any
+
+        Returns:
+            str: Name of the joint created for the supplied locator. 
         '''
             
         cmds.select(clear=True)
@@ -188,7 +217,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
         pos = self.getGuidePos(locator)
         jointName = locator.replace('GUIDE', 'JNT')
 
-        joint = cmds.joint(n=jointName)         
+        joint = cmds.joint(n=jointName)   
+        self.jointsList.append(joint)      
         cmds.xform(joint, ws=True, t=pos)       
 
         if parent:
@@ -206,13 +236,17 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
     def generateJoints(self):
         '''
-        Builds a joint skeleton from whatever locators currently exist in
-        self.locatorList, using only the root-level (unparented) locators
-        as starting points so each hierarchy is only walked once.
+        Recursively recreates a joint hierarchy from a locator hierarchy.
+
+        This function traverses the locator hierarchy depth-first, creating one
+        joint per locator while preserving naming, positions, and parenting.
+
+        It is intended to be called once for each root locator. Child hierarchies
+        are processed automatically through recursion.
         '''
         cmds.undoInfo(openChunk=True)
         try:
-            if self.locatorSymmetry.isChecked:
+            if self.locatorSymmetry.isChecked():
                 self.locatorSymmetry.setChecked(False)
             cmds.hide(self.locatorList)
             for loc in self.locatorList:
@@ -236,19 +270,19 @@ class AutoRiggerUI(QtWidgets.QDialog):
         finally:
             cmds.undoInfo(closeChunk=True)
 
-    def build_locator(self, joint_name: str, joint_data: dict, locatorList, parent=None):
+    def build_locator(self, locator_name: str, joint_data: dict, locatorList, storeLocators, parent=None):
         '''
         Recursively creates locators from a joint hierarchy dict.
 
         Parameters:
-            joint_name (str): Name to give the locator (JNT replaced with GUIDE)
+            locator_name (str): Name to give the locator (JNT replaced with GUIDE )
             joint_data (dict): Dictionary of joint data including children
             parent (str): Parent locator name, if any
         '''
         cmds.select(clear=True)
 
         loc = cmds.spaceLocator(
-            n=joint_name.replace('JNT', 'GUIDE'))[0]
+            n=locator_name.replace('JNT', 'GUIDE'))[0]
         
         cmds.xform(loc,
                    ws=True,
@@ -258,19 +292,27 @@ class AutoRiggerUI(QtWidgets.QDialog):
         if parent:
             cmds.parent(loc, parent)
 
-        locatorList.append(loc)
+        if storeLocators == True:
+            locatorList.append(loc)
         print(f"Created: {loc}")
 
         for child_name, child_data in joint_data["children"].items():
-            self.build_locator(child_name, child_data, locatorList, loc)
+            self.build_locator(child_name, child_data, locatorList, storeLocators, loc)
+            
 
-        
+    def getGuidePos(self, locator):
+        shape = cmds.listRelatives(locator, shapes=True, type="locator")[0]
+        transformPos = cmds.xform(locator, q=True, ws=True, t=True)
+        localPos = cmds.getAttr(f"{shape}.localPosition")[0]
+
+        return localPos        
     
-    def build_reverseFeetLocators(self, presetData):
+
+    def build_reverseFeetLocators(self, presetData, storeLocators):
         """Recreates the locator hierarchy from the loaded JSON dict."""
 
         for root_name, root_data in presetData.items():
-            self.build_locator(root_name, root_data, self.revFeetLocatorList)
+            self.build_locator(root_name, root_data, self.revFeetLocatorList, storeLocators)
 
         cmds.select(self.locatorList, r = True)
         cmds.makeIdentity(apply = True, t = True)
@@ -335,33 +377,38 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 cmds.setAttr(f"{locator}.localScale{index}", value)
         cmds.undoInfo(closeChunk = True)
 
-    def jointOrientation(self):
-        cmds.joint("root_JA_JNT", e = True, oj = "xyz", sao = "yup", ch = True, zso = True)
-
     def mirrorLocators(self, sel):
-        mirrorGrp = cmds.ls(sl = True, long = True)
-        print(mirrorGrp)
+        selection = cmds.ls(sl = True, long = True)
 
         if not sel:
-            sel = mirrorGrp
+            sel = selection
+            if not selection:
+                cmds.error("Please select what you want to mirror")
 
-        duplicatedObj = cmds.duplicate(sel, rc = True)
+        originGrp = cmds.group(sel)
 
-        dupeGRP = cmds.group(duplicatedObj, n = "duplicatedgroup")
+        duplicatedGrp = cmds.duplicate(originGrp, rc = True)[0]
+        cmds.makeIdentity(duplicatedGrp, a = True, s = True)
 
-        cmds.xform(dupeGRP, ws = True, piv = (0, 0, 0), s = (-1, 1, 1))
+        cmds.xform(duplicatedGrp, ws = True, piv = (0, 0, 0), s = (-1, 1, 1))
 
-        cmds.ungroup(dupeGRP)
+        children = cmds.listRelatives(duplicatedGrp, allDescendents = True)
+        
+        for child in children:
+            if child.startswith("L_"):
+                cmds.rename(child, child.replace("L_", "R_")
+                            .replace("LOC1", "LOC"))
+            elif child.startswith("R_"):
+                cmds.rename(child, child.replace("R_", "L_")
+                            .replace("LOC1", "LOC"))
+            else: 
+                cmds.rename(child, f"{child}_mirror")
+            
+        cmds.parent(cmds.listRelatives(duplicatedGrp, children = True), w = True)
 
-        mel.eval('searchReplaceNames "L_" "R_" "hierarchy";')
-        mel.eval('searchReplaceNames "LOC1" "LOC" "hierarchy";')
+        cmds.parent(cmds.listRelatives(originGrp, children = True), w = True)
 
-        cmds.parent("R_innerSideFoot_LOC", "R_outerSideFoot_LOC")
-        cmds.parent("R_outerSideFoot_LOC", "R_frontFoot_LOC")
-        cmds.parent("R_frontFoot_LOC", "R_backOfHeel_LOC")
-
-        cmds.makeIdentity(a = True, t = True, s = True, r = True)
-
+        cmds.delete(originGrp, duplicatedGrp)
 
 
     def locator_symmetry(self): 
@@ -419,10 +466,13 @@ class AutoRiggerUI(QtWidgets.QDialog):
 #################### joint based funcs #######################################
 
     def saveJointHierarchy(self):
-        self.jointList = cmds.ls("*_JNT", type = 'joint')
+        """
+        Saves the hierarchy locally, for temporary parenting
+
+        """
         self.joint_Hierarchy = {}
 
-        for joint in self.jointList: 
+        for joint in self.jointsList: 
             parent = cmds.listRelatives(joint, 
                                         parent = True,
                                         type = 'joint'
@@ -430,11 +480,129 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.joint_Hierarchy[joint] = parent[0] if parent else None
         
     def unparentJointHierarchy(self): 
-        self.saveJointHierarchy()
-        cmds.parent(self.jointList, world = True)
+        """
+        unparents the hierarchy
+
+        """
+        cmds.undoInfo(openChunk = True)
+        try:
+            self.saveJointHierarchy()
+            for joint in self.jointsList:
+                if not "root_JA_JNT" in joint:
+                    cmds.parent(joint, world = True)
+        finally: 
+            cmds.undoInfo(closeChunk = True)
 
     def reparentJointHierarchy(self):
-        for child, parent in self.joint_Hierarchy.items():
-            if parent:
-                cmds.parent(child,parent)
+        """
+        Reparents based on prior saved hierarchy
 
+        """
+        cmds.undoInfo(openChunk = True)
+        try:
+            for joint in self.joint_Hierarchy:
+                cmds.makeIdentity(joint, apply = True, r = True)
+            for child, parent in self.joint_Hierarchy.items():
+                if parent:
+                    cmds.parent(child,parent)
+        finally: 
+            cmds.undoInfo(closeChunk = True)
+
+    def jointOrientation(self):
+        """
+        Sets a basis for joint orientation across the skeleton (FOR BIPEDAL ONLY SO FAR)
+
+        """
+        cmds.joint("C_spineJA_JNT", 
+                   e = True, 
+                   oj = "xyz", 
+                   sao = "yup", 
+                   ch = True, 
+                   zso = True)
+        
+        #spinejoints
+        joints = cmds.ls("C_spine*",
+                              "C_head*",
+                              "C_neck*",
+                              "*legJD*",
+                              "*legJC*",
+                               type='joint')
+
+        self.unparentJointHierarchy()
+
+        for joint in joints:
+            pos = cmds.xform(joint, q = True, t = True, ws = True)
+            loc = cmds.spaceLocator(n = f"{joint}_temp")[0]
+            cmds.xform(loc, ws=True, t=(pos[0], pos[1] + 10, pos[2]))
+            cmds.delete(cmds.aimConstraint(loc, joint, 
+                                           offset = (90,0,0), 
+                                           aimVector = (1,0,0), 
+                                           upVector = (0,0,-1), 
+                                           worldUpType = 'scene'))
+            cmds.delete(loc)
+
+        wristPairs = [
+            ("L_armJD_JNT", "L_middleFngJEnd_JNT"),
+            ("R_armJD_JNT", "R_middleFngJEnd_JNT")] 
+        
+        for joint, aim in wristPairs:
+            cmds.delete(cmds.aimConstraint(aim, joint, 
+                               aimVector = (1,0,0),
+                               worldUpType = 'scene'))
+        
+        self.reparentJointHierarchy()
+
+        #endjoints
+        endjoints = cmds.ls("*End_JNT", type = 'joint')
+        for joint in endjoints:
+            cmds.joint(joint, e = True, zso = True, oj = 'none')
+
+    
+    def mirrorOrientation(self):
+        """
+        Mirrors joints based on input from UI
+        """
+
+        cmds.undoInfo(openChunk = True)
+        try: 
+            leftJoints = []
+            rightJoints = []
+            for joint in self.jointsList: 
+                if joint.startswith("L_"):
+                    leftJoints.append(joint)
+                elif joint.startswith("R_"):
+                    rightJoints.append(joint)
+                else:
+                    continue
+
+            left = config.prefix['left']
+            right = config.prefix['right']
+            if self.leftToRight.isChecked():
+                prefix = left
+                mirror = right
+                cmds.delete(rightJoints)
+
+            elif self.rightToLeft.isChecked():
+                prefix = right
+                mirror = left
+                cmds.delete(leftJoints)
+
+            clavJoint = f"{prefix}armJA_JNT"
+            hipJoint = f"{prefix}legJA_JNT"
+
+            for joint in [clavJoint, hipJoint]:
+                cmds.mirrorJoint(joint, 
+                                mirrorBehavior = True,
+                                mirrorYZ = True,
+                                searchReplace = (prefix, mirror))
+            
+            cmds.selection(cl = True)
+        finally: 
+            cmds.undoInfo(closeChunk = True)
+
+    #def showLocalRotationAxis(self): 
+
+
+        
+
+                    
