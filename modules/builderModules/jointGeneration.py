@@ -1,28 +1,13 @@
-import maya.cmds as cmds  # pyright: ignore[reportMissingImports]
-import maya.api.OpenMaya as om  # pyright: ignore[reportMissingImports]
-import autoRigger.config as config
-import json
 import os
-import importlib
-
-importlib.reload(config)
+import json
+import maya.cmds as cmds
+import autoRigger.utils.config as config
 
 
 class jointGeneration():
-    def __init__(self, prefix, preset, moduleType):
-        prefix = prefix.upper()
-        preset = preset.lower()
-
-        if prefix not in ['L', 'R', 'C']:
-            cmds.error('Please Choose either L, R, C')
-        if preset not in ['bipedal', 'quadraped', 'creature']:
-            cmds.error('Please choose existing preset')
-
+    def __init__(self):
         self.suffix = config.suffix
         self.attrs = config.attrs
-        self.side = f"{prefix}_"
-        self.preset = preset
-        self.moduleType = moduleType
 
         mayaDir = cmds.internalVar(userAppDir=True)
         self.json_file_path = os.path.join(
@@ -34,7 +19,7 @@ class jointGeneration():
         )
 
     # -------------------------------------------------------------------------
-    # JSON Save
+    # JSON Export
     # -------------------------------------------------------------------------
 
     def get_joint_hierarchy(self, joint: str) -> dict:
@@ -50,12 +35,10 @@ class jointGeneration():
         joint_pos = cmds.xform(joint, q=True, ws=True, t=True)
         children = cmds.listRelatives(joint, children=True, type='joint')
         parents = cmds.listRelatives(joint, parent=True, type='joint')
-        joint_orientation = cmds.getAttr(f"{joint}.jointOrient")[0]
         rotationOrder = cmds.getAttr(f"{joint}.rotateOrder")
 
         joint_data = {
             "pos": joint_pos,
-            "orientation": joint_orientation,
             "rotationOrder": rotationOrder,
             "parent": parents[0] if parents else None,
             "children": {}
@@ -67,26 +50,33 @@ class jointGeneration():
 
         return joint_data
 
-    def build_skeleton_dict(self, rootJoint: str) -> dict:
-        '''Builds the full skeleton dictionary from a root joint.'''
-        return {rootJoint: self.get_joint_hierarchy(rootJoint)}
-
     def skeleton_dict_result(self, rootJoint: str = 'root_JA_JNT'):
-        '''Stores the skeleton dict on self for use by build_json.'''
-        self.result = self.build_skeleton_dict(rootJoint)
+        '''Builds and stores the full skeleton dict from rootJoint on self.'''
+        self.result = {rootJoint: self.get_joint_hierarchy(rootJoint)}
 
-    def build_json(self):
-        '''Writes self.result to the json file path and prints the result.'''
-        with open(self.json_file_path, "w") as f:
+    def build_json(self, file_name: str):
+        '''Writes self.result to the preset file path.'''
+        file_path = config.find_file_path("presets", f"{file_name}.json")
+        with open(file_path, "w") as f:
             json.dump(self.result, f, indent=4)
+        print(f"Saved {file_name} at: {file_path}")
 
-        with open(self.json_file_path, "r") as f:
-            loaded = json.load(f)
+    def jointExportJSON(self, file_name: str):
+        '''Entry point for exporting. Select the root joint, then call this.
+            
+            Parameter: 
+                file_name(str) : whatever you want the file to be named'''
+        
+        selected = cmds.ls(sl=True)
+        if len(selected) != 1:
+            cmds.error("Please select only the root joint of the chain you want to export")
+            return
 
-        print(loaded)
+        self.skeleton_dict_result(rootJoint=selected[0])
+        self.build_json(file_name)
 
     # -------------------------------------------------------------------------
-    # JSON Load → Locators
+    # JSON Import → Locators
     # -------------------------------------------------------------------------
 
     def build_locator(self, joint_name: str, joint_data: dict, parent=None):
@@ -127,24 +117,25 @@ class jointGeneration():
 
     def generateJoints(self):
         '''
-        Finds all GUIDE locators in the scene and creates a joint at each one,
-        grouped under a Skeleton_GRP.
+        Finds all GUIDE locators in the scene and creates a joint at each one.
         '''
         guides = cmds.ls("*GUIDE", type="locator")
 
         joints = []
         for loc in guides:
             loc_pos = cmds.xform(loc, q=True, ws=True, t=True)
-            jnt = cmds.joint(p=loc_pos, n=loc.replace("GUIDE", "JNT"))[0]
+            jnt = cmds.joint(p=loc_pos, n=loc.replace("GUIDE", "JNT"))
             joints.append(jnt)
 
         cmds.group(joints, n="Skeleton_GRP")
 
+    # -------------------------------------------------------------------------
+    # Hierarchy Utilities
+    # -------------------------------------------------------------------------
 
     def separate_module_from_hierarchy(self, data: dict, root_joint: str) -> dict:
         '''
-        Extracts a subtree from the full skeleton dictionary
-        starting at root_joint.
+        Extracts a subtree from the full skeleton dictionary starting at root_joint.
 
         Parameters:
             data (dict): The full skeleton dictionary
@@ -156,18 +147,39 @@ class jointGeneration():
         for joint_name, joint_data in data.items():
             if joint_name == root_joint:
                 return {joint_name: joint_data}
-            
-            # recurse into children
+
             if joint_data["children"]:
                 result = self.separate_module_from_hierarchy(
-                    joint_data["children"], 
+                    joint_data["children"],
                     root_joint
                 )
                 if result:
                     return result
-        
+
         return {}
-        
 
 
-    
+'''
+DEVELOPER NOTE — Export/Import call chains
+==========================================
+
+EXPORT (joints → JSON):
+    jointExportJSON(file_name)
+        └── skeleton_dict_result(rootJoint)
+                └── get_joint_hierarchy(joint)   ← recurses through children
+        └── build_json(file_name)                ← writes self.result to disk
+
+    skeleton_dict_result builds and stores the dict on self.result.
+    build_json just writes whatever is on self.result.
+    You only need these two calls because get_joint_hierarchy and
+    build_skeleton_dict are internal steps — jointExportJSON is the
+    only public entry point you should call from outside the class.
+
+IMPORT (JSON → locators):
+    import_json_locators()
+        └── build_locator(joint_name, joint_data, parent)  ← recurses through children
+
+    import_json_locators reads the file and kicks off the recursion.
+    build_locator handles both creation and parenting in one pass.
+    Again, one public entry point — import_json_locators — is all you need.
+'''

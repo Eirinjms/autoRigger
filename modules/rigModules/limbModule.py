@@ -1,9 +1,9 @@
 import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
 import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports] 
-import autoRigger.shapes as shapes
-import autoRigger.modules.reverseFoot as reverseFoot
-import autoRigger.modules.handModule as handModule
-import autoRigger.config as config
+import autoRigger.utils.shapes as shapes
+import autoRigger.modules.rigModules.reverseFoot as reverseFoot
+import autoRigger.modules.rigModules.handModule as handModule
+import autoRigger.utils.config as config
 import importlib
 
 importlib.reload(config)

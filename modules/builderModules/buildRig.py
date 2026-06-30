@@ -1,8 +1,8 @@
 import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
-import autoRigger.modules.spineModule as spineModule
-import autoRigger.modules.limbModule as limbModule
-import autoRigger.modules.faceModule as faceModule
-import autoRigger.shapes as shapes
+import autoRigger.modules.rigModules.spineModule as spineModule
+import autoRigger.modules.rigModules.limbModule as limbModule
+import autoRigger.modules.rigModules.faceModule as faceModule
+import autoRigger.utils.shapes as shapes
 import importlib
 
 importlib.reload(spineModule)
@@ -12,7 +12,6 @@ importlib.reload(limbModule)
 
 
 def build():
-    #limbmodule uses side and 
     spineModule.build()
     limbModule.build_limb_set(sides = ["L", "R"], 
                               limbs = ["leg", "arm"])

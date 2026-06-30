@@ -35,6 +35,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self._loadUi(ui_file_path)
         self._connectWidgets()
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # UI SETUP
+    # ─────────────────────────────────────────────────────────────────────────
+
     def _loadUi(self, ui_file_path):
         if not os.path.exists(ui_file_path):
             print("File not found.")
@@ -82,6 +86,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.leftToRight = self.ui.findChild(QtWidgets.QRadioButton, "jointMirror_leftToRight_radio")
         self.rightToLeft = self.ui.findChild(QtWidgets.QRadioButton, "jointMirror_rightToLeft_radio")
 
+        self.localRotationAxesToggle = self.ui.findChild(QtWidgets.QCheckBox, "LRA_checkBox")
+        self.allLRA = self.ui.findChild(QtWidgets.QRadioButton, "LRA_all_radio")
+        self.selectedLRA = self.ui.findChild(QtWidgets.QRadioButton, "LRA_selected_radio")
+
         #-----------------------------------joint text areas -----------------------------------------------#
         self.importPresetText = self.ui.findChild(QtWidgets.QLineEdit, "ImportPreset_LineEdit")
         self.revFeetTextBox = self.ui.findChild(QtWidgets.QLineEdit, "reverseFeet_Locators_editLine")
@@ -115,6 +123,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.locatorSymmetry.toggled.connect(self.symmetryToggle)
 
         
+        # keep slider/label in sync with whatever locator is selected in the scene
+        self.selectionJob = cmds.scriptJob(
+            event=["SelectionChanged", self.syncSliderToSelection],
+            protected=True,
+        )
+
 
         #-----------------------------------rev feet connections -----------------------------------------------#
         if self.MirrorRevFeet: 
@@ -136,20 +150,43 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         if mirrorOrientationBtn:
             mirrorOrientationBtn.clicked.connect(self.mirrorOrientation)
+
+        
+        #localrotationaxes
+        if self.localRotationAxesToggle:
+            self.localRotationAxesToggle.toggled.connect(self.showLocalRotationAxes)
             
 
+    def closeEvent(self, event):
+        if getattr(self, "selectionJob", None):
+            cmds.scriptJob(kill=self.selectionJob, force=True)
+        super().closeEvent(event)
 
-        # keep slider/label in sync with whatever locator is selected in the scene
-        self.selectionJob = cmds.scriptJob(
-            event=["SelectionChanged", self.syncSliderToSelection],
-            protected=True,
-        )
+    # ─────────────────────────────────────────────────────────────────────────
+    # RIG BUILD
+    # ─────────────────────────────────────────────────────────────────────────
 
-    def exportJointsjson(self):
-        file_name = self.exportJointsFilename.text()
-        exp = jointGen.jointGeneration()
-        exp.jointExportJSON(file_name)
-    
+    def buildRigButton(self):
+        """ Builds the rig :D """
+        cmds.undoInfo(openChunk=True)
+        try:
+            buildRig.build()
+        finally:
+            cmds.undoInfo(closeChunk=True)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # LOCATORS
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def buildLocators(self):
+        "Builds a Locator? "
+        cmds.undoInfo(openChunk=True)
+        try:
+            self.locator = cmds.spaceLocator()[0]
+            self.locatorList.append(self.locator)
+            print(self.locator)
+        finally:
+            cmds.undoInfo(closeChunk=True)
 
     def importPreset(self, textBox, storeLocators : bool):
         """
@@ -199,7 +236,175 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         cmds.select(self.locatorList, r = True)
         cmds.makeIdentity(apply = True, t = True)
+
+    def build_locator(self, locator_name: str, joint_data: dict, locatorList, storeLocators, parent=None):
+        '''
+        Recursively creates locators from a joint hierarchy dict.
+
+        Parameters:
+            locator_name (str): Name to give the locator (JNT replaced with GUIDE )
+            joint_data (dict): Dictionary of joint data including children
+            parent (str): Parent locator name, if any
+        '''
+        cmds.select(clear=True)
+
+        loc = cmds.spaceLocator(
+            n=locator_name.replace('JNT', 'GUIDE'))[0]
+        
+        cmds.xform(loc,
+                   ws=True,
+                   t=joint_data["pos"]
+                    )
     
+        if parent:
+            cmds.parent(loc, parent)
+
+        if storeLocators == True:
+            locatorList.append(loc)
+        print(f"Created: {loc}")
+
+        for child_name, child_data in joint_data["children"].items():
+            self.build_locator(child_name, child_data, locatorList, storeLocators, loc)
+
+    def build_reverseFeetLocators(self, presetData, storeLocators):
+        """Recreates the locator hierarchy from the loaded JSON dict."""
+
+        for root_name, root_data in presetData.items():
+            self.build_locator(root_name, root_data, self.revFeetLocatorList, storeLocators)
+
+        cmds.select(self.locatorList, r = True)
+        cmds.makeIdentity(apply = True, t = True)
+
+    def getGuidePos(self, locator):
+        shape = cmds.listRelatives(locator, shapes=True, type="locator")[0]
+        transformPos = cmds.xform(locator, q=True, ws=True, t=True)
+        localPos = cmds.getAttr(f"{shape}.localPosition")[0]
+
+        return localPos        
+
+    def locatorSize(self, value):
+        if self.allLocatorsRadio and self.allLocatorsRadio.isChecked():
+            locators = self.locatorList
+        else:
+            selected = cmds.ls(sl=True)
+            locators = []
+            for obj in selected:
+                shapes = cmds.listRelatives(obj, s=True) or []
+                if shapes and cmds.nodeType(shapes[0]) == "locator":
+                    locators.append(obj)
+
+        cmds.undoInfo(openChunk = True)
+        for locator in locators:
+            for index in ['X', 'Y', 'Z']:
+                cmds.setAttr(f"{locator}.localScale{index}", value)
+        cmds.undoInfo(closeChunk = True)
+
+    def updateSizeLabel(self, value):
+        if self.sizeLabel:
+            self.sizeLabel.setText(str(value))
+
+    def syncSliderToSelection(self):
+        """When a locator is selected, set the slider/label to its current scale."""
+        selected = cmds.ls(sl=True) or []
+        for obj in selected:
+            shapes = cmds.listRelatives(obj, s=True) or []
+            if shapes and cmds.nodeType(shapes[0]) == "locator":
+                value = cmds.getAttr(f"{obj}.localScaleX")
+                if self.slider:
+                    self.slider.blockSignals(True)   # avoid re-triggering setAttr on every locator
+                    self.slider.setValue(int(value))
+                    self.slider.blockSignals(False)
+                if self.sizeLabel:
+                    self.sizeLabel.setText(str(value))
+                return  # just sync to the first locator found
+
+    def mirrorLocators(self, sel):
+        selection = cmds.ls(sl = True, long = True)
+
+        if not sel:
+            sel = selection
+            if not selection:
+                cmds.error("Please select what you want to mirror")
+
+        originGrp = cmds.group(sel)
+
+        duplicatedGrp = cmds.duplicate(originGrp, rc = True)[0]
+        cmds.makeIdentity(duplicatedGrp, a = True, s = True)
+
+        cmds.xform(duplicatedGrp, ws = True, piv = (0, 0, 0), s = (-1, 1, 1))
+
+        children = cmds.listRelatives(duplicatedGrp, allDescendents = True)
+        
+        for child in children:
+            if child.startswith("L_"):
+                cmds.rename(child, child.replace("L_", "R_")
+                            .replace("LOC1", "LOC"))
+            elif child.startswith("R_"):
+                cmds.rename(child, child.replace("R_", "L_")
+                            .replace("LOC1", "LOC"))
+            else: 
+                cmds.rename(child, f"{child}_mirror")
+            
+        cmds.parent(cmds.listRelatives(duplicatedGrp, children = True), w = True)
+
+        cmds.parent(cmds.listRelatives(originGrp, children = True), w = True)
+
+        cmds.delete(originGrp, duplicatedGrp)
+
+    def locator_symmetry(self): 
+        cmds.undoInfo(openChunk = True)
+        self.leftAttrs = []
+        self.rightAttrs = []
+        self.reverseNodes = []
+        for left in self.locatorList:
+            cmds.delete(left, ch = True)
+            if left.startswith("L_"):
+                right = left.replace("L_", "R_")
+
+                if cmds.objExists(right):
+                    mulDiv = cmds.createNode('multiplyDivide', name = f"{right.replace('R_', '')}_MD")
+                    self.reverseNodes.append(mulDiv)
+
+                    for transform in ["translate", "rotate"]:
+                        if transform == "rotate": 
+                            axes = ["Z", "X", "Y"]
+                        else: 
+                            axes = ["X", "Y", "Z"]
+                        cmds.connectAttr(f"{left}.{transform}{axes[0]}", f"{mulDiv}.input1{axes[0]}")
+                        cmds.setAttr(f"{mulDiv}.input2{axes[0]}", -1) 
+                        cmds.connectAttr(f"{mulDiv}.output{axes[0]}", f"{right}.{transform}{axes[0]}")
+
+                        for i in axes[1::]: 
+                            leftAttr = f"{left}.{transform}{i}"
+                            rightAttr = f"{right}.{transform}{i}"
+                            cmds.connectAttr(leftAttr, rightAttr)
+                            self.leftAttrs.append(leftAttr)
+                            self.rightAttrs.append(rightAttr)
+                        
+                print(f"successfully connected {left} with {right}")
+        cmds.undoInfo(closeChunk = True)
+
+    def disconnectSymmetry(self):
+        cmds.undoInfo(openChunk = True)
+        if self.leftAttrs and cmds.isConnected(self.leftAttrs[0], self.rightAttrs[0]):
+            for leftNode, RightNode in zip(self.leftAttrs, self.rightAttrs):
+                cmds.disconnectAttr(leftNode, RightNode)
+            cmds.delete(self.reverseNodes)
+            print("Successfully disconnected symmetry from all nodes")
+        else:
+            print("no connections found")
+        cmds.undoInfo(closeChunk = True)
+
+    def symmetryToggle(self, checked):
+        if checked:
+            self.locator_symmetry()
+        else:
+            self.disconnectSymmetry()
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # JOINTS
+    # ─────────────────────────────────────────────────────────────────────────
+
     def build_joint(self, locator: str, parent=None):
         '''
         Creates a joint per given locator. 
@@ -248,6 +453,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
         try:
             if self.locatorSymmetry.isChecked():
                 self.locatorSymmetry.setChecked(False)
+                
+            if len(self.locatorList)== 0:
+                return cmds.warning("No guide Locators found, please generate these before generating joints!")
+            
             cmds.hide(self.locatorList)
             for loc in self.locatorList:
                 cmds.makeIdentity(loc, 
@@ -270,200 +479,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
         finally:
             cmds.undoInfo(closeChunk=True)
 
-    def build_locator(self, locator_name: str, joint_data: dict, locatorList, storeLocators, parent=None):
-        '''
-        Recursively creates locators from a joint hierarchy dict.
-
-        Parameters:
-            locator_name (str): Name to give the locator (JNT replaced with GUIDE )
-            joint_data (dict): Dictionary of joint data including children
-            parent (str): Parent locator name, if any
-        '''
-        cmds.select(clear=True)
-
-        loc = cmds.spaceLocator(
-            n=locator_name.replace('JNT', 'GUIDE'))[0]
-        
-        cmds.xform(loc,
-                   ws=True,
-                   t=joint_data["pos"]
-                    )
-    
-        if parent:
-            cmds.parent(loc, parent)
-
-        if storeLocators == True:
-            locatorList.append(loc)
-        print(f"Created: {loc}")
-
-        for child_name, child_data in joint_data["children"].items():
-            self.build_locator(child_name, child_data, locatorList, storeLocators, loc)
-            
-
-    def getGuidePos(self, locator):
-        shape = cmds.listRelatives(locator, shapes=True, type="locator")[0]
-        transformPos = cmds.xform(locator, q=True, ws=True, t=True)
-        localPos = cmds.getAttr(f"{shape}.localPosition")[0]
-
-        return localPos        
-    
-
-    def build_reverseFeetLocators(self, presetData, storeLocators):
-        """Recreates the locator hierarchy from the loaded JSON dict."""
-
-        for root_name, root_data in presetData.items():
-            self.build_locator(root_name, root_data, self.revFeetLocatorList, storeLocators)
-
-        cmds.select(self.locatorList, r = True)
-        cmds.makeIdentity(apply = True, t = True)
-
-    def buildRigButton(self):
-        """ Builds the rig :D """
-        cmds.undoInfo(openChunk=True)
-        try:
-            buildRig.build()
-        finally:
-            cmds.undoInfo(closeChunk=True)
-
-    def buildLocators(self):
-        "Builds a Locator? "
-        cmds.undoInfo(openChunk=True)
-        try:
-            self.locator = cmds.spaceLocator()[0]
-            self.locatorList.append(self.locator)
-            print(self.locator)
-        finally:
-            cmds.undoInfo(closeChunk=True)
-
-    def syncSliderToSelection(self):
-        """When a locator is selected, set the slider/label to its current scale."""
-        selected = cmds.ls(sl=True) or []
-        for obj in selected:
-            shapes = cmds.listRelatives(obj, s=True) or []
-            if shapes and cmds.nodeType(shapes[0]) == "locator":
-                value = cmds.getAttr(f"{obj}.localScaleX")
-                if self.slider:
-                    self.slider.blockSignals(True)   # avoid re-triggering setAttr on every locator
-                    self.slider.setValue(int(value))
-                    self.slider.blockSignals(False)
-                if self.sizeLabel:
-                    self.sizeLabel.setText(str(value))
-                return  # just sync to the first locator found
-                
-
-    def closeEvent(self, event):
-        if getattr(self, "selectionJob", None):
-            cmds.scriptJob(kill=self.selectionJob, force=True)
-        super().closeEvent(event)
-
-    def updateSizeLabel(self, value):
-        if self.sizeLabel:
-            self.sizeLabel.setText(str(value))
-
-    def locatorSize(self, value):
-        if self.allLocatorsRadio and self.allLocatorsRadio.isChecked():
-            locators = self.locatorList
-        else:
-            selected = cmds.ls(sl=True)
-            locators = []
-            for obj in selected:
-                shapes = cmds.listRelatives(obj, s=True) or []
-                if shapes and cmds.nodeType(shapes[0]) == "locator":
-                    locators.append(obj)
-
-        cmds.undoInfo(openChunk = True)
-        for locator in locators:
-            for index in ['X', 'Y', 'Z']:
-                cmds.setAttr(f"{locator}.localScale{index}", value)
-        cmds.undoInfo(closeChunk = True)
-
-    def mirrorLocators(self, sel):
-        selection = cmds.ls(sl = True, long = True)
-
-        if not sel:
-            sel = selection
-            if not selection:
-                cmds.error("Please select what you want to mirror")
-
-        originGrp = cmds.group(sel)
-
-        duplicatedGrp = cmds.duplicate(originGrp, rc = True)[0]
-        cmds.makeIdentity(duplicatedGrp, a = True, s = True)
-
-        cmds.xform(duplicatedGrp, ws = True, piv = (0, 0, 0), s = (-1, 1, 1))
-
-        children = cmds.listRelatives(duplicatedGrp, allDescendents = True)
-        
-        for child in children:
-            if child.startswith("L_"):
-                cmds.rename(child, child.replace("L_", "R_")
-                            .replace("LOC1", "LOC"))
-            elif child.startswith("R_"):
-                cmds.rename(child, child.replace("R_", "L_")
-                            .replace("LOC1", "LOC"))
-            else: 
-                cmds.rename(child, f"{child}_mirror")
-            
-        cmds.parent(cmds.listRelatives(duplicatedGrp, children = True), w = True)
-
-        cmds.parent(cmds.listRelatives(originGrp, children = True), w = True)
-
-        cmds.delete(originGrp, duplicatedGrp)
-
-
-    def locator_symmetry(self): 
-        cmds.undoInfo(openChunk = True)
-        self.leftAttrs = []
-        self.rightAttrs = []
-        self.reverseNodes = []
-        for left in self.locatorList:
-            cmds.delete(left, ch = True)
-            if left.startswith("L_"):
-                right = left.replace("L_", "R_")
-
-                if cmds.objExists(right):
-                    mulDiv = cmds.createNode('multiplyDivide', name = f"{right.replace('R_', '')}_MD")
-                    self.reverseNodes.append(mulDiv)
-
-                    for transform in ["translate", "rotate"]:
-                        if transform == "rotate": 
-                            axes = ["Z", "X", "Y"]
-                        else: 
-                            axes = ["X", "Y", "Z"]
-                        cmds.connectAttr(f"{left}.{transform}{axes[0]}", f"{mulDiv}.input1{axes[0]}")
-                        cmds.setAttr(f"{mulDiv}.input2{axes[0]}", -1) 
-                        cmds.connectAttr(f"{mulDiv}.output{axes[0]}", f"{right}.{transform}{axes[0]}")
-
-                        for i in axes[1::]: 
-                            leftAttr = f"{left}.{transform}{i}"
-                            rightAttr = f"{right}.{transform}{i}"
-                            cmds.connectAttr(leftAttr, rightAttr)
-                            self.leftAttrs.append(leftAttr)
-                            self.rightAttrs.append(rightAttr)
-                        
-                print(f"successfully connected {left} with {right}")
-        cmds.undoInfo(closeChunk = True)
-
-    def disconnectSymmetry(self):
-        cmds.undoInfo(openChunk = True)
-        if self.leftAttrs and cmds.isConnected(self.leftAttrs[0], self.rightAttrs[0]):
-            for leftNode, RightNode in zip(self.leftAttrs, self.rightAttrs):
-                cmds.disconnectAttr(leftNode, RightNode)
-            cmds.delete(self.reverseNodes)
-            print("Successfully disconnected symmetry from all nodes")
-        else:
-            print("no connections found")
-        cmds.undoInfo(closeChunk = True)
-
-    def symmetryToggle(self, checked):
- 
-        if checked:
-            self.locator_symmetry()
-
-        else:
-            self.disconnectSymmetry()
-
-#################### joint based funcs #######################################
+    def exportJointsjson(self):
+        file_name = self.exportJointsFilename.text()
+        exp = jointGen.jointGeneration()
+        exp.jointExportJSON(file_name)
 
     def saveJointHierarchy(self):
         """
@@ -557,7 +576,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
         for joint in endjoints:
             cmds.joint(joint, e = True, zso = True, oj = 'none')
 
-    
     def mirrorOrientation(self):
         """
         Mirrors joints based on input from UI
@@ -565,6 +583,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         cmds.undoInfo(openChunk = True)
         try: 
+            if len(self.jointsList) == 0:
+                return cmds.warning("No joints found, unable to mirror joints.")
+            
+
             leftJoints = []
             rightJoints = []
             for joint in self.jointsList: 
@@ -574,9 +596,11 @@ class AutoRiggerUI(QtWidgets.QDialog):
                     rightJoints.append(joint)
                 else:
                     continue
-
+            
+            print(leftJoints + rightJoints)
             left = config.prefix['left']
             right = config.prefix['right']
+
             if self.leftToRight.isChecked():
                 prefix = left
                 mirror = right
@@ -589,20 +613,44 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
             clavJoint = f"{prefix}armJA_JNT"
             hipJoint = f"{prefix}legJA_JNT"
+            eyeJoint = f"{prefix}eyeJA_JNT"
 
-            for joint in [clavJoint, hipJoint]:
+            for joint in [clavJoint, hipJoint, eyeJoint]:
                 cmds.mirrorJoint(joint, 
                                 mirrorBehavior = True,
                                 mirrorYZ = True,
                                 searchReplace = (prefix, mirror))
             
-            cmds.selection(cl = True)
+            cmds.select(cl = True)
         finally: 
             cmds.undoInfo(closeChunk = True)
 
-    #def showLocalRotationAxis(self): 
+    def showLocalRotationAxes(self):
+        """
+            Toggles the visibility of local rotation axes on joints.
+        """
+        if len(self.jointsList) == 0:
 
+            self.localRotationAxesToggle.blockSignals(True)
+            try:
+                self.localRotationAxesToggle.setChecked(False)
+            finally: 
+                self.localRotationAxesToggle.blockSignals(False)
 
+            return cmds.warning("No joints found, unable to enable local rotation axes")
         
+        selectedJoints = cmds.ls(sl = True, 
+                                 type = 'joint')
 
-                    
+        if self.allLRA.isChecked():
+            for joint in self.jointsList:
+                cmds.setAttr(f"{joint}.displayLocalAxis", 1)
+        
+        elif self.selectedLRA.isChecked():
+            for joint in selectedJoints:
+                cmds.setAttr(f"{joint}.displayLocalAxis", 1)
+
+        if not self.localRotationAxesToggle.isChecked():
+            for joint in self.jointsList:
+                cmds.setAttr(f"{joint}.displayLocalAxis", 0)
+    

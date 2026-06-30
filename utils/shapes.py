@@ -1,6 +1,6 @@
 from unicodedata import name
-import maya.cmds as cmds
-import maya.mel as mel
+import maya.cmds as cmds # pyright: ignore[reportMissingImports]
+import maya.mel as mel # pyright: ignore[reportMissingImports]
 
 # ------------------------------
 # ARROW

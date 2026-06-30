@@ -1,6 +1,6 @@
 import enum
 from dataclasses import dataclass
-import maya.cmds as cmds
+import maya.cmds as cmds # pyright: ignore[reportMissingImports]
 import os
 
 
@@ -22,9 +22,9 @@ suffix = {
 }
 
 prefix = {
-    "left"    : "L",
-    "right"   : "R",
-    "central" : "C"
+    "left"    : "L_",
+    "right"   : "R_",
+    "central" : "C_"
 }
 
 attrs = ["tx","ty","tz","rx","ry","rz","sx","sy","sz"]

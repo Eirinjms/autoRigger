@@ -1,6 +1,6 @@
 import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
-import autoRigger.shapes as shapes
-import autoRigger.config as config
+import autoRigger.utils.shapes as shapes
+import autoRigger.utils.config as config
 
 import importlib
 importlib.reload(shapes)

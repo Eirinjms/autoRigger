@@ -1,0 +1,365 @@
+{
+    "L_armJB_JNT": {
+        "pos": [
+            14.018426549601944,
+            125.32047154811478,
+            -4.32025238663676
+        ],
+        "orientation": [
+            -0.8246985469041401,
+            -6.7311342023016065,
+            -55.50375137565037
+        ],
+        "rotationOrder": 0,
+        "parent": "L_armJA_JNT",
+        "children": {
+            "L_armJC_JNT": {
+                "pos": [
+                    27.716497766254474,
+                    107.21795033100716,
+                    -3.008527704550799
+                ],
+                "orientation": [
+                    98.61393073856132,
+                    -18.26666191003898,
+                    -5.627917073877228
+                ],
+                "rotationOrder": 0,
+                "parent": "L_armJB_JNT",
+                "children": {
+                    "L_armJD_JNT": {
+                        "pos": [
+                            39.36869818502501,
+                            90.85440271208695,
+                            4.8939742699411335
+                        ],
+                        "orientation": [
+                            95.44660971804045,
+                            -5.963540027744093e-15,
+                            -3.180554681463516e-15
+                        ],
+                        "rotationOrder": 0,
+                        "parent": "L_armJC_JNT",
+                        "children": {
+                            "L_thumbJA_JNT": {
+                                "pos": [
+                                    39.22958887988022,
+                                    88.77025088658372,
+                                    7.754059233506842
+                                ],
+                                "orientation": [
+                                    53.66267993096712,
+                                    29.13248520308954,
+                                    12.090861874235149
+                                ],
+                                "rotationOrder": 0,
+                                "parent": "L_armJD_JNT",
+                                "children": {
+                                    "L_thumbJB_JNT": {
+                                        "pos": [
+                                            39.72954130316059,
+                                            86.80191342238231,
+                                            9.992099505296673
+                                        ],
+                                        "orientation": [
+                                            -7.616668745656018,
+                                            3.776526672130155,
+                                            8.53046626290083
+                                        ],
+                                        "rotationOrder": 0,
+                                        "parent": "L_thumbJA_JNT",
+                                        "children": {
+                                            "L_thumbJC_JNT": {
+                                                "pos": [
+                                                    39.79481933749074,
+                                                    84.83564573913537,
+                                                    11.715997300763924
+                                                ],
+                                                "orientation": [
+                                                    6.715299919998867,
+                                                    -1.2960007399887512,
+                                                    10.08112891388703
+                                                ],
+                                                "rotationOrder": 0,
+                                                "parent": "L_thumbJB_JNT",
+                                                "children": {
+                                                    "L_thumbJEnd_JNT": {
+                                                        "pos": [
+                                                            39.893028639206044,
+                                                            82.85203335752031,
+                                                            12.900733516472702
+                                                        ],
+                                                        "orientation": [
+                                                            0.0,
+                                                            0.0,
+                                                            0.0
+                                                        ],
+                                                        "rotationOrder": 0,
+                                                        "parent": "L_thumbJC_JNT",
+                                                        "children": {}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "L_indexFngJA_JNT": {
+                                "pos": [
+                                    42.24199527026663,
+                                    84.42869046374653,
+                                    9.386650069913717
+                                ],
+                                "orientation": [
+                                    -4.454397957893751,
+                                    2.3674016600758674,
+                                    12.66178714072437
+                                ],
+                                "rotationOrder": 0,
+                                "parent": "L_armJD_JNT",
+                                "children": {
+                                    "L_indexFngJB_JNT": {
+                                        "pos": [
+                                            43.33641958708607,
+                                            81.52857863687439,
+                                            10.633909179587562
+                                        ],
+                                        "orientation": [
+                                            -7.616668745656015,
+                                            3.7765266721301542,
+                                            8.530466262900827
+                                        ],
+                                        "rotationOrder": 0,
+                                        "parent": "L_indexFngJA_JNT",
+                                        "children": {
+                                            "L_indexFngJC_JNT": {
+                                                "pos": [
+                                                    43.747139583528835,
+                                                    79.52214966200818,
+                                                    11.640031612514806
+                                                ],
+                                                "orientation": [
+                                                    6.7152999199988646,
+                                                    -1.2960007399887512,
+                                                    10.081128913887031
+                                                ],
+                                                "rotationOrder": 0,
+                                                "parent": "L_indexFngJB_JNT",
+                                                "children": {
+                                                    "L_indexFngJD_JNT": {
+                                                        "pos": [
+                                                            43.77777837739319,
+                                                            77.13372795312199,
+                                                            12.58888079435809
+                                                        ],
+                                                        "orientation": [
+                                                            -3.2627933861380285,
+                                                            0.0,
+                                                            0.0
+                                                        ],
+                                                        "rotationOrder": 0,
+                                                        "parent": "L_indexFngJC_JNT",
+                                                        "children": {}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "L_middleFngJA_JNT": {
+                                "pos": [
+                                    42.67478183759183,
+                                    83.93745512830151,
+                                    7.8588354077140785
+                                ],
+                                "orientation": [
+                                    -4.468323928813117,
+                                    -5.101433381623608,
+                                    13.244277711498034
+                                ],
+                                "rotationOrder": 0,
+                                "parent": "L_armJD_JNT",
+                                "children": {
+                                    "L_middleFngJB_JNT": {
+                                        "pos": [
+                                            43.89118613840014,
+                                            80.25760397342665,
+                                            8.889009048555275
+                                        ],
+                                        "orientation": [
+                                            -7.041151279673342,
+                                            4.767434666623567,
+                                            16.244561722555865
+                                        ],
+                                        "rotationOrder": 0,
+                                        "parent": "L_middleFngJA_JNT",
+                                        "children": {
+                                            "L_middleFngJC_JNT": {
+                                                "pos": [
+                                                    43.99426551638241,
+                                                    77.51682697000729,
+                                                    9.751582300033965
+                                                ],
+                                                "orientation": [
+                                                    6.715299919998877,
+                                                    -1.2960007399887545,
+                                                    10.081128913887007
+                                                ],
+                                                "rotationOrder": 0,
+                                                "parent": "L_middleFngJB_JNT",
+                                                "children": {
+                                                    "L_middleFngJEnd_JNT": {
+                                                        "pos": [
+                                                            43.242195120654436,
+                                                            74.61466816568434,
+                                                            10.36520256403497
+                                                        ],
+                                                        "orientation": [
+                                                            0.0,
+                                                            0.0,
+                                                            0.0
+                                                        ],
+                                                        "rotationOrder": 0,
+                                                        "parent": "L_middleFngJC_JNT",
+                                                        "children": {}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "L_ringFngJA_JNT": {
+                                "pos": [
+                                    43.03196423568692,
+                                    83.71787799477946,
+                                    6.44758761094939
+                                ],
+                                "orientation": [
+                                    -8.257794476872242,
+                                    -7.556337053444412,
+                                    33.2216044206897
+                                ],
+                                "rotationOrder": 0,
+                                "parent": "L_armJD_JNT",
+                                "children": {
+                                    "L_ringFngJB_JNT": {
+                                        "pos": [
+                                            43.60443529015704,
+                                            80.269210976349,
+                                            6.943288561327126
+                                        ],
+                                        "orientation": [
+                                            -7.616668745656015,
+                                            3.7765266721301542,
+                                            8.530466262900827
+                                        ],
+                                        "rotationOrder": 0,
+                                        "parent": "L_ringFngJA_JNT",
+                                        "children": {
+                                            "L_ringFngJC_JNT": {
+                                                "pos": [
+                                                    43.3411772848781,
+                                                    77.6423754678176,
+                                                    7.491299259973045
+                                                ],
+                                                "orientation": [
+                                                    6.715299919998865,
+                                                    -1.2960007399887468,
+                                                    10.08112891388703
+                                                ],
+                                                "rotationOrder": 0,
+                                                "parent": "L_ringFngJB_JNT",
+                                                "children": {
+                                                    "L_ringFngJEnd_JNT": {
+                                                        "pos": [
+                                                            42.62259181233319,
+                                                            74.99324442434722,
+                                                            7.803872033163273
+                                                        ],
+                                                        "orientation": [
+                                                            0.0,
+                                                            0.0,
+                                                            0.0
+                                                        ],
+                                                        "rotationOrder": 0,
+                                                        "parent": "L_ringFngJC_JNT",
+                                                        "children": {}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "L_pinkyFngJA_JNT": {
+                                "pos": [
+                                    42.70949349874788,
+                                    83.57206040826223,
+                                    4.781985608921957
+                                ],
+                                "orientation": [
+                                    -8.876208994674188,
+                                    -11.350422279847487,
+                                    33.571441316940785
+                                ],
+                                "rotationOrder": 0,
+                                "parent": "L_armJD_JNT",
+                                "children": {
+                                    "L_pinkyFngJB_JNT": {
+                                        "pos": [
+                                            43.27752994173106,
+                                            81.08640878502658,
+                                            4.945204529311492
+                                        ],
+                                        "orientation": [
+                                            -7.616668745656015,
+                                            3.7765266721301542,
+                                            8.530466262900827
+                                        ],
+                                        "rotationOrder": 0,
+                                        "parent": "L_pinkyFngJA_JNT",
+                                        "children": {
+                                            "L_pinkyFngJC_JNT": {
+                                                "pos": [
+                                                    43.2312675778257,
+                                                    79.60803466996029,
+                                                    5.117872672207462
+                                                ],
+                                                "orientation": [
+                                                    6.715299919998865,
+                                                    -1.2960007399887468,
+                                                    10.08112891388703
+                                                ],
+                                                "rotationOrder": 0,
+                                                "parent": "L_pinkyFngJB_JNT",
+                                                "children": {
+                                                    "L_pinkyFngJEnd_JNT": {
+                                                        "pos": [
+                                                            42.6641534570483,
+                                                            77.7336824058687,
+                                                            5.38386376340291
+                                                        ],
+                                                        "orientation": [
+                                                            0.0,
+                                                            0.0,
+                                                            0.0
+                                                        ],
+                                                        "rotationOrder": 0,
+                                                        "parent": "L_pinkyFngJC_JNT",
+                                                        "children": {}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

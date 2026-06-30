@@ -1,5 +1,5 @@
 import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
-import autoRigger.config as config
+import autoRigger.utils.config as config
 import string
 
 

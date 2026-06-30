@@ -39,13 +39,13 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>300</y>
+         <y>290</y>
          <width>341</width>
-         <height>51</height>
+         <height>101</height>
         </rect>
        </property>
        <property name="title">
-        <string>extras </string>
+        <string>Extras </string>
        </property>
        <widget class="QCheckBox" name="LocatorSymmetry_Bipedal">
         <property name="geometry">
@@ -73,12 +73,25 @@
          <string>PV VISUALIZER</string>
         </property>
        </widget>
+       <widget class="QPushButton" name="MirrorReverseFeet_2">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>60</y>
+          <width>141</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Mirror selected</string>
+        </property>
+       </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_2">
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>100</y>
+         <y>90</y>
          <width>341</width>
          <height>92</height>
         </rect>
@@ -188,7 +201,7 @@
          <x>10</x>
          <y>10</y>
          <width>341</width>
-         <height>81</height>
+         <height>71</height>
         </rect>
        </property>
        <property name="title">
@@ -198,7 +211,7 @@
         <property name="geometry">
          <rect>
           <x>220</x>
-          <y>40</y>
+          <y>30</y>
           <width>111</width>
           <height>23</height>
          </rect>
@@ -217,7 +230,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>40</y>
+          <y>30</y>
           <width>191</width>
           <height>20</height>
          </rect>
@@ -234,7 +247,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>200</y>
+         <y>190</y>
          <width>341</width>
          <height>93</height>
         </rect>
@@ -253,19 +266,6 @@
         </property>
         <property name="text">
          <string>Enable Spine Editing</string>
-        </property>
-       </widget>
-       <widget class="QPushButton" name="pushButton_3">
-        <property name="geometry">
-         <rect>
-          <x>220</x>
-          <y>20</y>
-          <width>111</width>
-          <height>23</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Mirror Selected</string>
         </property>
        </widget>
        <widget class="QSlider" name="horizontalSlider_8">
@@ -343,11 +343,17 @@
       <widget class="QPushButton" name="GenerateJoints_Bipedal">
        <property name="geometry">
         <rect>
-         <x>0</x>
-         <y>10</y>
-         <width>348</width>
+         <x>10</x>
+         <y>20</y>
+         <width>341</width>
          <height>23</height>
         </rect>
+       </property>
+       <property name="toolTip">
+        <string>Generates joints based on the guides</string>
+       </property>
+       <property name="toolTipDuration">
+        <number>5000</number>
        </property>
        <property name="text">
         <string>Generate Joints</string>
@@ -356,29 +362,35 @@
       <widget class="QGroupBox" name="groupBox_12">
        <property name="geometry">
         <rect>
-         <x>0</x>
-         <y>170</y>
-         <width>351</width>
+         <x>10</x>
+         <y>230</y>
+         <width>341</width>
          <height>71</height>
         </rect>
        </property>
        <property name="title">
         <string>Export presets</string>
        </property>
-       <widget class="QPushButton" name="ExportJoints_JSON_Bttn_2">
+       <widget class="QPushButton" name="ExportJoints_JSON_Bttn">
         <property name="geometry">
          <rect>
           <x>210</x>
           <y>30</y>
-          <width>131</width>
+          <width>121</width>
           <height>23</height>
          </rect>
+        </property>
+        <property name="toolTip">
+         <string>Set the filename in the textBox, and export the selected chain</string>
+        </property>
+        <property name="toolTipDuration">
+         <number>5000</number>
         </property>
         <property name="text">
          <string>Export JSON</string>
         </property>
        </widget>
-       <widget class="QLineEdit" name="lineEdit_2">
+       <widget class="QLineEdit" name="exportJointsFilename_text">
         <property name="geometry">
          <rect>
           <x>10</x>
@@ -388,16 +400,16 @@
          </rect>
         </property>
         <property name="text">
-         <string>presetName</string>
+         <string>fileName</string>
         </property>
        </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_13">
        <property name="geometry">
         <rect>
-         <x>0</x>
-         <y>250</y>
-         <width>351</width>
+         <x>10</x>
+         <y>310</y>
+         <width>341</width>
          <height>61</height>
         </rect>
        </property>
@@ -409,9 +421,12 @@
          <rect>
           <x>210</x>
           <y>20</y>
-          <width>131</width>
+          <width>121</width>
           <height>23</height>
          </rect>
+        </property>
+        <property name="toolTipDuration">
+         <number>5000</number>
         </property>
         <property name="text">
          <string>Import Joints</string>
@@ -434,10 +449,10 @@
       <widget class="QGroupBox" name="groupBox_7">
        <property name="geometry">
         <rect>
-         <x>0</x>
-         <y>40</y>
-         <width>351</width>
-         <height>121</height>
+         <x>10</x>
+         <y>50</y>
+         <width>341</width>
+         <height>101</height>
         </rect>
        </property>
        <property name="title">
@@ -452,6 +467,12 @@
           <height>23</height>
          </rect>
         </property>
+        <property name="toolTip">
+         <string>Unparents and saves the hierarchy</string>
+        </property>
+        <property name="toolTipDuration">
+         <number>5000</number>
+        </property>
         <property name="text">
          <string>Unparent Joint Hierarchy</string>
         </property>
@@ -465,6 +486,12 @@
           <height>23</height>
          </rect>
         </property>
+        <property name="toolTip">
+         <string>Restores the hierarchy</string>
+        </property>
+        <property name="toolTipDuration">
+         <number>5000</number>
+        </property>
         <property name="text">
          <string>Reparent Joint Hierarchy</string>
         </property>
@@ -473,20 +500,26 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>90</y>
+          <y>60</y>
           <width>121</width>
           <height>23</height>
          </rect>
         </property>
+        <property name="toolTip">
+         <string/>
+        </property>
+        <property name="toolTipDuration">
+         <number>5000</number>
+        </property>
         <property name="text">
-         <string>Mirror Orientation</string>
+         <string>Mirror Joints</string>
         </property>
        </widget>
        <widget class="QRadioButton" name="jointMirror_leftToRight_radio">
         <property name="geometry">
          <rect>
           <x>160</x>
-          <y>90</y>
+          <y>60</y>
           <width>77</width>
           <height>18</height>
          </rect>
@@ -495,14 +528,14 @@
          <string>L -&gt; R</string>
         </property>
         <property name="checked">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
        </widget>
        <widget class="QRadioButton" name="jointMirror_rightToLeft_radio">
         <property name="geometry">
          <rect>
           <x>250</x>
-          <y>90</y>
+          <y>60</y>
           <width>77</width>
           <height>18</height>
          </rect>
@@ -511,55 +544,13 @@
          <string>R -&gt; L</string>
         </property>
        </widget>
-       <widget class="QRadioButton" name="jointMirror_leftToRight_radio_2">
-        <property name="geometry">
-         <rect>
-          <x>190</x>
-          <y>60</y>
-          <width>71</width>
-          <height>18</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>All</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-       <widget class="QRadioButton" name="jointMirror_rightToLeft_radio_2">
-        <property name="geometry">
-         <rect>
-          <x>240</x>
-          <y>60</y>
-          <width>77</width>
-          <height>18</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Selected</string>
-        </property>
-       </widget>
-       <widget class="QCheckBox" name="checkBox">
-        <property name="geometry">
-         <rect>
-          <x>20</x>
-          <y>60</y>
-          <width>161</width>
-          <height>18</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>show Local Rotation Axes</string>
-        </property>
-       </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_5">
        <property name="geometry">
         <rect>
-         <x>0</x>
-         <y>320</y>
-         <width>351</width>
+         <x>10</x>
+         <y>380</y>
+         <width>341</width>
          <height>91</height>
         </rect>
        </property>
@@ -587,7 +578,7 @@
          <rect>
           <x>210</x>
           <y>20</y>
-          <width>131</width>
+          <width>121</width>
           <height>23</height>
          </rect>
         </property>
@@ -612,6 +603,61 @@
         </property>
         <property name="text">
          <string>Mirror Rev Feet Locs</string>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_10">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>160</y>
+         <width>341</width>
+         <height>61</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Local Rotation Axes</string>
+       </property>
+       <widget class="QRadioButton" name="LRA_selected_radio">
+        <property name="geometry">
+         <rect>
+          <x>260</x>
+          <y>30</y>
+          <width>77</width>
+          <height>18</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Selected</string>
+        </property>
+       </widget>
+       <widget class="QRadioButton" name="LRA_all_radio">
+        <property name="geometry">
+         <rect>
+          <x>180</x>
+          <y>30</y>
+          <width>71</width>
+          <height>18</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>All</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="LRA_checkBox">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>161</width>
+          <height>18</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>show Local Rotation Axes</string>
         </property>
        </widget>
       </widget>
