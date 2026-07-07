@@ -6,14 +6,13 @@ import string
 import importlib
 importlib.reload(config)
 
-def rotationOrder(item):
-    cmds.setAttr(f"{item}.rotateOrder", config.rotationOrder.ZYX.value) 
-
-def build(side):
+def build(side, handOrder):
     size = config.bipedal
     suffix = config.suffix
     attrs = config.attrs
     fingers = ['indexFng', 'middleFng', 'pinkyFng', 'thumb']
+
+
     
     wristJoint = f"{side}armJD_JNT"
     wrist = cmds.spaceLocator(n = f"{side}hand{suffix['locator']}")
@@ -29,22 +28,22 @@ def build(side):
 
         for count, joint in enumerate(fingerjoints):
             fkLoc = cmds.spaceLocator(n = joint.replace(suffix['joint'], suffix['locator']))[0]
-            rotationOrder(fkLoc)
+            config.setRotationOrder([fkLoc], handOrder)
             fkLocs.append(fkLoc)
 
             OffsetGrp = cmds.group(n = joint.replace(suffix['joint'], suffix['offsetGrp']), em = True)
-            rotationOrder(OffsetGrp)
+            config.setRotationOrder([OffsetGrp], handOrder)
             fkGrps.append(OffsetGrp)
 
             if 'thumbJA' in joint:
                 fkCtrl = cmds.circle(n = joint.replace(suffix['joint'], suffix['control']), r = size['fingers'] + 1, nr = (1,0,0))[0]
-                rotationOrder(fkCtrl)
                 fkCtrls.append(fkCtrl)
             else: 
                 fkCtrl = cmds.circle(n = joint.replace(suffix['joint'], suffix['control']), r = size['fingers'], nr = (1,0,0))[0]
-                rotationOrder(fkCtrl)
                 fkCtrls.append(fkCtrl)
                 
+            config.setRotationOrder([fkCtrl], handOrder) 
+
             cmds.parent(fkCtrl, OffsetGrp)
             cmds.parent(OffsetGrp, fkLoc)
             cmds.delete(cmds.parentConstraint(joint, fkLoc, mo = False))

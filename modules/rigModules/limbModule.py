@@ -11,7 +11,7 @@ importlib.reload(handModule)
 importlib.reload(reverseFoot)
 
 class limbBuild:
-    def __init__(self, side, limbType):
+    def __init__(self, side, limbType, legOrder, armOrder, handOrder):
         '''
         Builds an IK/FK limb rig including:
             - IK/FK blending
@@ -38,8 +38,11 @@ class limbBuild:
 
         if limbType == "arm":
             self.pvDistance = self.size['pvArmDistance']
+            self.rotOrder = armOrder
+            self.handOrder = handOrder
         else:
-            self.pvDistance = self.size['pvLegDistance']        
+            self.pvDistance = self.size['pvLegDistance'] 
+            self.rotOrder = legOrder       
 
         self.fkIK = config.fkik
         self.attrs = config.attrs
@@ -56,10 +59,11 @@ class limbBuild:
             index = 'ABC'
 
         self.joints = [f"{self.limbType}J{i}" for i in index]
+        self.allJoints = []
+        for joints in self.joints: 
+            joint = f"{self.side}{joints}{config.suffix['joint']}"
+            self.allJoints.append(joint)
         
-    def rotationOrder(self, itemList, rotOrder):
-        for item in itemList:
-            cmds.setAttr(f"{item}.rotateOrder", rotOrder.value)
 
     def dupeJoints(self):
         '''
@@ -67,6 +71,7 @@ class limbBuild:
         IK and FK chains
 
         '''
+        config.setRotationOrder(self.allJoints, self.rotOrder)
         self.fkJoints = []
         self.ikJoints = []
 
@@ -77,7 +82,7 @@ class limbBuild:
                 dup = cmds.duplicate(f"{self.side}{joint}{self.suffix['joint']}", 
                                      po = True, 
                                      n = f"{self.side}{joint}{i}{self.suffix['joint']}")[0]
-
+                
                 if count == len(self.joints):
                     count = 0 
 
@@ -102,7 +107,7 @@ class limbBuild:
         self.fkCtrls = []
 
         for fkCount, joint in enumerate(self.fkJoints): 
-            fkLoc = cmds.spaceLocator(n = joint.replace(self.suffix['joint'], self.suffix['locator']))
+            fkLoc = cmds.spaceLocator(n = joint.replace(self.suffix['joint'], self.suffix['locator']))[0]
             self.fkLocs.append(fkLoc)
 
             if 'legJA' in joint:
@@ -128,6 +133,8 @@ class limbBuild:
             fkCtrl = cmds.circle(n = joint.replace(self.suffix['joint'], self.suffix['control']), 
                                  r = radius, 
                                  nr = normal)[0]
+
+            config.setRotationOrder([fkLoc, fkCtrl], self.rotOrder)
             self.fkCtrls.append(fkCtrl)
             
             cmds.parent(fkCtrl, fkLoc)
@@ -149,9 +156,9 @@ class limbBuild:
 
         self.ikHandle = cmds.ikHandle(n = self.ikJoints[0].replace(self.fkIK[1], self.suffix ['ikHandle']), 
                                  sj = self.ikJoints[0], 
-                                 ee = self.ikJoints[2])[0]
+                                 ee = self.ikJoints[-1])[0]
         
-        self.ikLoc = cmds.spaceLocator(n = self.ikJoints[0].replace(self.suffix['joint'], self.suffix['locator']))
+        self.ikLoc = cmds.spaceLocator(n = self.ikJoints[0].replace(self.suffix['joint'], self.suffix['locator']))[0]
 
         if self.limbType == "leg":
             size = self.size['IKlegs']
@@ -166,13 +173,15 @@ class limbBuild:
 
         shape = cmds.listRelatives(self.ikCtrl, type = 'nurbsCurve')
 
+        config.setRotationOrder([self.ikLoc, self.ikCtrl], self.rotOrder)
+
         cmds.parent(self.ikCtrl, self.ikLoc)
-        cmds.matchTransform(self.ikLoc, self.ikJoints[2], pos = True, rot = True)
+        cmds.matchTransform(self.ikLoc, self.ikJoints[-1], pos = True, rot = True)
 
         cmds.pointConstraint(self.ikCtrl, self.ikHandle, 
                              n = self.ikJoints[0].replace(self.suffix['joint'], self.suffix['pointCon']), 
                              mo = False)
-        cmds.orientConstraint(self.ikCtrl, self.ikJoints[2], 
+        cmds.orientConstraint(self.ikCtrl, self.ikJoints[-1], 
                               n = self.ikJoints[0].replace(self.suffix['joint'], self.suffix['orientCon']), 
                               mo = False)
 
@@ -401,7 +410,7 @@ class limbBuild:
         if self.limbType == 'leg':
             reverseFoot.build(self.side, self.ikHandle, self.ikCtrl, self.switch, self.joints)
         if self.limbType == 'arm':
-            handModule.build(self.side)
+            handModule.build(self.side, self.handOrder)
 
 
     def legSpaceSwitch(self):
@@ -599,17 +608,21 @@ class limbBuild:
         shapes.ctrlColour()
         print("Building:", self.side, self.limbType)
 
-def build_limb_set(sides: list, limbs: list):   
+def build_limb_set(legOrder, armOrder, handOrder, sides: list, limbs: list):   
     """
-    A wrapper function that allows you to list up limbs and sides to build.
+    Builds the requested limb types for the specified sides.
 
-        Parameters: 
-            sides : List, expects "L" and "R"
-            limb : List, expects "arm" and "leg"
+    Parameters:
+        sides (list[str]): Side identifiers to build, typically ["L", "R"].
+        limbs (list[str]): Limb types to build, typically ["arm", "leg"].
+        legOrder (int) : the rotation order of the legs. 
+        armOrder (int) : the rotation order of the arms. 
+        handOrder (int) : the rotation order of the fingers. 
     """
+
     for side in sides:
         for limb in limbs:
-            limbBuild(side, limb).buildLimb()
+            limbBuild(side, limb, legOrder, armOrder, handOrder).buildLimb()
     
     print("All Limbs built")
 

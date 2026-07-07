@@ -29,7 +29,7 @@
       </size>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -39,9 +39,9 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>290</y>
+         <y>270</y>
          <width>341</width>
-         <height>101</height>
+         <height>131</height>
         </rect>
        </property>
        <property name="title">
@@ -60,7 +60,7 @@
          <string>Enable Symmetry</string>
         </property>
        </widget>
-       <widget class="QCheckBox" name="checkBox_18">
+       <widget class="QCheckBox" name="pvViz_checkBox">
         <property name="geometry">
          <rect>
           <x>230</x>
@@ -73,7 +73,39 @@
          <string>PV VISUALIZER</string>
         </property>
        </widget>
-       <widget class="QPushButton" name="MirrorReverseFeet_2">
+       <widget class="QPushButton" name="MirrorSelLocators_Btn">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>90</y>
+          <width>141</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Mirror selected</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="ReparentLocHierarchy_Bipedal">
+        <property name="geometry">
+         <rect>
+          <x>170</x>
+          <y>60</y>
+          <width>141</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Restores the hierarchy</string>
+        </property>
+        <property name="toolTipDuration">
+         <number>5000</number>
+        </property>
+        <property name="text">
+         <string>Reparent Loc Hierarchy</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="UnparentLocHierarchy_Bipedal">
         <property name="geometry">
          <rect>
           <x>10</x>
@@ -82,8 +114,14 @@
           <height>23</height>
          </rect>
         </property>
+        <property name="toolTip">
+         <string>Unparents and saves the hierarchy</string>
+        </property>
+        <property name="toolTipDuration">
+         <number>5000</number>
+        </property>
         <property name="text">
-         <string>Mirror selected</string>
+         <string>Unparent Loc Hierarchy</string>
         </property>
        </widget>
       </widget>
@@ -243,36 +281,32 @@
         </property>
        </widget>
       </widget>
-      <widget class="QGroupBox" name="groupBox_6">
+      <widget class="QGroupBox" name="CustomizableSpine_grp">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <property name="geometry">
         <rect>
          <x>10</x>
          <y>190</y>
          <width>341</width>
-         <height>93</height>
+         <height>61</height>
         </rect>
        </property>
        <property name="title">
         <string>Customizable Spine</string>
        </property>
-       <widget class="QCheckBox" name="LocatorSymmetry_Bipedal_2">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>20</y>
-          <width>131</width>
-          <height>18</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Enable Spine Editing</string>
-        </property>
-       </widget>
-       <widget class="QSlider" name="horizontalSlider_8">
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="checked">
+        <bool>false</bool>
+       </property>
+       <widget class="QSlider" name="SpineAmount_Slider">
         <property name="geometry">
          <rect>
           <x>80</x>
-          <y>60</y>
+          <y>20</y>
           <width>231</width>
           <height>22</height>
          </rect>
@@ -281,7 +315,7 @@
          <number>1</number>
         </property>
         <property name="maximum">
-         <number>15</number>
+         <number>12</number>
         </property>
         <property name="singleStep">
          <number>2</number>
@@ -294,7 +328,7 @@
         <property name="geometry">
          <rect>
           <x>0</x>
-          <y>60</y>
+          <y>20</y>
           <width>91</width>
           <height>20</height>
          </rect>
@@ -312,11 +346,11 @@
          <number>16</number>
         </property>
        </widget>
-       <widget class="QLabel" name="TwistJoint_Number_5">
+       <widget class="QLabel" name="SpineAmnt_Number">
         <property name="geometry">
          <rect>
           <x>300</x>
-          <y>60</y>
+          <y>20</y>
           <width>101</width>
           <height>20</height>
          </rect>
@@ -340,30 +374,11 @@
       <attribute name="title">
        <string>Skeleton</string>
       </attribute>
-      <widget class="QPushButton" name="GenerateJoints_Bipedal">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>20</y>
-         <width>341</width>
-         <height>23</height>
-        </rect>
-       </property>
-       <property name="toolTip">
-        <string>Generates joints based on the guides</string>
-       </property>
-       <property name="toolTipDuration">
-        <number>5000</number>
-       </property>
-       <property name="text">
-        <string>Generate Joints</string>
-       </property>
-      </widget>
       <widget class="QGroupBox" name="groupBox_12">
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>230</y>
+         <y>290</y>
          <width>341</width>
          <height>71</height>
         </rect>
@@ -402,13 +417,16 @@
         <property name="text">
          <string>fileName</string>
         </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
        </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_13">
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>310</y>
+         <y>370</y>
          <width>341</width>
          <height>61</height>
         </rect>
@@ -416,7 +434,7 @@
        <property name="title">
         <string>Imports</string>
        </property>
-       <widget class="QPushButton" name="ExportJoints_JSON_Bttn_5">
+       <widget class="QPushButton" name="ImportJoints_Bttn">
         <property name="geometry">
          <rect>
           <x>210</x>
@@ -432,7 +450,7 @@
          <string>Import Joints</string>
         </property>
        </widget>
-       <widget class="QLineEdit" name="lineEdit_5">
+       <widget class="QLineEdit" name="importJointsFilename_text">
         <property name="geometry">
          <rect>
           <x>10</x>
@@ -450,7 +468,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>50</y>
+         <y>110</y>
          <width>341</width>
          <height>101</height>
         </rect>
@@ -494,6 +512,9 @@
         </property>
         <property name="text">
          <string>Reparent Joint Hierarchy</string>
+        </property>
+        <property name="checkable">
+         <bool>false</bool>
         </property>
        </widget>
        <widget class="QPushButton" name="mirrorJointOrientation_Btn">
@@ -549,7 +570,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>380</y>
+         <y>440</y>
          <width>341</width>
          <height>91</height>
         </rect>
@@ -610,7 +631,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>160</y>
+         <y>220</y>
          <width>341</width>
          <height>61</height>
         </rect>
@@ -661,6 +682,70 @@
         </property>
        </widget>
       </widget>
+      <widget class="QGroupBox" name="groupBox_14">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>10</y>
+         <width>341</width>
+         <height>91</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Define Joints</string>
+       </property>
+       <widget class="QPushButton" name="UseSelectedRoot_btn">
+        <property name="geometry">
+         <rect>
+          <x>210</x>
+          <y>60</y>
+          <width>121</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Set the filename in the textBox, and export the selected chain</string>
+        </property>
+        <property name="toolTipDuration">
+         <number>5000</number>
+        </property>
+        <property name="text">
+         <string>Use selected Root</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="selectedrootchain_text">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>60</y>
+          <width>191</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>rootJoint</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="GenerateJoints_Bipedal">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>20</y>
+          <width>321</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Generates joints based on the guides</string>
+        </property>
+        <property name="toolTipDuration">
+         <number>5000</number>
+        </property>
+        <property name="text">
+         <string>Generate Joints</string>
+        </property>
+       </widget>
+      </widget>
      </widget>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">
@@ -679,7 +764,7 @@
         <string>Build Rig!</string>
        </property>
       </widget>
-      <widget class="QGroupBox" name="groupBox_8">
+      <widget class="QGroupBox" name="StretchyLimbs_Grpbox">
        <property name="geometry">
         <rect>
          <x>0</x>
@@ -690,6 +775,9 @@
        </property>
        <property name="title">
         <string>Stretchy Limbs</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
        </property>
        <widget class="QCheckBox" name="StretchyLimbs_arms_checkBttn">
         <property name="geometry">
@@ -730,7 +818,10 @@
         </property>
        </widget>
       </widget>
-      <widget class="QGroupBox" name="groupBox">
+      <widget class="QGroupBox" name="ribbons_Grpbox">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <property name="geometry">
         <rect>
          <x>0</x>
@@ -741,6 +832,12 @@
        </property>
        <property name="title">
         <string>Ribbons</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="checked">
+        <bool>false</bool>
        </property>
        <widget class="QCheckBox" name="ArmsRibbon_CheckBttn">
         <property name="geometry">
@@ -835,22 +932,6 @@
        <property name="title">
         <string>Rotation Order</string>
        </property>
-       <widget class="QComboBox" name="comboBox_5">
-        <property name="geometry">
-         <rect>
-          <x>40</x>
-          <y>20</y>
-          <width>60</width>
-          <height>22</height>
-         </rect>
-        </property>
-        <property name="acceptDrops">
-         <bool>true</bool>
-        </property>
-        <property name="toolTip">
-         <string notr="true"/>
-        </property>
-       </widget>
        <widget class="QLabel" name="label_4">
         <property name="geometry">
          <rect>
@@ -862,16 +943,6 @@
         </property>
         <property name="text">
          <string>Arm</string>
-        </property>
-       </widget>
-       <widget class="QComboBox" name="comboBox_6">
-        <property name="geometry">
-         <rect>
-          <x>40</x>
-          <y>50</y>
-          <width>60</width>
-          <height>22</height>
-         </rect>
         </property>
        </widget>
        <widget class="QLabel" name="label_5">
@@ -887,7 +958,7 @@
          <string>Leg</string>
         </property>
        </widget>
-       <widget class="QComboBox" name="comboBox_7">
+       <widget class="QComboBox" name="spineRotationOrder_comboBox">
         <property name="geometry">
          <rect>
           <x>150</x>
@@ -896,6 +967,36 @@
           <height>22</height>
          </rect>
         </property>
+        <item>
+         <property name="text">
+          <string>XYZ</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>YZX</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ZXY</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>XZY</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>YXZ</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ZYX</string>
+         </property>
+        </item>
        </widget>
        <widget class="QLabel" name="label_8">
         <property name="geometry">
@@ -908,16 +1009,6 @@
         </property>
         <property name="text">
          <string>Spine</string>
-        </property>
-       </widget>
-       <widget class="QComboBox" name="comboBox_8">
-        <property name="geometry">
-         <rect>
-          <x>150</x>
-          <y>50</y>
-          <width>60</width>
-          <height>22</height>
-         </rect>
         </property>
        </widget>
        <widget class="QLabel" name="label_9">
@@ -933,16 +1024,6 @@
          <string>Fingers</string>
         </property>
        </widget>
-       <widget class="QComboBox" name="comboBox_9">
-        <property name="geometry">
-         <rect>
-          <x>270</x>
-          <y>20</y>
-          <width>60</width>
-          <height>22</height>
-         </rect>
-        </property>
-       </widget>
        <widget class="QLabel" name="label_10">
         <property name="geometry">
          <rect>
@@ -956,8 +1037,168 @@
          <string>Neck</string>
         </property>
        </widget>
+       <widget class="QComboBox" name="armRotationOrder_comboBox">
+        <property name="geometry">
+         <rect>
+          <x>40</x>
+          <y>20</y>
+          <width>60</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <item>
+         <property name="text">
+          <string>XYZ</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>YZX</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ZXY</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>XZY</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>YXZ</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ZYX</string>
+         </property>
+        </item>
+       </widget>
+       <widget class="QComboBox" name="legRotationOrder_comboBox">
+        <property name="geometry">
+         <rect>
+          <x>40</x>
+          <y>50</y>
+          <width>60</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <item>
+         <property name="text">
+          <string>XYZ</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>YZX</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ZXY</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>XZY</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>YXZ</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ZYX</string>
+         </property>
+        </item>
+       </widget>
+       <widget class="QComboBox" name="fingersRotationOrder_comboBox">
+        <property name="geometry">
+         <rect>
+          <x>150</x>
+          <y>50</y>
+          <width>60</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <item>
+         <property name="text">
+          <string>XYZ</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>YZX</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ZXY</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>XZY</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>YXZ</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ZYX</string>
+         </property>
+        </item>
+       </widget>
+       <widget class="QComboBox" name="neckRotationOrder_comboBox">
+        <property name="geometry">
+         <rect>
+          <x>270</x>
+          <y>20</y>
+          <width>60</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <item>
+         <property name="text">
+          <string>XYZ</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>YZX</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ZXY</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>XZY</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>YXZ</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ZYX</string>
+         </property>
+        </item>
+       </widget>
       </widget>
-      <widget class="QGroupBox" name="groupBox_3">
+      <widget class="QGroupBox" name="TwistJoints_Grpbox">
        <property name="geometry">
         <rect>
          <x>0</x>
@@ -969,7 +1210,10 @@
        <property name="title">
         <string>Twist Joints</string>
        </property>
-       <widget class="QCheckBox" name="checkBox_10">
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <widget class="QCheckBox" name="twistJoints_arm_checkbtn">
         <property name="geometry">
          <rect>
           <x>10</x>
@@ -982,7 +1226,7 @@
          <string>Arms</string>
         </property>
        </widget>
-       <widget class="QCheckBox" name="checkBox_11">
+       <widget class="QCheckBox" name="twistJoints_legs_checkbtn">
         <property name="geometry">
          <rect>
           <x>70</x>
@@ -998,7 +1242,7 @@
        <widget class="QSlider" name="horizontalSlider_6">
         <property name="geometry">
          <rect>
-          <x>4</x>
+          <x>10</x>
           <y>50</y>
           <width>241</width>
           <height>22</height>
@@ -1020,7 +1264,7 @@
        <widget class="QLabel" name="TwistJoint_Number">
         <property name="geometry">
          <rect>
-          <x>250</x>
+          <x>280</x>
           <y>50</y>
           <width>41</width>
           <height>20</height>
@@ -1039,6 +1283,19 @@
          <number>16</number>
         </property>
        </widget>
+      </widget>
+      <widget class="QPushButton" name="SPIDERTEMP">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>440</y>
+         <width>351</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>BUILD SPIDER TEMP BUTTON</string>
+       </property>
       </widget>
      </widget>
     </widget>

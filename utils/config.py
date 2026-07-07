@@ -24,7 +24,7 @@ suffix = {
 prefix = {
     "left"    : "L_",
     "right"   : "R_",
-    "central" : "C_"
+    "center" : "C_"
 }
 
 attrs = ["tx","ty","tz","rx","ry","rz","sx","sy","sz"]
@@ -32,7 +32,7 @@ attrs = ["tx","ty","tz","rx","ry","rz","sx","sy","sz"]
 fkik = ['_FK', '_IK']
 
 
-class rotationOrder(enum.Enum):
+class RotationOrder(enum.Enum):
     XYZ = 0
     YZX = 1
     ZXY = 2
@@ -42,9 +42,9 @@ class rotationOrder(enum.Enum):
 
 
 limbRotationOrder = {
-    "Arm"   : rotationOrder.XYZ,
-    "Leg"   : rotationOrder.XYZ,
-    "Spine" : rotationOrder.ZXY
+    "Arm"   : RotationOrder.XYZ,
+    "Leg"   : RotationOrder.XYZ,
+    "Spine" : RotationOrder.ZXY
 }
 
 bipedal = {
@@ -73,7 +73,8 @@ def find_file_path(*destination: str) -> str :
 
     Parameters:
         *destination: One or more path components inside the
-            autoRigger directory.
+            autoRigger directory. 
+            mayadir/scripts/autoRigger/*destination
 
     Returns:
         str : The file path.
@@ -86,3 +87,16 @@ def find_file_path(*destination: str) -> str :
                         )
 
     return file_path
+
+
+
+def setRotationOrder(itemList, rotOrderIndex):
+    """
+    Sets the rotation for the specified list.
+        Parameters: 
+            itemList (list): a list of objects you want to set order on
+            rotOrderIndex (int): 
+    
+    """
+    for item in itemList: 
+        cmds.setAttr(f"{item}.rotateOrder", rotOrderIndex) 

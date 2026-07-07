@@ -18,10 +18,8 @@ class jointGeneration():
             "hierarchy.json"
         )
 
-    # -------------------------------------------------------------------------
-    # JSON Export
-    # -------------------------------------------------------------------------
 
+    # JSON Export
     def get_joint_hierarchy(self, joint: str) -> dict:
         '''
         Recursively builds a dictionary for a joint and all its children.
@@ -35,11 +33,9 @@ class jointGeneration():
         joint_pos = cmds.xform(joint, q=True, ws=True, t=True)
         children = cmds.listRelatives(joint, children=True, type='joint')
         parents = cmds.listRelatives(joint, parent=True, type='joint')
-        rotationOrder = cmds.getAttr(f"{joint}.rotateOrder")
 
         joint_data = {
             "pos": joint_pos,
-            "rotationOrder": rotationOrder,
             "parent": parents[0] if parents else None,
             "children": {}
         }
@@ -69,15 +65,14 @@ class jointGeneration():
         
         selected = cmds.ls(sl=True)
         if len(selected) != 1:
-            cmds.error("Please select only the root joint of the chain you want to export")
+            cmds.error("Please select only the root of the chain you want to export")
             return
 
         self.skeleton_dict_result(rootJoint=selected[0])
         self.build_json(file_name)
 
-    # -------------------------------------------------------------------------
+
     # JSON Import → Locators
-    # -------------------------------------------------------------------------
 
     def build_locator(self, joint_name: str, joint_data: dict, parent=None):
         '''
@@ -111,9 +106,8 @@ class jointGeneration():
         for root_name, root_data in data.items():
             self.build_locator(root_name, root_data)
 
-    # -------------------------------------------------------------------------
+
     # Joint Generation from Locators
-    # -------------------------------------------------------------------------
 
     def generateJoints(self):
         '''
@@ -129,10 +123,9 @@ class jointGeneration():
 
         cmds.group(joints, n="Skeleton_GRP")
 
-    # -------------------------------------------------------------------------
-    # Hierarchy Utilities
-    # -------------------------------------------------------------------------
 
+    # Hierarchy Utilities
+  
     def separate_module_from_hierarchy(self, data: dict, root_joint: str) -> dict:
         '''
         Extracts a subtree from the full skeleton dictionary starting at root_joint.
@@ -157,6 +150,8 @@ class jointGeneration():
                     return result
 
         return {}
+
+    
 
 
 '''

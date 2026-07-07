@@ -2,7 +2,7 @@ import maya.cmds as cmds # pyright: ignore[reportMissingImports]
 import autoRigger.utils.shapes as shapes
 
 #Creating lists for later use
-def headBuild():
+def headBuild(neckOrder):
     
     suffix = ['_JNT','_LOC', '_CTRL', '_GRP', "_paCON", '_poCON', '_oCON', '_aimCON']
     prefix = ['L_', 'R_', 'C_']

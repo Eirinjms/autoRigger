@@ -1,0 +1,59 @@
+import maya.cmds as cmds  # pyright: ignore[reportMissingImports]
+import maya.api.OpenMaya as om  # pyright: ignore[reportMissingImports]
+
+
+class TwistJoints:
+
+    def __init__(self, twistInput, axisInput, startJoint, endJoint, twistJntAmount):
+        self.twistInput = twistInput
+        self.axis = axisInput
+        self.startJoint = startJoint
+        self.endJoint = endJoint
+        self.twistJntAmount = twistJntAmount
+
+    def twistSetup(self):
+        jointName = self.startJoint.replace('_JNT', '')
+
+        # vector lerp between start and end
+        A = om.MVector(cmds.xform(self.startJoint, q=True, ws=True, t=True))
+        B = om.MVector(cmds.xform(self.endJoint, q=True, ws=True, t=True))
+
+        step = (B - A) / (self.twistJntAmount + 1)
+
+        # create twist joints evenly spaced between start and end
+        twistJnts = []
+        cmds.select(clear=True)
+
+        for i in range(self.twistJntAmount):
+            pos = A + step * (i + 1)
+            jnt = cmds.joint(
+                n=f"{jointName}_{i:02d}_TWIST_JNT",
+                p= pos,
+                rad=0.5
+            )
+            twistJnts.append(jnt)
+
+            if 'leg' in jointName:
+                cmds.matchTransform(jnt, self.endJoint, rot=True, pos=False, scl=False)
+
+            if 'arm' in jointName:
+                cmds.matchTransform(jnt, self.startJoint, rot=True, pos=False, scl=False)
+
+        # parent into a chain under startJoint
+        cmds.select(clear=True)
+        for i in range(len(twistJnts) - 1, 0, -1):
+            cmds.parent(twistJnts[i], twistJnts[i - 1])
+        cmds.parent(twistJnts[0], self.startJoint)
+
+        cmds.makeIdentity(twistJnts[0], apply=True, t=False, r=True, s=False)
+
+        # distribute twist percentages evenly
+        percentStep = 1 / (len(twistJnts) + 1)
+        for i, twst in enumerate(twistJnts):
+            percent = percentStep * (i + 1)
+            md = cmds.createNode('multiplyDivide', n=f"{twst}_MD")
+            cmds.setAttr(f"{md}.input2{self.axis}", percent)
+            cmds.connectAttr(f"{self.endJoint}.rotate{self.axis}", f"{md}.input1{self.axis}")
+            cmds.connectAttr(f"{md}.output{self.axis}", f"{twst}.rotate{self.axis}")
+
+        return twistJnts
