@@ -1239,7 +1239,7 @@
          <string>Legs</string>
         </property>
        </widget>
-       <widget class="QSlider" name="horizontalSlider_6">
+       <widget class="QSlider" name="twistJoint_Slider">
         <property name="geometry">
          <rect>
           <x>10</x>
@@ -1249,10 +1249,10 @@
          </rect>
         </property>
         <property name="minimum">
-         <number>3</number>
+         <number>1</number>
         </property>
         <property name="maximum">
-         <number>16</number>
+         <number>8</number>
         </property>
         <property name="singleStep">
          <number>2</number>
@@ -1284,7 +1284,7 @@
         </property>
        </widget>
       </widget>
-      <widget class="QPushButton" name="SPIDERTEMP">
+      <widget class="QPushButton" name="TEMP">
        <property name="geometry">
         <rect>
          <x>0</x>
@@ -1294,7 +1294,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>BUILD SPIDER TEMP BUTTON</string>
+        <string>TEMP BUTTON</string>
        </property>
       </widget>
      </widget>

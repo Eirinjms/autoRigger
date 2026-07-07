@@ -10,12 +10,13 @@ import json
 #maya improts 
 import maya.cmds as cmds # pyright: ignore[reportMissingImports]
 import maya.OpenMayaUI as omui # pyright: ignore[reportMissingImports]
+#from maya.app.general.mayaMixin import MayaQWidgetDockableMixin as MQwidgetMixin # pyright: ignore[reportMissingImports]
 import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports]
 
 #my own modules
-from autoRigger.modules.builderModules import buildRig, locatorBasedFunctions as locFunc
+from autoRigger.modules.builderModules import buildRig, locatorBasedFunctions as locFunc, jointGeneration as jointGen
 import autoRigger.utils.config as config
-import autoRigger.modules.builderModules.jointGeneration as jointGen
+import autoRigger.modules.rigModules.twistSetup as twistSetup
 
 import importlib
 importlib.reload(jointGen)
@@ -69,9 +70,11 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.oldSpinelocators = []
         self.newSpinelocators = []
 
+        self.prefix = [config.prefix['left'], config.prefix['right']]
+
         self.setWindowIcon(QtGui.QIcon(config.find_file_path("logo.png")))
         self.setWindowTitle("AutoRigger V01")
-        self.setObjectName("AutoRigger V01")
+        self.setObjectName("AutoRiggerV01")
 
 
         self._loadUi(ui_file_path)
@@ -172,6 +175,13 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.stretchyLimbsCheckGrp = self.ui.findChild(QtWidgets.QGroupBox, "StretchyLimbs_Grpbox")
         self.ribbonCheckGrp = self.ui.findChild(QtWidgets.QGroupBox, "ribbons_Grpbox")
 
+        self.twistArmCheck = self.ui.findChild(QtWidgets.QCheckBox, "twistJoints_arm_checkbtn")
+        self.twistLegCheck = self.ui.findChild(QtWidgets.QCheckBox, "twistJoints_legs_checkbtn")
+        self.twistSlider = self.ui.findChild(QtWidgets.QSlider, "twistJoint_Slider")
+
+        self.temp = self.ui.findChild(QtWidgets.QPushButton, "TEMP")
+        self.twistLabel = self.ui.findChild(QtWidgets.QLabel, "TwistJoint_Number")
+
 
         #-----------------------------------connections -----------------------------------------------#
 
@@ -180,6 +190,14 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         if exportJoints:
             exportJoints.clicked.connect(self.exportJointsjson)
+
+        if self.temp:
+            self.temp.clicked.connect(self.twistCreation)
+
+        if self.twistSlider:
+            self.twistSlider.valueChanged.connect(self.updateSizeLabelTwist)
+
+        #-----------------------------------Rig Connections-----------------------------------------------#  
         
         if self.twistCheckGrp:
             self.twistCheckGrp.toggled.connect(self.toggleRigOptions)
@@ -189,6 +207,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         if self.ribbonCheckGrp:
             self.ribbonCheckGrp.toggled.connect(self.toggleRigOptions)
+
+
         #-----------------------------------Locator connections -----------------------------------------------#
         if createLocBtn:
             createLocBtn.clicked.connect(self.buildLocators)
@@ -276,6 +296,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
     def buildRigButton(self):
         """ Builds the rig :D """
+
+        self.twistCreation()
+
         cmds.undoInfo(openChunk=True)
         try:
             if not self.revFeetLocList:
@@ -308,6 +331,35 @@ class AutoRiggerUI(QtWidgets.QDialog):
             print("..Rig built!")
         finally:
             cmds.undoInfo(closeChunk=True)
+
+
+    def twistCreation(self):
+        cmds.undoInfo(openChunk = True)
+        try: 
+            self.twistInput = self.twistSlider.value()
+            startJoints = []
+            endJoints = []
+            axisInput = "X"
+            if self.twistArmCheck.isChecked():
+                for side in self.prefix:
+                    startJoints.extend([f"{side}armJB_JNT", f"{side}armJC_JNT"])
+                    endJoints.extend([f"{side}armJC_JNT", f"{side}armJD_JNT"])
+
+            if self.twistArmCheck.isChecked():
+                for side in self.prefix:
+                    startJoints.extend([f"{side}legJA_JNT", f"{side}legJB_JNT"])
+                    endJoints.extend([f"{side}legJB_JNT", f"{side}legJC_JNT"])
+
+            for sj, ej in zip(startJoints, endJoints):
+                twist = twistSetup.TwistJoints(axisInput, sj, ej, self.twistInput)
+                self.jointsList.extend(twist.twistCreation())
+        finally: 
+            cmds.undoInfo(closeChunk = True)
+
+    
+    def updateSizeLabelTwist(self, value):
+        if self.twistLabel:
+            self.twistLabel.setText(str(value))
 
     # ─────────────────────────────────────────────────────────────────────────
     # LOCATORS
@@ -723,7 +775,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
         for joint in joints:
             pos = cmds.xform(joint, q = True, t = True, ws = True)
             loc = cmds.spaceLocator(n = f"{joint}_temp")[0]
-            print(loc)
             cmds.xform(loc, ws=True, t=(pos[0], pos[1] + 10, pos[2]))
             cmds.delete(cmds.aimConstraint(loc, joint, 
                                            offset = (90,0,0), 
@@ -735,7 +786,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
         for joint in feetJoints:
             pos = cmds.xform(joint, q = True, t = True, ws = True)
             loc = cmds.spaceLocator(n = f"{joint}_temp")[0]
-            print(loc)
             cmds.xform(loc, ws=True, t=(pos[0] + 10, pos[1], pos[2]))
             cmds.delete(cmds.aimConstraint(loc, joint, 
                                            offset = (90,0,0), 

@@ -4,27 +4,26 @@ import maya.api.OpenMaya as om  # pyright: ignore[reportMissingImports]
 
 class TwistJoints:
 
-    def __init__(self, twistInput, axisInput, startJoint, endJoint, twistJntAmount):
-        self.twistInput = twistInput
+    def __init__(self, axisInput, startJoint, endJoint, twistInput):
         self.axis = axisInput
         self.startJoint = startJoint
         self.endJoint = endJoint
-        self.twistJntAmount = twistJntAmount
+        self.twistInput = twistInput
 
-    def twistSetup(self):
+    def twistCreation(self):
         jointName = self.startJoint.replace('_JNT', '')
 
         # vector lerp between start and end
         A = om.MVector(cmds.xform(self.startJoint, q=True, ws=True, t=True))
         B = om.MVector(cmds.xform(self.endJoint, q=True, ws=True, t=True))
 
-        step = (B - A) / (self.twistJntAmount + 1)
+        step = (B - A) / (self.twistInput + 1)
 
         # create twist joints evenly spaced between start and end
         twistJnts = []
         cmds.select(clear=True)
 
-        for i in range(self.twistJntAmount):
+        for i in range(self.twistInput):
             pos = A + step * (i + 1)
             jnt = cmds.joint(
                 n=f"{jointName}_{i:02d}_TWIST_JNT",
