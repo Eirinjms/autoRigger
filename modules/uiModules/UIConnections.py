@@ -22,6 +22,7 @@ import importlib
 importlib.reload(jointGen)
 importlib.reload(locFunc)
 importlib.reload(buildRig)
+importlib.reload(twistSetup)
 
 
 def getMayaWindow():
@@ -69,6 +70,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.ui = None
         self.oldSpinelocators = []
         self.newSpinelocators = []
+
+        self.hierarchy = {}
 
         self.prefix = [config.prefix['left'], config.prefix['right']]
 
@@ -284,7 +287,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
         if self.localRotationAxesToggle:
             self.localRotationAxesToggle.toggled.connect(self.showLocalRotationAxes)
 
-
     def closeEvent(self, event):
         if getattr(self, "selectionJob", None):
             cmds.scriptJob(kill=self.selectionJob, force=True)
@@ -345,16 +347,18 @@ class AutoRiggerUI(QtWidgets.QDialog):
                     startJoints.extend([f"{side}armJB_JNT", f"{side}armJC_JNT"])
                     endJoints.extend([f"{side}armJC_JNT", f"{side}armJD_JNT"])
 
-            if self.twistArmCheck.isChecked():
+            if self.twistLegCheck.isChecked():
                 for side in self.prefix:
                     startJoints.extend([f"{side}legJA_JNT", f"{side}legJB_JNT"])
                     endJoints.extend([f"{side}legJB_JNT", f"{side}legJC_JNT"])
 
             for sj, ej in zip(startJoints, endJoints):
-                twist = twistSetup.TwistJoints(axisInput, sj, ej, self.twistInput)
-                self.jointsList.extend(twist.twistCreation())
+                twist = twistSetup.TwistJointsGeneration(axisInput, sj, ej, self.twistInput, self.armOrder, self.legOrder)
+                print(self.legOrder)
+                self.jointsList.extend(twist.creation())
         finally: 
             cmds.undoInfo(closeChunk = True)
+            print(self.jointsList)
 
     
     def updateSizeLabelTwist(self, value):
@@ -385,13 +389,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
         
         """
         folder = config.find_file_path("presets")
-        print(folder)
+
         filePath, _ = QFileDialog.getOpenFileName(
             self,
             "Import Locator Preset",
             folder,
-            "JSON Files (*.json)",
-        )
+            "JSON Files (*.json)",)
 
         if textBox:
             textBox.setText(filePath)
@@ -460,14 +463,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.build_locator(root_name, root_data, self.revFeetLocatorList, storeLocators)
 
         cmds.select(self.locatorList, r = True)
-        cmds.makeIdentity(apply = True, t = True)
-
-    def getGuidePos(self, locator):
-        shape = cmds.listRelatives(locator, shapes=True, type="locator")[0]
-        transformPos = cmds.xform(locator, q=True, ws=True, t=True)
-        localPos = cmds.getAttr(f"{shape}.localPosition")[0]
-
-        return localPos        
+        cmds.makeIdentity(apply = True, t = True)      
 
     def locatorSize(self, value):
         if self.allLocatorsRadio and self.allLocatorsRadio.isChecked():
@@ -720,9 +716,15 @@ class AutoRiggerUI(QtWidgets.QDialog):
             cmds.undoInfo(closeChunk=True)
 
     def exportJointsjson(self):
-        file_name = self.exportJointsFilename.text()
+        folder = config.find_file_path("presets")
+        filePath, _ = QFileDialog.getSaveFileName(
+        self,
+        "Export Joint JSON",
+        folder,
+        "JSON Files (*.json)")
+
         exp = jointGen.jointGeneration()
-        exp.jointExportJSON(file_name)
+        exp.jointExportJSON(filePath)
 
     def defineJointListSel(self):
         if not self.jointsList:
@@ -761,18 +763,20 @@ class AutoRiggerUI(QtWidgets.QDialog):
                    zso = True)
         
         #spinejoints
-        joints = cmds.ls("C_spine*",
-                              "C_head*",
-                              "C_neck*",
+        centerJoints = cmds.ls("C_*",
                                type='joint')
+        
         
         feetJoints = cmds.ls("*legJC*", "*legJD*", type = 'joint')
 
-        print(joints)
+        print(centerJoints)
 
         self.unparentHierarchy(self.jointsList)
 
-        for joint in joints:
+        for joint in centerJoints:
+            if "jaw" in joint:
+                continue
+            
             pos = cmds.xform(joint, q = True, t = True, ws = True)
             loc = cmds.spaceLocator(n = f"{joint}_temp")[0]
             cmds.xform(loc, ws=True, t=(pos[0], pos[1] + 10, pos[2]))
@@ -786,11 +790,11 @@ class AutoRiggerUI(QtWidgets.QDialog):
         for joint in feetJoints:
             pos = cmds.xform(joint, q = True, t = True, ws = True)
             loc = cmds.spaceLocator(n = f"{joint}_temp")[0]
-            cmds.xform(loc, ws=True, t=(pos[0] + 10, pos[1], pos[2]))
+            cmds.xform(loc, ws=True, t=(pos[0], pos[1] + 10, pos[2]))
             cmds.delete(cmds.aimConstraint(loc, joint, 
                                            offset = (90,0,0), 
-                                           aimVector = (0,1,0), 
-                                           upVector = (0,0,1), 
+                                           aimVector = (1,0,0), 
+                                           upVector = (0,0,-1), 
                                            worldUpType = 'scene'))
             cmds.delete(loc)   
 
@@ -922,6 +926,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
         Saves the hierarchy locally, for temporary parenting
 
         """
+
         self.hierarchy = {}
 
         for node in nodeList: 
@@ -937,7 +942,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         """
         cmds.undoInfo(openChunk = True)
-        try:
+        try:    
+            if len(self.hierarchy) != 0: 
+                return print("Hierarchy already saved, please reparent first!")            
+
             self.saveHierarchy(nodeList)
             for node in nodeList:
                 if cmds.listRelatives(node, parent = True) is not None:  
@@ -958,8 +966,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
             for child, parent in self.hierarchy.items():
                 if parent:
                     cmds.parent(child,parent)
+
+            self.hierarchy = {}  #resets the dict to empty
+            
         finally: 
             cmds.undoInfo(closeChunk = True)
+
 
     # ─────────────────────────────────────────────────────────────────────────
     # Rig options
@@ -967,7 +979,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
     def toggleRigOptions(self, checked):
 
-        sender = self.sender()
+        sender = self.sender() #returns the widget that sent the signal to run the function
 
         if sender == self.ribbonCheckGrp and checked:
             self.twistCheckGrp.setChecked(False)
