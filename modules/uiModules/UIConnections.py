@@ -15,6 +15,7 @@ import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports]
 
 #my own modules
 from autoRigger.modules.builderModules import buildRig, locatorBasedFunctions as locFunc, jointGeneration as jointGen
+from autoRigger.modules.rigModules.symmetryModule import symmetry
 import autoRigger.utils.config as config
 import autoRigger.modules.rigModules.twistSetup as twistSetup
 
@@ -71,6 +72,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.oldSpinelocators = []
         self.newSpinelocators = []
 
+        self.revFeetSymmetry = symmetry(self.revFeetLocList)
+        self.guideSymmetry = symmetry(self.locatorList)
+
         self.hierarchy = {}
 
         self.prefix = [config.prefix['left'], config.prefix['right']]
@@ -125,9 +129,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         mirrorLocatorBtn = self.ui.findChild(QtWidgets.QPushButton, "ReparentLocHierarchy_Bipedal")
 
-        self.revFeetSymmetry = self.ui.findChild(QtWidgets.QCheckBox, "LocatorSymmetry_ReverseFeet")
-        self.MirrorRevFeet = self.ui.findChild(QtWidgets.QPushButton, "MirrorReverseFeet")
-
         self.pvVisualizer = self.ui.findChild(QtWidgets.QCheckBox, "pvViz_checkBox")
 
         self.spineSlider = self.ui.findChild(QtWidgets.QSlider,"SpineAmount_Slider")
@@ -156,6 +157,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         defineNewJointList = self.ui.findChild(QtWidgets.QPushButton, "UseSelectedRoot_btn")
         self.newJointListText = self.ui.findChild(QtWidgets.QLineEdit, "selectedrootchain_text")
+
+        revFeetSymmetryToggle = self.ui.findChild(QtWidgets.QCheckBox, "LocatorSymmetry_revFeet_Bipedal")
 
 
         #-----------------------------------joint text areas -----------------------------------------------#
@@ -231,7 +234,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
             
         if self.locatorSymmetry:
-            self.locatorSymmetry.toggled.connect(self.symmetryToggle)
+            self.locatorSymmetry.toggled.connect(lambda checked: self.symmetryToggle(checked, 
+                                                                                      self.guideSymmetry, 
+                                                                                      self.locatorSymmetry))
 
         
         # keep slider/label in sync with whatever locator is selected in the scene
@@ -268,7 +273,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.MirrorRevFeet.clicked.connect(lambda : self.mirrorLocators("L_backOfHeel_LOC"))
 
         if importRevFeetLocsBtn:
-            importRevFeetLocsBtn.clicked.connect(lambda: self.importPreset(self.revFeetTextBox, storeLocators = False, locatorList = self.revFeetLocList))            
+            importRevFeetLocsBtn.clicked.connect(self.build_reverseFeetLocators) 
+
+        if revFeetSymmetryToggle:
+            revFeetSymmetryToggle.toggled.connect(lambda checked: self.symmetryToggle(checked, 
+                                                                                      self.revFeetLocList, 
+                                                                                      revFeetSymmetryToggle))          
 
 
         #-----------------------------------joint connections -----------------------------------------------
@@ -381,11 +391,17 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
     def importPreset(self, textBox, storeLocators : bool, locatorList):
         """
-        the function doing thangs
+        Imports a JSON preset and recreates the locator hierarchy.
 
-            Parameters: 
-                textBox : which UI box you wanna fill
-                storeLocators(bool) : if you want to append to the loc list
+        Parameters:
+            textBox:
+                UI text box containing the preset file path.
+
+            storeLocators (bool):
+                If True, append the imported locators to ``locatorList``.
+
+            locatorList (list):
+                List used to store the imported locator objects.
         
         """
         folder = config.find_file_path("presets")
@@ -456,14 +472,17 @@ class AutoRiggerUI(QtWidgets.QDialog):
         for child_name, child_data in joint_data["children"].items():
             self.build_locator(child_name, child_data, locatorList, storeLocators, loc)
 
-    def build_reverseFeetLocators(self, presetData, storeLocators):
+    def build_reverseFeetLocators(self):
         """Recreates the locator hierarchy from the loaded JSON dict."""
 
-        for root_name, root_data in presetData.items():
-            self.build_locator(root_name, root_data, self.revFeetLocatorList, storeLocators)
+        self.importPreset(self.revFeetTextBox, storeLocators = False, locatorList = self.revFeetLocList)
 
-        cmds.select(self.locatorList, r = True)
-        cmds.makeIdentity(apply = True, t = True)      
+        mirroredRevFeet = self.mirrorLocators("L_backOfHeel_LOC")
+
+        self.revFeetLocList.extend(mirroredRevFeet)
+
+        self.locator_symmetry(self.revFeetLocList)
+     
 
     def locatorSize(self, value):
         if self.allLocatorsRadio and self.allLocatorsRadio.isChecked():
@@ -555,84 +574,22 @@ class AutoRiggerUI(QtWidgets.QDialog):
         cmds.delete(originGrp, duplicatedGrp)
 
         return mirroredLocs
-    
-    def locator_symmetry(self): 
-        cmds.undoInfo(openChunk = True)
-        try:
-            self.leftAttrs = []
-            self.rightAttrs = []
-            self.reverseNodes = []
-            for left in self.locatorList:
-                cmds.delete(left, ch = True)
-                if left.startswith("L_"):
-                    right = left.replace("L_", "R_")
-
-                    if cmds.objExists(right):
-                        for transform in ["translate", "rotate"]:
-                            mulDiv = cmds.createNode('multiplyDivide', name = f"{right.replace('R_', '')}{transform}_MD")
-                            self.reverseNodes.append(mulDiv)
-
-                            allAxes = ["Z", "Y", "X"]
-
-                            if transform == "rotate": 
-                                negatedAxes = ["Z", "Y"]
-                                copiedAxes = [axis for axis in allAxes if axis not in negatedAxes]
-
-                            else: 
-                                negatedAxes = ["X"]
-                                copiedAxes = [axis for axis in allAxes if axis not in negatedAxes]
-
-                            for axis in negatedAxes:
-                                cmds.connectAttr(f"{left}.{transform}{axis}", f"{mulDiv}.input1{axis}")
-                                cmds.setAttr(f"{mulDiv}.input2{axis}", -1) 
-                                cmds.connectAttr(f"{mulDiv}.output{axis}", f"{right}.{transform}{axis}")
-
-                            for axis in copiedAxes:
-                                leftAttr = f"{left}.{transform}{axis}"
-                                rightAttr = f"{right}.{transform}{axis}"
-                                cmds.connectAttr(leftAttr, rightAttr)
-                                self.leftAttrs.append(leftAttr)
-                                self.rightAttrs.append(rightAttr)
-                            
-                    print(f"successfully connected {left} with {right}")
-        except Exception as e:
-            print(e)            
-        finally:
-            cmds.undoInfo(closeChunk = True)
-
-    def disconnectSymmetry(self):
-        """
-        Disconnects the symmetry by removing nodes and disconnecting sides
-        """
-
-        cmds.undoInfo(openChunk = True)
-        try:
-            if self.leftAttrs and cmds.isConnected(self.leftAttrs[0], self.rightAttrs[0]):
-                for leftNode, RightNode in zip(self.leftAttrs, self.rightAttrs):
-                    cmds.disconnectAttr(leftNode, RightNode)
-                cmds.delete(self.reverseNodes)
-                print("Successfully disconnected symmetry from all nodes")
-            else:
-                print("no connections found")
-        finally:
-            cmds.undoInfo(closeChunk = True)
-            
-
-    def symmetryToggle(self, checked):
+                
+    def symmetryToggle(self, checked, symmetry, checkBox):
         if checked:
             if not self.locatorList:
-                self.locatorSymmetry.blockSignals(True)
+                checkBox.blockSignals(True)
                 try:
-                    self.locatorSymmetry.setChecked(False)
+                    checkBox.setChecked(False)
                 finally: 
-                    self.locatorSymmetry.blockSignals(False)
-                   
+                    checkBox.blockSignals(False)
+                
                 return cmds.warning("No locators found, please generate these first")
             
             else:
-                self.locator_symmetry()
+                symmetry.locator_symmetry()
         else:
-            self.disconnectSymmetry()
+            symmetry.disconnectSymmetry()
 
     # ─────────────────────────────────────────────────────────────────────────
     # JOINTS
