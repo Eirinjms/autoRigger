@@ -69,7 +69,7 @@
                                         "rotationOrder": 0,
                                         "parent": "C_spineJC_JNT",
                                         "children": {
-                                            "C_spineJE_JNT": {
+                                            "C_spineJEnd_JNT": {
                                                 "pos": [
                                                     5.685512014815976e-10,
                                                     125.71850086434787,
@@ -95,7 +95,7 @@
                                                             -60.99971104065921
                                                         ],
                                                         "rotationOrder": 0,
-                                                        "parent": "C_spineJE_JNT",
+                                                        "parent": "C_spineJEnd_JNT",
                                                         "children": {
                                                             "L_armJB_JNT": {
                                                                 "pos": [
@@ -474,7 +474,7 @@
                                                             -0.10543957958693374
                                                         ],
                                                         "rotationOrder": 0,
-                                                        "parent": "C_spineJE_JNT",
+                                                        "parent": "C_spineJEnd_JNT",
                                                         "children": {
                                                             "C_headJA_JNT": {
                                                                 "pos": [
@@ -519,7 +519,7 @@
                                                                         "rotationOrder": 0,
                                                                         "parent": "C_headJA_JNT",
                                                                         "children": {
-                                                                            "L_eyeJEND_JNT": {
+                                                                            "L_eyeJEnd_JNT": {
                                                                                 "pos": [
                                                                                     3.7229194045066727,
                                                                                     148.32826232910156,
@@ -614,7 +614,7 @@
                                                             119.00028895934061
                                                         ],
                                                         "rotationOrder": 0,
-                                                        "parent": "C_spineJE_JNT",
+                                                        "parent": "C_spineJEnd_JNT",
                                                         "children": {
                                                             "R_armJB_JNT": {
                                                                 "pos": [

@@ -100,3 +100,22 @@ def setRotationOrder(itemList, rotOrderIndex):
     """
     for item in itemList: 
         cmds.setAttr(f"{item}.rotateOrder", rotOrderIndex) 
+
+
+def getGuidePos(locator):
+    """
+    Finds the local and world position of the specified node.
+
+        Parameters: 
+            locator (str): name of specified locator
+        
+        Returns: 
+            localPos (tuple[float, float, float]): Local-space translation.
+            worldPos (tuple[float, float, float]): World-space translation.
+    
+    """
+    shape = cmds.listRelatives(locator, shapes=True, type="locator")[0]
+    transformPos = cmds.xform(locator, q=True, ws=True, t=True)
+    localPos = cmds.getAttr(f"{shape}.localPosition")[0]
+
+    return localPos, transformPos     

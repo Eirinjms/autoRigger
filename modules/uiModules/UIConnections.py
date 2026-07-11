@@ -652,7 +652,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             
         cmds.select(clear=True)
 
-        pos = self.getGuidePos(locator)
+        pos, _ = config.getGuidePos(locator)
         jointName = locator.replace('GUIDE', 'JNT')
 
         joint = cmds.joint(n=jointName)   
@@ -690,12 +690,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
             if len(self.locatorList)== 0:
                 return cmds.warning("No guide Locators found, please generate these before generating joints!")
             
-            cmds.hide(self.locatorList)
             for loc in self.locatorList:
                 cmds.makeIdentity(loc, 
                                 apply = True, 
                                 t = True, 
                                 r = True)
+                
             
             roots = []
             for loc in self.locatorList:
@@ -710,7 +710,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
             
             self.jointOrientation()
 
-            cmds.group(roots, n = "_Skeleton_GRP")
+            cmds.select(clear = True)   
+            locGrp = cmds.group(roots, n = "Guide_Locator_GRP")
+            cmds.hide(locGrp)
             
         finally:
             cmds.undoInfo(closeChunk=True)
@@ -850,9 +852,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
             clavJoint = f"{prefix}armJA_JNT"
             hipJoint = f"{prefix}legJA_JNT"
-            eyeJoint = f"{prefix}eyeJA_JNT"
 
-            for joint in [clavJoint, hipJoint, eyeJoint]:
+            for joint in [clavJoint, hipJoint]:
                 cmds.mirrorJoint(joint, 
                                 mirrorBehavior = True,
                                 mirrorYZ = True,
@@ -869,9 +870,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
         cmds.undoInfo(openChunk = True)
         try:
             if len(self.jointsList) == 0:
-
-                self.localRotationAxesToggle.blockSignals(True)
                 try:
+                    self.localRotationAxesToggle.blockSignals(True)
                     self.localRotationAxesToggle.setChecked(False)
                 finally: 
                     self.localRotationAxesToggle.blockSignals(False)
@@ -944,7 +944,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
         cmds.undoInfo(openChunk = True)
         try:    
             if len(self.hierarchy) != 0: 
-                return print("Hierarchy already saved, please reparent first!")            
+                return cmds.warning("Hierarchy already saved, please reparent first!")            
 
             self.saveHierarchy(nodeList)
             for node in nodeList:
@@ -978,6 +978,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
     # ─────────────────────────────────────────────────────────────────────────
 
     def toggleRigOptions(self, checked):
+        """
+            Enables or disables UI elements based on the state of the button.
+
+            Parameters:
+                checked (bool): Whether the button is checked.
+        """
 
         sender = self.sender() #returns the widget that sent the signal to run the function
 
@@ -998,13 +1004,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.spineRoot = cmds.listRelatives("root_JA_GUIDE", children = True, type='transform')[0]
         print(self.spineRoot)
 
-        self.spineEnd = "C_spineJE_GUIDE"
-        #self.spineEnd = next((loc for loc in cmds.listRelatives(self.spineroot, ad = True, type='transform')[0] if "spineJE" in loc), None )
+        self.spineEnd = next(loc for loc in cmds.listRelatives(self.spineRoot, ad = True, type='transform') if "JEnd" in loc)
         print(self.spineEnd)
-
-        AttachmentPointsEnd = cmds.listRelatives(self.spineEnd, children = True)
-
-        attachmentPointsRoot = cmds.listRelatives(self.spineRoot, children = True)
 
         if self.spineEnd is None:
             return print("No spine End locator found")
@@ -1021,8 +1022,11 @@ class AutoRiggerUI(QtWidgets.QDialog):
     
     def spineLocMath(self):
         
-        SRVECTOR = om.MVector(self.getGuidePos(self.spineRoot))
-        SEVECTOR = om.MVector(self.getGuidePos(self.spineEnd))
+        rootLocalPos, _ = config.getGuidePos(self.spineRoot)
+        endLocalPos, _ = config.getGuidePos(self.spineEnd)
+
+        SRVECTOR = om.MVector(rootLocalPos)
+        SEVECTOR = om.MVector(endLocalPos)
 
         distanceVector = SEVECTOR - SRVECTOR
 
@@ -1045,16 +1049,27 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
     def spineFunc(self):
         if self.oldSpinelocators:
-            cmds.delete(self.oldSpinelocators)
+            self.deletingSpine(self.oldSpinelocators)
         elif self.newSpinelocators:
-            cmds.delete(self.newSpinelocators)
+            self.deletingSpine(self.newSpinelocators)
 
         spineJointNumber = self.spineSlider.value()
 
         self.spineLocators(spineJointNumber)
         self.spineLocMath()
+
+    def deletingSpine(self, joints: list):
+        childrenEnd = cmds.listRelatives(self.spineEnd, children = True)
+        childrenRoot = cmds.listRelatives(self.spineRoot, children = True)
+
+        cmds.parent(self.spineEnd, w = True)
+
+        cmds.delete(joints)
+
+        cmds.parent(self.spineEnd, self.newSpinelocators[-1])
+
         
-    
+        
 """Generate Spine
     ↓
 Unparent:
