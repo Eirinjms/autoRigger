@@ -29,7 +29,7 @@
       </size>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -39,7 +39,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>370</y>
+         <y>410</y>
          <width>341</width>
          <height>131</height>
         </rect>
@@ -129,7 +129,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>270</y>
+         <y>310</y>
          <width>341</width>
          <height>92</height>
         </rect>
@@ -290,7 +290,7 @@
          <x>10</x>
          <y>200</y>
          <width>341</width>
-         <height>61</height>
+         <height>101</height>
         </rect>
        </property>
        <property name="title">
@@ -323,6 +323,12 @@
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
+        <property name="invertedAppearance">
+         <bool>false</bool>
+        </property>
+        <property name="invertedControls">
+         <bool>false</bool>
+        </property>
        </widget>
        <widget class="QLabel" name="TwistJoint_Number_4">
         <property name="geometry">
@@ -351,6 +357,75 @@
          <rect>
           <x>300</x>
           <y>20</y>
+          <width>101</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
+        <property name="text">
+         <string>1</string>
+        </property>
+        <property name="textFormat">
+         <enum>Qt::AutoText</enum>
+        </property>
+        <property name="indent">
+         <number>16</number>
+        </property>
+       </widget>
+       <widget class="QSlider" name="SpineCurve_Slider">
+        <property name="geometry">
+         <rect>
+          <x>80</x>
+          <y>50</y>
+          <width>221</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="minimum">
+         <number>-5</number>
+        </property>
+        <property name="maximum">
+         <number>5</number>
+        </property>
+        <property name="singleStep">
+         <number>0</number>
+        </property>
+        <property name="sliderPosition">
+         <number>0</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+       <widget class="QLabel" name="TwistJoint_Number_6">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>50</y>
+          <width>91</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
+        <property name="text">
+         <string>Curvature</string>
+        </property>
+        <property name="textFormat">
+         <enum>Qt::AutoText</enum>
+        </property>
+        <property name="indent">
+         <number>16</number>
+        </property>
+       </widget>
+       <widget class="QLabel" name="SpineCurve_text">
+        <property name="geometry">
+         <rect>
+          <x>300</x>
+          <y>50</y>
           <width>101</width>
           <height>20</height>
          </rect>
@@ -742,6 +817,44 @@
         </property>
         <property name="text">
          <string>Toggle Symmetry</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="UnparentRevFeet_bn">
+        <property name="geometry">
+         <rect>
+          <x>140</x>
+          <y>60</y>
+          <width>81</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Unparents and saves the hierarchy</string>
+        </property>
+        <property name="toolTipDuration">
+         <number>5000</number>
+        </property>
+        <property name="text">
+         <string>Unparent</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="ParentRevFeet_bn">
+        <property name="geometry">
+         <rect>
+          <x>240</x>
+          <y>60</y>
+          <width>91</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Restores the hierarchy</string>
+        </property>
+        <property name="toolTipDuration">
+         <number>5000</number>
+        </property>
+        <property name="text">
+         <string>Reparent</string>
         </property>
        </widget>
       </widget>

@@ -4,6 +4,9 @@ from PySide6.QtCore import QFile # pyright: ignore[reportMissingImports]
 from PySide6.QtUiTools import QUiLoader # pyright: ignore[reportMissingImports]
 from PySide6.QtWidgets import QFileDialog # pyright: ignore[reportMissingImports]
 from shiboken6 import wrapInstance # pyright: ignore[reportMissingImports]
+
+#system
+import string
 import os
 import json
 
@@ -15,8 +18,9 @@ import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports]
 
 #my own modules
 from autoRigger.modules.builderModules import buildRig, locatorBasedFunctions as locFunc, jointGeneration as jointGen
-from autoRigger.modules.rigModules.symmetryModule import symmetry
-import autoRigger.utils.config as config
+from autoRigger.modules.rigModules.symmetrySetup import symmetry
+from autoRigger.modules.rigModules import ProceduralSpineCreation
+from autoRigger.utils import config, mirror, hierarchyModule as hier
 import autoRigger.modules.rigModules.twistSetup as twistSetup
 
 import importlib
@@ -24,6 +28,7 @@ importlib.reload(jointGen)
 importlib.reload(locFunc)
 importlib.reload(buildRig)
 importlib.reload(twistSetup)
+importlib.reload(ProceduralSpineCreation)
 
 
 def getMayaWindow():
@@ -75,14 +80,17 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.revFeetSymmetry = symmetry(self.revFeetLocList)
         self.guideSymmetry = symmetry(self.locatorList)
 
-        self.hierarchy = {}
+        self.guideHier = hier.hierarchyManager(self.locatorList, False)
+        self.revFeetHier = hier.hierarchyManager(self.revFeetLocList, False)
+        self.jointHier = hier.hierarchyManager(self.jointsList, True)
+
+        self.procSpine = ProceduralSpineCreation.ProceduralSpine()
 
         self.prefix = [config.prefix['left'], config.prefix['right']]
 
         self.setWindowIcon(QtGui.QIcon(config.find_file_path("logo.png")))
         self.setWindowTitle("AutoRigger V01")
         self.setObjectName("AutoRiggerV01")
-
 
         self._loadUi(ui_file_path)
         self._connectWidgets()
@@ -133,6 +141,11 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         self.spineSlider = self.ui.findChild(QtWidgets.QSlider,"SpineAmount_Slider")
         self.spineCustomization = self.ui.findChild(QtWidgets.QGroupBox,"CustomizableSpine_grp")
+
+        self.curveMult = self.ui.findChild(QtWidgets.QSlider, "SpineCurve_Slider")
+
+        self.spineAmntText = self.ui.findChild(QtWidgets.QLabel, "SpineAmnt_Number")
+        self.spineCurveText = self.ui.findChild(QtWidgets.QLabel, "SpineCurve_text")
         
         #-----------------------------------joint buttons -----------------------------------------------#
 
@@ -143,7 +156,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
         importRevFeetLocsBtn = self.ui.findChild(QtWidgets.QPushButton, "ImportPreset_reverseFeet_Locators")
 
         exportJoints =  self.ui.findChild(QtWidgets.QPushButton, "ExportJoints_JSON_Bttn")
-        self.exportJointsFilename = self.ui.findChild(QtWidgets.QLineEdit, "exportJointsFilename_text")
         importJoints = self.ui.findChild(QtWidgets.QPushButton, "ImportJoints_Bttn")
         self.importJointsFilename =self.ui.findChild(QtWidgets.QLineEdit, "importJointsFilename_text")
 
@@ -160,10 +172,14 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         revFeetSymmetryToggle = self.ui.findChild(QtWidgets.QCheckBox, "LocatorSymmetry_revFeet_Bipedal")
 
+        unParentRevFeet = self.ui.findChild(QtWidgets.QPushButton, "UnparentRevFeet_bn")
+        ParentRevFeet = self.ui.findChild(QtWidgets.QPushButton, "ParentRevFeet_bn")
+
 
         #-----------------------------------joint text areas -----------------------------------------------#
         self.importPresetText = self.ui.findChild(QtWidgets.QLineEdit, "ImportPreset_LineEdit")
         self.revFeetTextBox = self.ui.findChild(QtWidgets.QLineEdit, "reverseFeet_Locators_editLine")
+        self.exportJointsFilename = self.ui.findChild(QtWidgets.QLineEdit, "exportJointsFilename_text")
 
         self.MirrorRevFeet = self.ui.findChild(QtWidgets.QPushButton, "MirrorReverseFeet")
 
@@ -230,7 +246,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.slider.valueChanged.connect(self.updateSizeLabel)
 
         if self.spineSlider:
-            self.spineSlider.valueChanged.connect(self.spineFunc)
+            self.spineSlider.valueChanged.connect(self.procSpine.updateSpine)
+            self.spineSlider.valueChanged.connect(lambda value: self.spineAmntText.setText(f"{value}")) 
+
+        if self.curveMult:
+             self.curveMult.valueChanged.connect(self.procSpine.updateCurvature)    
+             self.curveMult.valueChanged.connect(lambda value: self.spineCurveText.setText(f"{value}"))    
 
             
         if self.locatorSymmetry:
@@ -252,10 +273,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
         )
 
         if unparentLocsBtn:
-            unparentLocsBtn.clicked.connect(lambda : self.unparentHierarchy(self.locatorList))
+            unparentLocsBtn.clicked.connect(self.guideHier.unparentHierarchy)
 
         if reparentLocsBtn:
-            reparentLocsBtn.clicked.connect(lambda : self.reparentHierarchy(False))
+            reparentLocsBtn.clicked.connect(self.guideHier.reparentHierarchy)
 
         if self.pvVisualizer:
             self.pvVisualizer.blockSignals(True)
@@ -263,39 +284,41 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.pvVisualizer.blockSignals(False)
             self.pvVisualizer.toggled.connect(self.previewPV)
 
-        if self.spineCustomization:
-            if self.spineCustomization.isChecked():
-                self.spineFunc()
-
 
         #-----------------------------------rev feet connections -----------------------------------------------#
         if self.MirrorRevFeet: 
-            self.MirrorRevFeet.clicked.connect(lambda : self.mirrorLocators("L_backOfHeel_LOC"))
+            self.MirrorRevFeet.clicked.connect(lambda : mirror.mirrorLocators("L_backOfHeel_LOC"))
 
         if importRevFeetLocsBtn:
             importRevFeetLocsBtn.clicked.connect(self.build_reverseFeetLocators) 
 
         if revFeetSymmetryToggle:
             revFeetSymmetryToggle.toggled.connect(lambda checked: self.symmetryToggle(checked, 
-                                                                                      self.revFeetLocList, 
+                                                                                      self.revFeetSymmetry, 
                                                                                       revFeetSymmetryToggle))          
 
+        if unParentRevFeet:
+            unParentRevFeet.clicked.connect(self.revFeetHier.unparentHierarchy)
+
+        if ParentRevFeet:
+            ParentRevFeet.clicked.connect(self.revFeetHier.reparentHierarchy)      
 
         #-----------------------------------joint connections -----------------------------------------------
         if defineNewJointList:
             defineNewJointList.clicked.connect(self.defineJointListSel)
 
         if unparentJointsBtn:
-            unparentJointsBtn.clicked.connect(lambda: self.unparentHierarchy(self.jointsList))
+            unparentJointsBtn.clicked.connect(self.jointHier.unparentHierarchy)
 
         if reparentJointsBtn:
-            reparentJointsBtn.clicked.connect(lambda: self.reparentHierarchy(True))
+            reparentJointsBtn.clicked.connect(self.jointHier.reparentHierarchy)
 
         if mirrorOrientationBtn:
             mirrorOrientationBtn.clicked.connect(self.mirrorJoints)
 
         if self.localRotationAxesToggle:
             self.localRotationAxesToggle.toggled.connect(self.showLocalRotationAxes)
+
 
     def closeEvent(self, event):
         if getattr(self, "selectionJob", None):
@@ -327,11 +350,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 cmds.warning("No joints found, please generate joints first")
                 return
 
-            self.armOrder = self.armRotOrdMenu.currentIndex()
-            self.legOrder = self.legRotOrdMenu.currentIndex()
-            self.spineOrder = self.spineRotOrdMenu.currentIndex()
-            self.handOrder = self.handRotOrdMenu.currentIndex()
-            self.neckOrder = self.neckRotOrdMenu.currentIndex()
+            self.defineRotOrder()   
 
             buildRig.build(
                 self.armOrder,
@@ -348,6 +367,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
     def twistCreation(self):
         cmds.undoInfo(openChunk = True)
         try: 
+            self.defineRotOrder()
             self.twistInput = self.twistSlider.value()
             startJoints = []
             endJoints = []
@@ -374,6 +394,13 @@ class AutoRiggerUI(QtWidgets.QDialog):
     def updateSizeLabelTwist(self, value):
         if self.twistLabel:
             self.twistLabel.setText(str(value))
+
+    def defineRotOrder(self):
+        self.armOrder = self.armRotOrdMenu.currentIndex()
+        self.legOrder = self.legRotOrdMenu.currentIndex()
+        self.spineOrder = self.spineRotOrdMenu.currentIndex()
+        self.handOrder = self.handRotOrdMenu.currentIndex()
+        self.neckOrder = self.neckRotOrdMenu.currentIndex()
 
     # ─────────────────────────────────────────────────────────────────────────
     # LOCATORS
@@ -440,8 +467,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.build_locator(root_name, root_data, locatorList, storeLocators)
         cmds.undoInfo(closeChunk = True)
 
-        cmds.select(self.locatorList, r = True)
-        cmds.makeIdentity(apply = True, t = True)
+        cmds.select(clear = True)
+        cmds.makeIdentity(locatorList, apply = True, t = True)
 
     def build_locator(self, locator_name: str, joint_data: dict, locatorList, storeLocators, parent=None):
         '''
@@ -481,7 +508,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         self.revFeetLocList.extend(mirroredRevFeet)
 
-        self.locator_symmetry(self.revFeetLocList)
+        self.revFeetSymmetry.locator_symmetry()
      
 
     def locatorSize(self, value):
@@ -522,62 +549,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 if self.sizeLabel:
                     self.sizeLabel.setText(str(value))
                 return  # just sync to the first locator found
-
-    def mirrorLocators(self, sel : str | list | None = None) -> list:
-        """
-        Mirrors locators from a provided list or the current Maya selection.
-
-            Parameters:
-                sel (list): List of locators to duplicate.
-                    
-            Returns:
-                list: A list of the mirrored locators
-        """
-
-        selection = cmds.ls(sl = True, long = True)
-
-        mirroredLocs = []
-
-        if not sel:
-            sel = selection
-
-        if not sel:
-            cmds.warning("Please select what you want to mirror")
-            return []
-
-        originGrp = cmds.group(sel)
-
-        duplicatedGrp = cmds.duplicate(originGrp, rc = True)[0]
-        cmds.makeIdentity(duplicatedGrp, a = True, s = True)
-
-        cmds.xform(duplicatedGrp, ws = True, piv = (0, 0, 0), s = (-1, 1, 1))
-
-        children = cmds.listRelatives(duplicatedGrp, allDescendents = True) or []
-        
-        for child in children:
-
-            if child.startswith("L_"):
-                child = cmds.rename(child, child.replace("L_", "R_")
-                            .replace("LOC1", "LOC"))
-            elif child.startswith("R_"):
-                child = cmds.rename(child, child.replace("R_", "L_")
-                            .replace("LOC1", "LOC"))
-            else: 
-                child = cmds.rename(child, f"{child}_mirror")
-            
-            mirroredLocs.append(child)
-            
-        cmds.parent(cmds.listRelatives(duplicatedGrp, children = True), w = True)
-
-        cmds.parent(cmds.listRelatives(originGrp, children = True), w = True)
-
-        cmds.delete(originGrp, duplicatedGrp)
-
-        return mirroredLocs
                 
     def symmetryToggle(self, checked, symmetry, checkBox):
         if checked:
-            if not self.locatorList:
+            if not symmetry.locatorList:
                 checkBox.blockSignals(True)
                 try:
                     checkBox.setChecked(False)
@@ -647,6 +622,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
             if len(self.locatorList)== 0:
                 return cmds.warning("No guide Locators found, please generate these before generating joints!")
             
+            self.locatorList = cmds.ls("*GUIDE", type = 'transform')
+            
             for loc in self.locatorList:
                 cmds.makeIdentity(loc, 
                                 apply = True, 
@@ -669,7 +646,11 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
             cmds.select(clear = True)   
             locGrp = cmds.group(roots, n = "Guide_Locator_GRP")
+            cmds.select(clear = True)   
+            skelGrp = cmds.group(roots[0].replace("GUIDE", "JNT"), n = "_Skeleton_GRP")
             cmds.hide(locGrp)
+
+            cmds.select(clear = True)   
             
         finally:
             cmds.undoInfo(closeChunk=True)
@@ -682,8 +663,13 @@ class AutoRiggerUI(QtWidgets.QDialog):
         folder,
         "JSON Files (*.json)")
 
+        if not filePath:
+            return
+
         exp = jointGen.jointGeneration()
         exp.jointExportJSON(filePath)
+
+        self.exportJointsFilename.setText(filePath)
 
     def defineJointListSel(self):
         if not self.jointsList:
@@ -714,6 +700,24 @@ class AutoRiggerUI(QtWidgets.QDialog):
         Sets a basis for joint orientation across the skeleton (FOR BIPEDAL ONLY SO FAR)
 
         """
+
+
+        required = [
+            "C_spineJA_JNT",
+            "L_armJD_JNT",
+            "R_armJD_JNT",
+            "L_middleFngJEnd_JNT",
+            "R_middleFngJEnd_JNT",
+        ]
+
+        missing = [j for j in required if not cmds.objExists(j)]
+
+        if missing:
+            cmds.warning(
+                "Automatic joint orientation currently supports the default biped only."
+            )
+            return
+        
         cmds.joint("C_spineJA_JNT", 
                    e = True, 
                    oj = "xyz", 
@@ -730,9 +734,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         print(centerJoints)
 
-        self.unparentHierarchy(self.jointsList)
+        self.jointHier.unparentHierarchy()
 
-        for joint in centerJoints:
+        for joint in centerJoints + feetJoints:
             if "jaw" in joint:
                 continue
             
@@ -744,29 +748,19 @@ class AutoRiggerUI(QtWidgets.QDialog):
                                            aimVector = (1,0,0), 
                                            upVector = (0,0,-1), 
                                            worldUpType = 'scene'))
-            cmds.delete(loc)
-
-        for joint in feetJoints:
-            pos = cmds.xform(joint, q = True, t = True, ws = True)
-            loc = cmds.spaceLocator(n = f"{joint}_temp")[0]
-            cmds.xform(loc, ws=True, t=(pos[0], pos[1] + 10, pos[2]))
-            cmds.delete(cmds.aimConstraint(loc, joint, 
-                                           offset = (90,0,0), 
-                                           aimVector = (1,0,0), 
-                                           upVector = (0,0,-1), 
-                                           worldUpType = 'scene'))
-            cmds.delete(loc)   
+            cmds.delete(loc) 
 
         wristPairs = [
             ("L_armJD_JNT", "L_middleFngJEnd_JNT"),
             ("R_armJD_JNT", "R_middleFngJEnd_JNT")] 
+            
         
         for joint, aim in wristPairs:
             cmds.delete(cmds.aimConstraint(aim, joint, 
                                aimVector = (1,0,0),
                                worldUpType = 'scene'))
         
-        self.reparentHierarchy(True)
+        self.jointHier.reparentHierarchy()
 
         #endjoints
         for joint in self.jointsList:
@@ -782,6 +776,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
         try: 
             if len(self.jointsList) == 0:
                 return cmds.warning("No joints found, unable to mirror joints.")
+
+            if cmds.listRelatives(self.jointsList[0], children = True) is None:
+                self.jointHier.reparentHierarchy() #ensures ur hierarchy is combined again before mirror
             
             leftJoints = []
             rightJoints = []
@@ -796,6 +793,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
             print(leftJoints + rightJoints)
             left = config.prefix['left']
             right = config.prefix['right']
+
+            leftJoints = [j for j in leftJoints if "eye" not in j]
+            rightJoints = [j for j in rightJoints if "eye" not in j] #rebuilds the list but removes the eyejoints
+            print(leftJoints + rightJoints)
 
             if self.leftToRight.isChecked():
                 prefix = left
@@ -875,62 +876,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
         # AND ALSO ADD IN THAT HEN THE THANG IS UNCHECKED U DELETE THE plane
 
     # ─────────────────────────────────────────────────────────────────────────
-    # GENERAL
-    # ─────────────────────────────────────────────────────────────────────────
-
-    def saveHierarchy(self, nodeList):
-        """
-        Saves the hierarchy locally, for temporary parenting
-
-        """
-
-        self.hierarchy = {}
-
-        for node in nodeList: 
-            parent = cmds.listRelatives(node, 
-                                        parent = True,
-                                        )
-            self.hierarchy[node] = parent[0] if parent else None
-    
-            
-    def unparentHierarchy(self, nodeList): 
-        """
-        unparents the hierarchy
-
-        """
-        cmds.undoInfo(openChunk = True)
-        try:    
-            if len(self.hierarchy) != 0: 
-                return cmds.warning("Hierarchy already saved, please reparent first!")            
-
-            self.saveHierarchy(nodeList)
-            for node in nodeList:
-                if cmds.listRelatives(node, parent = True) is not None:  
-                    cmds.parent(node, world = True)
-        finally: 
-            cmds.undoInfo(closeChunk = True)
-
-    def reparentHierarchy(self, freezeTrans : bool):
-        """
-        Reparents based on prior saved hierarchy
-
-        """
-        cmds.undoInfo(openChunk = True)
-        try:
-            if freezeTrans:
-                for node in self.hierarchy:
-                    cmds.makeIdentity(node, apply = True, r = True)
-            for child, parent in self.hierarchy.items():
-                if parent:
-                    cmds.parent(child,parent)
-
-            self.hierarchy = {}  #resets the dict to empty
-            
-        finally: 
-            cmds.undoInfo(closeChunk = True)
-
-
-    # ─────────────────────────────────────────────────────────────────────────
     # Rig options
     # ─────────────────────────────────────────────────────────────────────────
 
@@ -950,119 +895,3 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         elif sender in (self.twistCheckGrp, self.stretchyLimbsCheckGrp) and checked:
             self.ribbonCheckGrp.setChecked(False)
-
-# ─────────────────────────────────────────────────────────────────────────
-    # procedural spine locator creation
-    # ─────────────────────────────────────────────────────────────────────────
-    def spineLocators(self, spineJointNumber):
-
-        self.jointAmount = spineJointNumber
-
-        self.spineRoot = cmds.listRelatives("root_JA_GUIDE", children = True, type='transform')[0]
-        print(self.spineRoot)
-
-        self.spineEnd = next(loc for loc in cmds.listRelatives(self.spineRoot, ad = True, type='transform') if "JEnd" in loc)
-        print(self.spineEnd)
-
-        if self.spineEnd is None:
-            return print("No spine End locator found")
-        elif self.spineRoot is None:
-            return print("No spine root was found")
-        
-        self.oldSpinelocators = cmds.ls("*spine*", type='transform')
-
-        if self.spineRoot in self.oldSpinelocators:
-            self.oldSpinelocators.remove(self.spineRoot)
-
-        if self.spineEnd in self.oldSpinelocators:
-            self.oldSpinelocators.remove(self.spineEnd)
-    
-    def spineLocMath(self):
-        
-        rootLocalPos, _ = config.getGuidePos(self.spineRoot)
-        endLocalPos, _ = config.getGuidePos(self.spineEnd)
-
-        SRVECTOR = om.MVector(rootLocalPos)
-        SEVECTOR = om.MVector(endLocalPos)
-
-        distanceVector = SEVECTOR - SRVECTOR
-
-        distanceBetweenJoints = distanceVector.length() / (self.jointAmount - 1 )
-
-        direction = distanceVector.normal()
-
-        positions = []
-        print(positions)
-
-        for i in range(self.jointAmount):
-            pos = SRVECTOR + direction * distanceBetweenJoints * i
-            positions.append(pos)
-
-        for pos in positions:
-            loc = cmds.spaceLocator(n = "spine#")[0]
-            cmds.xform(loc, t = (pos), ws = True)
-            self.newSpinelocators.append(loc)
-        print(positions)
-
-    def spineFunc(self):
-        if self.oldSpinelocators:
-            self.deletingSpine(self.oldSpinelocators)
-        elif self.newSpinelocators:
-            self.deletingSpine(self.newSpinelocators)
-
-        spineJointNumber = self.spineSlider.value()
-
-        self.spineLocators(spineJointNumber)
-        self.spineLocMath()
-
-    def deletingSpine(self, joints: list):
-        childrenEnd = cmds.listRelatives(self.spineEnd, children = True)
-        childrenRoot = cmds.listRelatives(self.spineRoot, children = True)
-
-        cmds.parent(self.spineEnd, w = True)
-
-        cmds.delete(joints)
-
-        cmds.parent(self.spineEnd, self.newSpinelocators[-1])
-
-        
-        
-"""Generate Spine
-    ↓
-Unparent:
-- L_armJA_GUIDE
-- R_armJA_GUIDE
-- L_legJA_GUIDE
-- R_legJA_GUIDE
-- neck_GUIDE
-    ↓
-Delete old procedural spine
-    ↓
-Generate new spine chain
-    ↓
-Parent spineEnd → neck
-Parent spineRoot → arms/legs
-
-That's much simpler than trying to thread new locators into an existing chain.
-
-Even better, your Generate Joints function can just assume the hierarchy is already correct. It doesn't need to know how the spine was rebuilt—it just recursively walks whatever hierarchy exists."
-
-
-Save root attachments
-Save end attachments
-↓
-Unparent attachments
-↓
-Delete procedural spine
-↓
-Generate new procedural spine
-↓
-Parent:
-spineRoot
-    ↓
-new spine chain
-    ↓
-spineEnd
-↓
-Reattach saved root attachments
-Reattach saved end attachments"""

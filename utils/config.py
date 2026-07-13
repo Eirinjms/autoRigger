@@ -118,4 +118,6 @@ def getGuidePos(locator):
     transformPos = cmds.xform(locator, q=True, ws=True, t=True)
     localPos = cmds.getAttr(f"{shape}.localPosition")[0]
 
-    return localPos, transformPos     
+    return localPos, transformPos
+
+     

@@ -65,7 +65,7 @@ class jointGeneration():
         
         selected = cmds.ls(sl=True)
         if len(selected) != 1:
-            cmds.error("Please select only the root of the chain you want to export")
+            cmds.warning("Please select only the root of the chain you want to export")
             return
 
         self.skeleton_dict_result(rootJoint=selected[0])
