@@ -23,8 +23,6 @@ def build(side, ikHandle, ikCtrl, switch, joints):
     for jnt in toeJoints:
         joints.append(jnt)
 
-    print(joints)
-
     #pivot LOCS (alr existign in scene)
     frontLoc = f"{side}{locs[0]}{suffix['locator']}"
     backLoc = f"{side}{locs[1]}{suffix['locator']}"
@@ -49,7 +47,7 @@ def build(side, ikHandle, ikCtrl, switch, joints):
 
     #unparent the OG ikh from the chain
     cmds.parent(ikHandle,  w = True)
-    cmds.delete(f"{side}{joints[0]}{config.fkik[1]}{suffix['pointCon']}")
+    cmds.delete(f"{side}{joints[0]}{config.fkik['ik']}{suffix['pointCon']}")
 
     #IKS
     ballIk = cmds.ikHandle(n = f"{side}{joints[3]}{suffix['ikHandle']}", sj = ankleJnt, ee = ballJnt)[0]

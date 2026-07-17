@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>388</width>
-    <height>589</height>
+    <width>394</width>
+    <height>597</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -434,7 +434,7 @@
          <enum>Qt::LeftToRight</enum>
         </property>
         <property name="text">
-         <string>1</string>
+         <string>0</string>
         </property>
         <property name="textFormat">
          <enum>Qt::AutoText</enum>
@@ -450,13 +450,13 @@
          <x>10</x>
          <y>90</y>
          <width>341</width>
-         <height>91</height>
+         <height>101</height>
         </rect>
        </property>
        <property name="title">
         <string>Generate Guides</string>
        </property>
-       <widget class="QSlider" name="GuideChainLenght_Slider">
+       <widget class="QSlider" name="GuideChainLength_Slider">
         <property name="geometry">
          <rect>
           <x>80</x>
@@ -478,7 +478,7 @@
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
-       <widget class="QLabel" name="TwistJoint_Number_5">
+       <widget class="QLabel" name="generateLocatorChainNumber_btn">
         <property name="geometry">
          <rect>
           <x>300</x>
@@ -513,7 +513,7 @@
          <string>Chain length</string>
         </property>
        </widget>
-       <widget class="QPushButton" name="UnparentLocHierarchy_Bipedal_2">
+       <widget class="QPushButton" name="generateLocatorChain_btn">
         <property name="geometry">
          <rect>
           <x>220</x>
@@ -532,7 +532,7 @@
          <string>Generate Locators</string>
         </property>
        </widget>
-       <widget class="QLineEdit" name="lineEdit">
+       <widget class="QLineEdit" name="baseName_locChain_text">
         <property name="geometry">
          <rect>
           <x>72</x>
@@ -545,7 +545,7 @@
          <string>ChainName</string>
         </property>
        </widget>
-       <widget class="QLineEdit" name="lineEdit_2">
+       <widget class="QLineEdit" name="prefix_locChain_text">
         <property name="geometry">
          <rect>
           <x>10</x>
@@ -609,51 +609,6 @@
         </property>
         <property name="readOnly">
          <bool>false</bool>
-        </property>
-       </widget>
-      </widget>
-      <widget class="QGroupBox" name="groupBox_13">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>370</y>
-         <width>341</width>
-         <height>61</height>
-        </rect>
-       </property>
-       <property name="title">
-        <string>Imports</string>
-       </property>
-       <widget class="QPushButton" name="ImportJoints_Bttn">
-        <property name="geometry">
-         <rect>
-          <x>210</x>
-          <y>20</y>
-          <width>121</width>
-          <height>23</height>
-         </rect>
-        </property>
-        <property name="toolTipDuration">
-         <number>5000</number>
-        </property>
-        <property name="text">
-         <string>Import Joints</string>
-        </property>
-       </widget>
-       <widget class="QLineEdit" name="importJointsFilename_text">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>20</y>
-          <width>191</width>
-          <height>20</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>fileName</string>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
         </property>
        </widget>
       </widget>
@@ -763,7 +718,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>440</y>
+         <y>370</y>
          <width>341</width>
          <height>91</height>
         </rect>

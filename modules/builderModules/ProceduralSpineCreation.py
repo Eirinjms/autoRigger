@@ -11,18 +11,31 @@ class ProceduralSpine:
 
         self.oldSpinelocators = []
         self.newSpinelocators = []
+
+        self.spineLocs = []
+
         self.positions = []
-    # ─────────────────────────────────────────────────────────────────────────
-    # PUBLIC
-    # ─────────────────────────────────────────────────────────────────────────
+
+        self.spineRoot = None
+        self.hier = hierarchyModule.hierarchyManager([self.spineRoot], True, 'transform')
 
     def updateSpine(self, jointAmount):
         self.jointAmount = jointAmount
         self.spineFunc()
 
     def updateCurvature(self, curvatureAmount):
-        self.curvature  = curvatureAmount
-        self.curveSpineMath()
+
+        cmds.undoInfo(openChunk = True)
+        try:
+            self.curvature  = curvatureAmount
+
+            cmds.parent(self.spineEnd, w=True)
+
+            self.curveSpineMath()
+            cmds.parent(self.spineEnd, self.newSpinelocators[-1])
+
+        finally:
+            cmds.undoInfo(closeChunk = True)
 
     def spineFunc(self):
         cmds.undoInfo(openChunk=True)
@@ -36,12 +49,11 @@ class ProceduralSpine:
                 self.deletingSpine(self.newSpinelocators)
 
             self.spineLocMath()
-
-            if self.jointAmount != 0:
+            if self.curvature != 0: 
                 self.curveSpineMath()
-            
-            cmds.parent(self.spineEnd, self.newSpinelocators[-1])
+
             cmds.parent(self.newSpinelocators[0], self.spineRoot)
+            cmds.parent(self.spineEnd, self.newSpinelocators[-1])
 
         finally:
             cmds.undoInfo(closeChunk=True)
@@ -54,7 +66,6 @@ class ProceduralSpine:
         self.jointAmount = spineJointNumber
 
         self.spineRoot = cmds.listRelatives("root_JA_GUIDE", children=True, type='transform')[0]
-        print(self.spineRoot)
 
         self.spineEnd = "C_spineJEnd_GUIDE"
 
@@ -72,21 +83,29 @@ class ProceduralSpine:
             self.oldSpinelocators.remove(self.spineEnd)
 
     def spineLocMath(self):
+        """
+        The math responsible for placing guides evenly
+        depending on desired amount of joints
+        """
 
         self.newSpinelocators.clear()
+        self.spineLocs.clear()
         self.positions.clear()
 
-        self.rootLocalPos, _ = config.getGuidePos(self.spineRoot)
-        self.endLocalPos, _ = config.getGuidePos(self.spineEnd)
+        self.spineLocs.append(self.spineRoot)
+        self.rootLocalPos, self.rootWorldPos = config.getGuidePos(self.spineRoot)
+        self.endLocalPos, self.endWorldPos = config.getGuidePos(self.spineEnd)
 
-        self.SRVECTOR = om.MVector(self.rootLocalPos)
-        self.SEVECTOR = om.MVector(self.endLocalPos)
+        self.rootFinalPos = tuple(a + b for a, b in zip(self.rootLocalPos, self.rootWorldPos)) #adds the local and world position together
+        self.endFinalPos = tuple(a + b for a, b in zip(self.endLocalPos, self.endWorldPos))
+
+        self.SRVECTOR = om.MVector(self.rootFinalPos)
+        self.SEVECTOR = om.MVector(self.endFinalPos)
 
         distanceVector = self.SEVECTOR - self.SRVECTOR
         distanceBetweenJoints = distanceVector.length() / (self.jointAmount + 1)
         self.direction = distanceVector.normal()
 
-        self.positions = []
         for i in range(1, self.jointAmount + 1):
             pos = self.SRVECTOR + self.direction * distanceBetweenJoints * i
             self.positions.append(pos)
@@ -96,9 +115,11 @@ class ProceduralSpine:
             loc = cmds.spaceLocator(n=spinename)[0]
             cmds.xform(loc, t=pos, ws=True)
             self.newSpinelocators.append(spinename)
+            self.spineLocs.append(spinename)
 
             if index > 0:
                 cmds.parent(loc, self.newSpinelocators[index - 1])
+        self.spineLocs.append(self.spineEnd)
 
     # ─────────────────────────────────────────────────────────────────────────
     # CURVE OFFSET
@@ -120,10 +141,7 @@ class ProceduralSpine:
             cmds.xform(curveloc, t=controlPos, ws=True)
             cmds.makeIdentity(curveloc, a=True, t=True)
 
-            curvepoints = []
-            for loc in [self.spineRoot, curveloc, self.spineEnd]:
-                pos, _ = config.getGuidePos(loc)
-                curvepoints.append(pos)
+            curvepoints = [self.rootFinalPos, controlPos, self.endFinalPos]
 
             curve = cmds.curve(d=3, ep=curvepoints, n="temp_curve")
             cmds.rebuildCurve(curve, d=3,

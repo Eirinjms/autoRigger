@@ -14,26 +14,35 @@ class hierarchyManager:
                                 before restoring the hierarchy. Primarily intended for joint
                                 workflows.
     """
-    def __init__(self, nodeList : list, freezeTrans : bool):
+    def __init__(self, nodeList : list, freezeTrans : bool, typeOfNode : str):
 
         self.hierarchy = {}
         self.freezeTrans = freezeTrans
         self.nodeList = nodeList
+        self.type = typeOfNode
 
     def saveHierarchy(self):
-        """
-        Saves the hierarchy locally, for temporary parenting
-        """
 
         self.hierarchy = {}
-
+        roots = []
         for node in self.nodeList: 
             parent = cmds.listRelatives(node, 
-                                        parent = True,
-                                        )
-            self.hierarchy[node] = parent[0] if parent else None
-    
+                                        parent = True)
             
+            if parent is None: 
+                root = node
+                roots.append(root)
+            
+        for root in roots:
+            self.hierarchy[root] = None
+            self.climbHierarchy(root)
+    
+    def climbHierarchy(self, root):
+        children = cmds.listRelatives(root, children = True, type = self.type) or []
+        for child in children: 
+            self.hierarchy[child] = root
+            self.climbHierarchy(child)
+
     def unparentHierarchy(self): 
         """
         unparents the hierarchy
@@ -48,7 +57,7 @@ class hierarchyManager:
 
             self.saveHierarchy()
             print(self.hierarchy)
-            for node in self.nodeList:
+            for node in self.hierarchy:
                 if cmds.listRelatives(node, parent = True) is not None:  
                     cmds.parent(node, world = True)
         finally: 

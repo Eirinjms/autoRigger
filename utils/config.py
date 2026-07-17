@@ -18,7 +18,8 @@ suffix = {
     "orientCon"    : "_oCON",
     "poleVectorCon": "_pvCON",
     "offsetGrp"    : "_OFFSET_GRP",
-    "skinCluster"  : "_SKN"
+    "skinCluster"  : "_SKN",
+    "switch"       : "_SWITCH"
 }
 
 prefix = {
@@ -29,7 +30,9 @@ prefix = {
 
 attrs = ["tx","ty","tz","rx","ry","rz","sx","sy","sz"]
 
-fkik = ['_FK', '_IK']
+fkik = {
+    'fk' : '_FK',
+    'ik' : '_IK'}
 
 
 class RotationOrder(enum.Enum):

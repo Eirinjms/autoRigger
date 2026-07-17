@@ -11,7 +11,7 @@ importlib.reload(handModule)
 importlib.reload(reverseFoot)
 
 class limbBuild:
-    def __init__(self, side, limbType, legOrder, armOrder, handOrder):
+    def __init__(self, side, limbType, legOrder, armOrder, handOrder, armStretch, legStretch):
         '''
         Builds an IK/FK limb rig including:
             - IK/FK blending
@@ -31,6 +31,10 @@ class limbBuild:
             cmds.error('Please Choose either L or R')
         if limbType not in ['arm', 'leg']:
             cmds.error('Please Choose either arm or leg')
+
+        self.stretchyArms = armStretch
+
+        self.stretchyLegs = legStretch
 
         self.size = config.bipedal
         
@@ -86,7 +90,7 @@ class limbBuild:
                 if count == len(self.joints):
                     count = 0 
 
-                if dup.endswith(f"{self.fkIK[0]}{self.suffix['joint']}"):
+                if dup.endswith(f"{self.fkIK['fk']}{self.suffix['joint']}"):
                     self.fkJoints.append(dup)
                     if count > 0:
                         cmds.parent(self.fkJoints[count], self.fkJoints[count-1])
@@ -154,7 +158,7 @@ class limbBuild:
         The IK setup for selected limb, creates the solver + control
         '''
 
-        self.ikHandle = cmds.ikHandle(n = self.ikJoints[0].replace(self.fkIK[1], self.suffix ['ikHandle']), 
+        self.ikHandle = cmds.ikHandle(n = self.ikJoints[0].replace(self.fkIK['ik'], self.suffix ['ikHandle']), 
                                  sj = self.ikJoints[0], 
                                  ee = self.ikJoints[-1])[0]
         
@@ -166,7 +170,7 @@ class limbBuild:
             size = self.size['IKarms']
 
 
-        self.ikCtrl = shapes.cubeCtrl(name = f"{self.side}{self.limbType}{self.fkIK[1]}'{self.suffix['control']}", 
+        self.ikCtrl = shapes.cubeCtrl(name = f"{self.side}{self.limbType}{self.fkIK['ik']}'{self.suffix['control']}", 
                                  X = size, 
                                  Y = size, 
                                  Z = size)
@@ -262,8 +266,8 @@ class limbBuild:
         '''
 
         #########################################################################
-        self.fkGrp = cmds.group(n = f"{self.side}{self.limbType}{self.fkIK[0]}{self.suffix['group']}", em = True)
-        self.ikGrp = cmds.group(n = f"{self.side}{self.limbType}{self.fkIK[1]}{self.suffix['group']}", em = True)
+        self.fkGrp = cmds.group(n = f"{self.side}{self.limbType}{self.fkIK['fk']}{self.suffix['group']}", em = True)
+        self.ikGrp = cmds.group(n = f"{self.side}{self.limbType}{self.fkIK['ik']}{self.suffix['group']}", em = True)
 
         cmds.parent(self.fkLocs[0], self.fkGrp)
         cmds.parent(self.ikHandle, self.ikLoc, self.ikGrp)
@@ -601,14 +605,18 @@ class limbBuild:
 
         self.poleVectorSpaceSwitch()
 
-        if stretch: 
-            self.squashNstretch()
+        if self.limbType == 'leg':
+            if self.stretchyLegs: 
+                self.squashNstretch()
+        if self.limbType == 'arm':
+            if self.stretchyArms:
+                self.squashNstretch()
             
         self.cleanup()
         shapes.ctrlColour()
         print("Building:", self.side, self.limbType)
 
-def build_limb_set(legOrder, armOrder, handOrder, sides: list, limbs: list):   
+def build_limb_set(legOrder, armOrder, handOrder, stretchyArms, stretchyLegs, sides: list, limbs: list):   
     """
     Builds the requested limb types for the specified sides.
 
@@ -618,11 +626,12 @@ def build_limb_set(legOrder, armOrder, handOrder, sides: list, limbs: list):
         legOrder (int) : the rotation order of the legs. 
         armOrder (int) : the rotation order of the arms. 
         handOrder (int) : the rotation order of the fingers. 
+        stretchylegs (bool):
     """
 
     for side in sides:
         for limb in limbs:
-            limbBuild(side, limb, legOrder, armOrder, handOrder).buildLimb()
+            limbBuild(side, limb, legOrder, armOrder, handOrder, stretchyArms, stretchyLegs).buildLimb()
     
     print("All Limbs built")
 

@@ -9,6 +9,7 @@ from shiboken6 import wrapInstance # pyright: ignore[reportMissingImports]
 import string
 import os
 import json
+import math
 
 #maya improts 
 import maya.cmds as cmds # pyright: ignore[reportMissingImports]
@@ -19,9 +20,12 @@ import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports]
 #my own modules
 from autoRigger.modules.builderModules import buildRig, locatorBasedFunctions as locFunc, jointGeneration as jointGen
 from autoRigger.modules.rigModules.symmetrySetup import symmetry
-from autoRigger.modules.rigModules import ProceduralSpineCreation
-from autoRigger.utils import config, mirror, hierarchyModule as hier
+from autoRigger.modules.builderModules import ProceduralSpineCreation
+from autoRigger.utils import config, mirror, hierarchyModule as hier, proceduralLocatorChain as procLoc
 import autoRigger.modules.rigModules.twistSetup as twistSetup
+
+
+
 
 import importlib
 importlib.reload(jointGen)
@@ -29,7 +33,10 @@ importlib.reload(locFunc)
 importlib.reload(buildRig)
 importlib.reload(twistSetup)
 importlib.reload(ProceduralSpineCreation)
-
+importlib.reload(hier)
+importlib.reload(mirror)
+importlib.reload(config)
+importlib.reload(procLoc)
 
 def getMayaWindow():
     """
@@ -80,11 +87,15 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.revFeetSymmetry = symmetry(self.revFeetLocList)
         self.guideSymmetry = symmetry(self.locatorList)
 
-        self.guideHier = hier.hierarchyManager(self.locatorList, False)
-        self.revFeetHier = hier.hierarchyManager(self.revFeetLocList, False)
-        self.jointHier = hier.hierarchyManager(self.jointsList, True)
+        self.guideHier = hier.hierarchyManager(self.locatorList, False, 'transform')
+        self.revFeetHier = hier.hierarchyManager(self.revFeetLocList, False, 'transform')
+        self.jointHier = hier.hierarchyManager(self.jointsList, True, 'joint')
 
         self.procSpine = ProceduralSpineCreation.ProceduralSpine()
+        self.spineJoints = []
+        self.spineCustomizationState = False
+
+        self.locGuidesCreated = False
 
         self.prefix = [config.prefix['left'], config.prefix['right']]
 
@@ -146,6 +157,15 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         self.spineAmntText = self.ui.findChild(QtWidgets.QLabel, "SpineAmnt_Number")
         self.spineCurveText = self.ui.findChild(QtWidgets.QLabel, "SpineCurve_text")
+
+
+        #generative locator
+
+        self.guideChainLength = self.ui.findChild(QtWidgets.QSlider, "GuideChainLength_Slider")
+        self.generateLocChain = self.ui.findChild(QtWidgets.QPushButton, "generateLocatorChain_btn")
+        self.prefixLocChain = self.ui.findChild(QtWidgets.QLineEdit, "prefix_locChain_text")
+        self.baseNameLocChain = self.ui.findChild(QtWidgets.QLineEdit, "baseName_locChain_text")
+        self.LocatorChainNumber = self.ui.findChild(QtWidgets.QLabel, "generateLocatorChainNumber_btn")
         
         #-----------------------------------joint buttons -----------------------------------------------#
 
@@ -201,6 +221,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.twistLegCheck = self.ui.findChild(QtWidgets.QCheckBox, "twistJoints_legs_checkbtn")
         self.twistSlider = self.ui.findChild(QtWidgets.QSlider, "twistJoint_Slider")
 
+        self.stretchyLegsCheck = self.ui.findChild(QtWidgets.QSlider, "StretchyLimbs_legs_checkBttn")
+        self.stretchyArmsCheck = self.ui.findChild(QtWidgets.QSlider, "StretchyLimbs_arms_checkBttn")
+
         self.temp = self.ui.findChild(QtWidgets.QPushButton, "TEMP")
         self.twistLabel = self.ui.findChild(QtWidgets.QLabel, "TwistJoint_Number")
 
@@ -232,6 +255,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
 
         #-----------------------------------Locator connections -----------------------------------------------#
+        if self.generateLocChain:
+            self.generateLocChain.clicked.connect(self.guideGenerator)
+
+        if self.guideChainLength:
+            self.guideChainLength.valueChanged.connect(self.generateLocs)
+
         if createLocBtn:
             createLocBtn.clicked.connect(self.buildLocators)
             
@@ -246,8 +275,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.slider.valueChanged.connect(self.updateSizeLabel)
 
         if self.spineSlider:
-            self.spineSlider.valueChanged.connect(self.procSpine.updateSpine)
-            self.spineSlider.valueChanged.connect(lambda value: self.spineAmntText.setText(f"{value}")) 
+            self.spineSlider.valueChanged.connect(self.spineUpdate)
 
         if self.curveMult:
              self.curveMult.valueChanged.connect(self.procSpine.updateCurvature)    
@@ -273,10 +301,11 @@ class AutoRiggerUI(QtWidgets.QDialog):
         )
 
         if unparentLocsBtn:
-            unparentLocsBtn.clicked.connect(self.guideHier.unparentHierarchy)
+            unparentLocsBtn.clicked.connect(self.unparentClicked)
+
 
         if reparentLocsBtn:
-            reparentLocsBtn.clicked.connect(self.guideHier.reparentHierarchy)
+            reparentLocsBtn.clicked.connect(self.reparentClicked)
 
         if self.pvVisualizer:
             self.pvVisualizer.blockSignals(True)
@@ -351,18 +380,22 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 return
 
             self.defineRotOrder()   
+            self.stretchyArms = self.stretchyArmsCheck.isChecked()
+            self.stretchyLegs = self.stretchyLegsCheck.isChecked()
 
             buildRig.build(
+                self.spineOrder,
+                self.spineJoints,     
                 self.armOrder,
                 self.legOrder,
                 self.handOrder,
-                self.spineOrder,
                 self.neckOrder,
+                self.stretchyArms,
+                self.stretchyLegs
             )
             print("..Rig built!")
         finally:
             cmds.undoInfo(closeChunk=True)
-
 
     def twistCreation(self):
         cmds.undoInfo(openChunk = True)
@@ -390,7 +423,55 @@ class AutoRiggerUI(QtWidgets.QDialog):
             cmds.undoInfo(closeChunk = True)
             print(self.jointsList)
 
+    def spineValue(self):
+        value = self.spineSlider.value()
+
+        if value % 2 == 0:
+            value += 1
+
+        self.spineAmntText.setText(f"{value}")
+
+        return value
     
+    def spineUpdate(self):
+        self.procSpine.updateSpine(self.spineValue())
+        self.spineJoints.clear()
+        for loc in self.procSpine.spineLocs:
+            loc.replace("GUIDE", "JNT")
+            self.spineJoints.append(loc)
+
+    def locatorValue(self):
+        value = self.guideChainLength.value()
+        self.LocatorChainNumber.setText(str(value))
+
+        return value
+
+    def createInstanceLocChain(self): 
+        prefix = self.prefixLocChain.text()
+        baseName = self.baseNameLocChain.text()
+        sliderValue = self.locatorValue()
+
+        instance = procLoc.procLocatorGenerator(sliderValue, baseName, prefix)
+        
+        return instance
+    
+    def guideGenerator(self):
+        self.generator = self.createInstanceLocChain()
+        self.generator.generateLocs()
+
+        self.locGuidesCreated = True
+    
+    def generateLocs(self):
+        cmds.undoInfo(openChunk = True)
+        try:
+            self.locatorValue()
+            if not self.locGuidesCreated:
+                return
+            self.generator.updateJointAmount(self.locatorValue())
+            self.generator.placementMath()
+        finally: 
+            cmds.undoInfo(closeChunk = True)
+
     def updateSizeLabelTwist(self, value):
         if self.twistLabel:
             self.twistLabel.setText(str(value))
@@ -401,6 +482,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.spineOrder = self.spineRotOrdMenu.currentIndex()
         self.handOrder = self.handRotOrdMenu.currentIndex()
         self.neckOrder = self.neckRotOrdMenu.currentIndex()
+    
 
     # ─────────────────────────────────────────────────────────────────────────
     # LOCATORS
@@ -504,7 +586,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         self.importPreset(self.revFeetTextBox, storeLocators = False, locatorList = self.revFeetLocList)
 
-        mirroredRevFeet = self.mirrorLocators("L_backOfHeel_LOC")
+        mirroredRevFeet = mirror.mirrorLocators("L_backOfHeel_LOC")
 
         self.revFeetLocList.extend(mirroredRevFeet)
 
@@ -565,6 +647,18 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 symmetry.locator_symmetry()
         else:
             symmetry.disconnectSymmetry()
+
+    
+    def unparentClicked(self): 
+        self.spineCustomizationState = self.spineCustomization.isChecked()
+        self.guideHier.unparentHierarchy()
+        self.spineCustomization.setChecked(False)
+        self.spineCustomization.blockSignals(True)
+
+    def reparentClicked(self):
+        self.guideHier.reparentHierarchy()
+        self.spineCustomization.setChecked(self.spineCustomizationState)
+        self.spineCustomization.blockSignals(False)
 
     # ─────────────────────────────────────────────────────────────────────────
     # JOINTS
@@ -647,7 +741,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             cmds.select(clear = True)   
             locGrp = cmds.group(roots, n = "Guide_Locator_GRP")
             cmds.select(clear = True)   
-            skelGrp = cmds.group(roots[0].replace("GUIDE", "JNT"), n = "_Skeleton_GRP")
+            #skelGrp = cmds.group(roots[0].replace("GUIDE", "JNT"), n = "_Skeleton_GRP")
             cmds.hide(locGrp)
 
             cmds.select(clear = True)   
@@ -860,6 +954,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             Parameters: 
                 sel (str) : a selected root for the chain you want to visualize.
         """
+
 
         if not sel:
             sel = cmds.ls(sl = True, 

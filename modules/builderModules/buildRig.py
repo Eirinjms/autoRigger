@@ -1,5 +1,5 @@
 import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
-#import autoRigger.modules.rigModules.spineModule as spineModule
+import autoRigger.modules.rigModules.spineModule as spineModule
 import autoRigger.modules.rigModules.limbModule as limbModule
 import autoRigger.modules.rigModules.faceModule as faceModule
 import autoRigger.modules.rigModules.cleanup as cleanup
@@ -12,7 +12,7 @@ importlib.reload(faceModule)
 importlib.reload(limbModule)
 
 
-def build(armOrder, legOrder, handOrder, spineOrder, neckOrder):
+def build(spineOrder, spineJoints, armOrder, legOrder, handOrder, neckOrder, stretchyArms, stretchylegs):
     """
     the wrapper builder calling upon the other modules.
 
@@ -20,10 +20,13 @@ def build(armOrder, legOrder, handOrder, spineOrder, neckOrder):
             armOrder : defines the rotation order for the arm, and is a passed value from the UI. 
             (counts for the other orders too) 
     """
-    #spineModule.build(spineOrder, spineJointsAmount)
+    spineBuild = spineModule.spineBuilder(spineOrder, spineJoints)
+    spineBuild.buildSpine()
     limbModule.build_limb_set(legOrder, 
                               armOrder, 
                               handOrder,
+                              stretchylegs,
+                              stretchyArms,
                               sides = ["L", "R"], 
                               limbs = ["leg", "arm"])
     faceModule.headBuild(neckOrder)
