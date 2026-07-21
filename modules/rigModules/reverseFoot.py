@@ -18,40 +18,40 @@ def build(side, ikHandle, ikCtrl, switch, joints):
     suffix = config.suffix
     prefix = config.prefix
     locs = ['frontFoot', 'backOfHeel', 'innerSideFoot', 'outerSideFoot']
-    toeJoints = ['legJD', 'legJEnd']
-
-    for jnt in toeJoints:
-        joints.append(jnt)
-
+    
     #pivot LOCS (alr existign in scene)
     frontLoc = f"{side}{locs[0]}{suffix['locator']}"
     backLoc = f"{side}{locs[1]}{suffix['locator']}"
     innerLoc = f"{side}{locs[2]}{suffix['locator']}"
     outerLoc = f"{side}{locs[3]}{suffix['locator']}"
 
-    ankleJnt = f"{side}{joints[2]}{suffix['joint']}"
-    ballJnt = f"{side}{joints[3]}{suffix['joint']}"
-    toeJnt = f"{side}{joints[4]}{suffix['joint']}"
+    ankleJnt = joints[-1]
+    ballJnt = cmds.listRelatives(ankleJnt, children = True)[0]
+    toeJnt = cmds.listRelatives(ballJnt, children = True)[0]
 
-    ballLoc = cmds.spaceLocator(n = f"{side}{joints[3]}{suffix['locator']}")[0]
-    toeLoc = cmds.spaceLocator(n = f"{side}{joints[4]}{suffix['locator']}")[0]
+
+    ballLoc = cmds.spaceLocator(n = ballJnt.replace(suffix["joint"], suffix["locator"]))[0]
+    toeLoc = cmds.spaceLocator(n = toeJnt.replace(suffix["joint"], suffix["locator"]))[0]
 
     cmds.matchTransform(ballLoc, ballJnt, pos = True, rot = True)
     cmds.matchTransform(toeLoc, ballJnt, pos = True, rot = True)
     
     #REMOVE WHEN USED FOR CHARACTERS WITH STRAIGHT FEET (ADD AS A CHECKBOX?)
-    cmds.xform(ballLoc, toeLoc, ro = (0,10,0), os = True)
+    #cmds.xform(ballLoc, toeLoc, ro = (0,10,0), os = True)
 
     #Delete rotation valeus from locs 
     cmds.makeIdentity(ballLoc, toeLoc, apply = True, r = True)
 
     #unparent the OG ikh from the chain
     cmds.parent(ikHandle,  w = True)
-    cmds.delete(f"{side}{joints[0]}{config.fkik['ik']}{suffix['pointCon']}")
+    pointCon = joints[0].replace(
+                suffix["joint"],
+                f"{config.fkik['ik']}{suffix['pointCon']}")
+    cmds.delete(pointCon)
 
     #IKS
-    ballIk = cmds.ikHandle(n = f"{side}{joints[3]}{suffix['ikHandle']}", sj = ankleJnt, ee = ballJnt)[0]
-    toeIk = cmds.ikHandle(n = f"{side}{joints[4]}{suffix['ikHandle']}", sj = ballJnt, ee = toeJnt)[0]
+    ballIk = cmds.ikHandle(n = ballJnt.replace(suffix["joint"], suffix["ikHandle"]), sj = ankleJnt, ee = ballJnt)[0]
+    toeIk = cmds.ikHandle(n = toeJnt.replace(suffix["joint"], suffix["ikHandle"]), sj = ballJnt, ee = toeJnt)[0]
 
     #Hierarchy
     cmds.parent(toeIk, toeLoc)
@@ -73,9 +73,12 @@ def build(side, ikHandle, ikCtrl, switch, joints):
 
     footCtrlGrp = cmds.group(sliderCtrl, borderCtrl, n = f"{side}foot{suffix['control']}{suffix['group']}")
 
-    cmds.matchTransform(footCtrlGrp, frontLoc, pos = True, rot = True)    
+    print("L:", cmds.xform("L_frontFoot_LOC", q=True, ws=True, t=True))
+    print("R:", cmds.xform("R_frontFoot_LOC", q=True, ws=True, t=True))
 
-    cmds.xform(footCtrlGrp, t = (1,0,7), r = True)
+    cmds.matchTransform(footCtrlGrp, frontLoc, pos = True, rot = True)  
+
+    #cmds.xform(footCtrlGrp, t = (1,0,7), r = True)
 
 
     #SDKs for "hiding iks"

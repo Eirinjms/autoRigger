@@ -4,9 +4,9 @@ import autoRigger.utils.config as config
 
 
 class TwistJointsGeneration:
-    def __init__(self, axisInput, startJoint, endJoint, twistInput, armOrder, legOrder):
+    def __init__(self, axisInput, startJoint, endJoint, twistInput, rotOrder):
         """
-        Creates an instance of the twist setup, can be used on any limb. 
+        Creates an instance of the twist setup, can be used on any chain hopefully. 
         
         """
         self.axis = axisInput
@@ -19,8 +19,7 @@ class TwistJointsGeneration:
 
         self.twistInput = twistInput
 
-        self.legOrder = legOrder
-        self.armOrder = armOrder
+        self.rotOrder = rotOrder
 
     def twistCreation(self):
         """
@@ -49,20 +48,25 @@ class TwistJointsGeneration:
 
             if 'leg' in jointName:
                 cmds.matchTransform(jnt, self.startJoint, rot=True, pos=False, scl=False)
-                config.setRotationOrder([jnt], self.legOrder)
-                print(self.legOrder)
+                config.setRotationOrder([jnt], self.rotOrder)
+                
 
-            if 'arm' in jointName:
+            elif 'arm' in jointName:
                 cmds.matchTransform(jnt, self.startJoint, rot=True, pos=False, scl=False)
-                config.setRotationOrder([jnt], self.armOrder)
-                print(self.armOrder)
+                config.setRotationOrder([jnt], self.rotOrder)
+            
+            else:
+                cmds.matchTransform(jnt, self.startJoint, rot=True, pos=False, scl=False)
+                config.setRotationOrder([jnt], 0)
+            
+            cmds.makeIdentity(jnt, apply = True, r = True)
+            
 
 
         # parent into a chain under startJoint
         cmds.select(clear=True)
-        for i in range(len(self.twistJointsList) - 1, 0, -1):
-            cmds.parent(self.twistJointsList[i], self.twistJointsList[i - 1])
-        cmds.parent(self.twistJointsList[0], self.startJoint)
+        for jnt in self.twistJointsList:
+            cmds.parent(jnt, self.startJoint)
 
         cmds.makeIdentity(self.twistJointsList[0], apply=True, t=False, r=True, s=False)
 
@@ -74,16 +78,15 @@ class TwistJointsGeneration:
             self.mdNodes.append(md)
 
             cmds.setAttr(f"{md}.input2{self.axis}", percent)
-        print(self.mdNodes)
         return self.twistJointsList
     
     def matrixTwistSetup(self):
         locatorStart = cmds.spaceLocator(n = self.startJoint.replace("JNT", "MTX_LOC"))[0]
         locatorEnd = cmds.spaceLocator(n = self.endJoint.replace("JNT", "MTX_LOC"))[0]
         
-
-        cmds.matchTransform(locatorStart, self.startJoint, pos = True, rot = True)
-        cmds.matchTransform(locatorEnd, self.endJoint, pos = True, rot = True)
+        cmds.matchTransform(locatorEnd, self.endJoint, pos = True)
+        cmds.matchTransform(locatorStart, self.startJoint, rot = True)
+        cmds.matchTransform(locatorEnd, self.startJoint, rot = True)
 
         cmds.parentConstraint(self.startJoint, locatorStart)
         cmds.parentConstraint(self.endJoint, locatorEnd)
@@ -104,6 +107,7 @@ class TwistJointsGeneration:
             cmds.connectAttr(f"{md}.outputX", f"{jnt}.rotateX")
 
     def creation(self):
+        print(self.twistInput, "ui")
         self.twistCreation()
         self.matrixTwistSetup()
 

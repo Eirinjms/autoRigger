@@ -33,6 +33,10 @@ def fourWayArrowCtrl(name, size):
     cmds.xform(ctrl, s=(size, size, size))
     cmds.makeIdentity(ctrl, apply=True, t=True, r=True, s=True)
 
+    shape = cmds.listRelatives(ctrl, shapes=True, path=True)[0]
+    cmds.rename(shape, f"{ctrl}Shape")
+
+
     return ctrl
 # ------------------------------
 # CUBE
@@ -54,6 +58,10 @@ def cubeCtrl(name, X, Y, Z):
 
     cmds.xform(ctrl, s=(X, Y, Z))
     cmds.makeIdentity(ctrl, apply=True, t=True, r=True, s=True)
+
+    shape = cmds.listRelatives(ctrl, shapes=True, path=True)[0]
+    cmds.rename(shape, f"{ctrl}Shape")
+
 
 
     return ctrl
@@ -86,6 +94,10 @@ def pyramidCtrl(name, size):
     cmds.xform(ctrl, s=(size, size, size))
     cmds.makeIdentity(ctrl, apply=True, t=True, r=True, s=True)
 
+    shape = cmds.listRelatives(ctrl, shapes=True, path=True)[0]
+    cmds.rename(shape, f"{ctrl}Shape")
+
+
     return ctrl
 
 
@@ -113,6 +125,9 @@ def oneWayArrowCtrl(name, size):
 
     cmds.xform(ctrl, s=(size, size, size))
     cmds.makeIdentity(ctrl, apply=True, t=True, r=True, s=True)
+
+    shape = cmds.listRelatives(ctrl, shapes=True, path=True)[0]
+    cmds.rename(shape, f"{ctrl}Shape")
 
     return ctrl
 
@@ -142,6 +157,10 @@ def twoWayArrowCtrl(name, size):
 
     cmds.xform(ctrl, s=(size, size, size))
     cmds.makeIdentity(ctrl, apply=True, t=True, r=True, s=True)
+
+    shape = cmds.listRelatives(ctrl, shapes=True, path=True)[0]
+    cmds.rename(shape, f"{ctrl}Shape")
+
 
     return ctrl
 
@@ -205,6 +224,7 @@ def pvCtrl(name, size):
     cmds.xform(cvs[1::2], s = (3, 3, 3))
 
     cmds.makeIdentity(circleCurve, t = 1, s = 1, r = 1)
+    
 
     return circleCurve 
 
@@ -233,6 +253,10 @@ def eyeCtrl(name, size):
         cmds.xform(cv, s = (1, 1, 1.3))
 
     cmds.makeIdentity(ctrl, apply = True, t = True, r = True, s = True)
+
+    shape = cmds.listRelatives(ctrl, shapes=True, path=True)[0]
+    cmds.rename(shape, f"{ctrl}Shape")
+
 
     return ctrl
 
@@ -299,7 +323,11 @@ def gearCtrl(name, size, side, limb):
 
     cmds.xform(ctrl, s = (size, size, size))
 
+    shape = cmds.listRelatives(ctrl, shapes=True, path=True)[0]
+    cmds.rename(shape, f"{ctrl}Shape")
+
     cmds.delete(innerCircle)
+    
 
     return ctrl
 
@@ -318,6 +346,9 @@ def squareCtrl(name, size):
 
     cmds.xform(ctrl, s=(size, size, size))
     cmds.makeIdentity(ctrl, apply=True, t=True, r=True, s=True)
+
+    shape = cmds.listRelatives(ctrl, shapes=True, path=True)[0]
+    cmds.rename(shape, f"{ctrl}Shape")
 
     return ctrl
 

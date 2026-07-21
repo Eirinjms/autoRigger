@@ -4,8 +4,6 @@ import importlib
 
 importlib.reload(shapes)
 
-
-
 def cleanup():
     globalCtrl = shapes.fourWayArrowCtrl(name = "C_global_CTRL", size = 20)
 

@@ -39,9 +39,13 @@ class hierarchyManager:
     
     def climbHierarchy(self, root):
         children = cmds.listRelatives(root, children = True, type = self.type) or []
+        hierarchy = []
         for child in children: 
             self.hierarchy[child] = root
-            self.climbHierarchy(child)
+            hierarchy.append(child)
+            hierarchy.extend(self.climbHierarchy(child))
+        
+        return hierarchy
 
     def unparentHierarchy(self): 
         """

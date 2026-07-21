@@ -16,10 +16,13 @@ suffix = {
     "parentCon"    : "_paCON",
     "pointCon"     : "_poCON",
     "orientCon"    : "_oCON",
+    "aimCon"       : "_aimCON",
     "poleVectorCon": "_pvCON",
     "offsetGrp"    : "_OFFSET_GRP",
     "skinCluster"  : "_SKN",
-    "switch"       : "_SWITCH"
+    "switch"       : "_SWITCH",
+    "curve"        : "_CURVE",
+    "ikspline"     : "_IKSpline"
 }
 
 prefix = {
@@ -123,4 +126,23 @@ def getGuidePos(locator):
 
     return localPos, transformPos
 
+def addTuples(tuple1, tuple2):
+    return tuple(x + y for x, y in zip(tuple1, tuple2))
+
      
+
+def findRoots(nodes):
+    """
+    Returns all root nodes from a list of transforms.
+    """
+
+    roots = []
+
+    for node in nodes:
+        if not cmds.objExists(node):
+            continue
+
+        if not cmds.listRelatives(node, parent=True):
+            roots.append(node)
+
+    return roots

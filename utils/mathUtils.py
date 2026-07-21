@@ -1,6 +1,7 @@
 import config
 import string
 import maya.cmds as cmds
+import maya.openMaya.api as om
 
 def interpolatePositions(startGuide, endGuide, amount):
     

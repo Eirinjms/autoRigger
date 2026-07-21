@@ -1,8 +1,7 @@
 import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
 import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports] 
 import autoRigger.utils.shapes as shapes
-import autoRigger.modules.rigModules.reverseFoot as reverseFoot
-import autoRigger.modules.rigModules.handModule as handModule
+from autoRigger.modules.rigModules import handModule, reverseFoot, twistSetup as twist, squashAndStretch as stretch
 import autoRigger.utils.config as config
 import importlib
 
@@ -11,7 +10,16 @@ importlib.reload(handModule)
 importlib.reload(reverseFoot)
 
 class limbBuild:
-    def __init__(self, side, limbType, legOrder, armOrder, handOrder, armStretch, legStretch):
+    def __init__(self, side, 
+                 limbType, 
+                 legOrder, 
+                 armOrder, 
+                 handOrder, 
+                 armStretch, 
+                 legStretch, 
+                 twistArm, 
+                 twistLeg, 
+                 twistJoints):
         '''
         Builds an IK/FK limb rig including:
             - IK/FK blending
@@ -33,11 +41,15 @@ class limbBuild:
             cmds.error('Please Choose either arm or leg')
 
         self.stretchyArms = armStretch
-
         self.stretchyLegs = legStretch
 
+        self.twistArm = twistArm
+        self.twistLeg = twistLeg
+        self.twistAmount = twistJoints
+
+        self.twistJoints = []
+
         self.size = config.bipedal
-        
         self.suffix = config.suffix
 
         if limbType == "arm":
@@ -62,11 +74,11 @@ class limbBuild:
         else: 
             index = 'ABC'
 
-        self.joints = [f"{self.limbType}J{i}" for i in index]
-        self.allJoints = []
-        for joints in self.joints: 
+        self.jointBaseName = [f"{self.limbType}J{i}" for i in index]
+        self.joints = []
+        for joints in self.jointBaseName: 
             joint = f"{self.side}{joints}{config.suffix['joint']}"
-            self.allJoints.append(joint)
+            self.joints.append(joint)
         
 
     def dupeJoints(self):
@@ -75,19 +87,19 @@ class limbBuild:
         IK and FK chains
 
         '''
-        config.setRotationOrder(self.allJoints, self.rotOrder)
+        config.setRotationOrder(self.joints, self.rotOrder)
         self.fkJoints = []
         self.ikJoints = []
 
         count = 0
 
-        for i in self.fkIK:
-            for joint in self.joints:
+        for i in self.fkIK.values():
+            for joint in self.jointBaseName:
                 dup = cmds.duplicate(f"{self.side}{joint}{self.suffix['joint']}", 
                                      po = True, 
                                      n = f"{self.side}{joint}{i}{self.suffix['joint']}")[0]
                 
-                if count == len(self.joints):
+                if count == len(self.jointBaseName):
                     count = 0 
 
                 if dup.endswith(f"{self.fkIK['fk']}{self.suffix['joint']}"):
@@ -204,11 +216,25 @@ class limbBuild:
                                  size = size, 
                                  side = self.side, 
                                  limb = self.limbType)
+                                 
+        cmds.matchTransform(self.ikBNDLoc, self.joints[-1])
+        cmds.matchTransform(self.switch, self.joints[-1], pos = True)
+        cmds.makeIdentity(self.switch, apply = True, t = True)
 
-        cmds.parent(self.switch, self.ikBNDLoc)
-        cmds.parentConstraint(f"{self.side}{self.joints[2]}{self.suffix['joint']}", self.ikBNDLoc, 
-                              n = f"{self.side}{self.joints[0]}_BND{self.suffix['parentCon']}", 
-                              mo = False)
+        if 'L_' in self.switch:
+            Transform=(20, 0, 0)
+            
+        else: 
+            Transform=(-20, 0, 0) 
+
+        cmds.xform(self.switch, t = Transform, ro = (0, 0, 0))
+        cmds.makeIdentity(self.switch, apply = True, t = True, r = True)
+
+        cmds.pointConstraint(self.switch,self.switch, self.ikBNDLoc, n = self.switch + config.suffix['pointCon']) 
+
+        cmds.parentConstraint(f"{self.side}{self.jointBaseName[2]}{self.suffix['joint']}", self.ikBNDLoc, 
+                              n = f"{self.side}{self.jointBaseName[0]}_BND{self.suffix['parentCon']}", 
+                              mo = True)
 
         cmds.addAttr(self.switch, 
                      ln = 'FKIK_Switch', 
@@ -218,20 +244,6 @@ class limbBuild:
                      dv = 1, 
                      k = True)
 
-        if 'L_' in self.switch:
-            Transform=(0, 0, -13)
-            
-        else: 
-            Transform=(0, 0, 13) 
-
-        cmds.xform(self.switch, r = True, 
-                   t = Transform, 
-                   ro = (-6, 0, 90))
-        
-        cmds.makeIdentity(self.switch, 
-                          apply = True, 
-                          t = True, 
-                          r = True)
 
         for attr in self.attrs: 
             cmds.setAttr(f"{self.switch}.{attr}", 
@@ -248,7 +260,7 @@ class limbBuild:
         value = ['rotate', 'scale']
 
         for v in value: 
-            for joint, ikJoint, fkJoint in zip(self.joints, self.ikJoints, self.fkJoints): 
+            for joint, ikJoint, fkJoint in zip(self.jointBaseName, self.ikJoints, self.fkJoints): 
                 blend = cmds.shadingNode('blendColors', 
                                             au = True, 
                                             n = f"{joint}_{v}{self.suffix['blendColor']}")
@@ -278,7 +290,7 @@ class limbBuild:
 
         fkikRev = cmds.shadingNode('reverse', 
                                    au = True, 
-                                   n = f"{self.side}{self.joints[0]}{self.suffix['reverse']}")
+                                   n = f"{self.side}{self.jointBaseName[0]}{self.suffix['reverse']}")
 
         cmds.connectAttr(f"{self.switch}.FKIK_Switch", f"{fkikRev}.inputX")
         cmds.connectAttr(fkikRev + '.outputX', self.fkGrp + '.visibility')
@@ -289,9 +301,9 @@ class limbBuild:
         Calculates a pole vector position using the plane defined by
         the start, mid, and end joints. 
         '''
-        self.H = om.MVector(cmds.xform(f"{self.side}{self.joints[0]}{self.suffix['joint']}", q = True, ws = True, t = True))
-        self.K = om.MVector(cmds.xform(f"{self.side}{self.joints[1]}{self.suffix['joint']}", q = True, ws = True, t = True))
-        self.A = om.MVector(cmds.xform(f"{self.side}{self.joints[2]}{self.suffix['joint']}", q = True, ws = True, t = True))
+        self.H = om.MVector(cmds.xform(f"{self.side}{self.jointBaseName[0]}{self.suffix['joint']}", q = True, ws = True, t = True))
+        self.K = om.MVector(cmds.xform(f"{self.side}{self.jointBaseName[1]}{self.suffix['joint']}", q = True, ws = True, t = True))
+        self.A = om.MVector(cmds.xform(f"{self.side}{self.jointBaseName[2]}{self.suffix['joint']}", q = True, ws = True, t = True))
 
         HK = self.K - self.H
         HA = self.A - self.H
@@ -387,6 +399,7 @@ class limbBuild:
             else:
                 cmds.xform(cv, t=(0,5,0), os=True, r=True)
 
+
         # parent into FK chain
         cmds.parent(self.fkGrp, self.clavCtrl)
 
@@ -416,6 +429,20 @@ class limbBuild:
         if self.limbType == 'arm':
             handModule.build(self.side, self.handOrder)
 
+    def hipSpace(self):
+        spineJnt = "C_spineJA_JNT"
+
+
+        hiploc_name = f"hipSpace{self.suffix['locator']}"
+        if cmds.objExists(hiploc_name) == True:
+            self.hipLoc = hiploc_name
+        else: 
+            self.hipLoc = cmds.spaceLocator(n = hiploc_name)[0]
+
+        
+        spinePos = cmds.xform(spineJnt, q = True, t = True, ws = True)
+
+        cmds.xform(self.hipLoc, t = spinePos)
 
     def legSpaceSwitch(self):
         '''
@@ -425,16 +452,6 @@ class limbBuild:
             spineJnt: passed on from the spine module
         returns: alot of things im gnna guess. 
         '''
-
-        spineJnt = "C_spineJA_JNT"
-
-
-        hiploc_name = f"hipSpace{self.suffix['locator']}"
-        if cmds.objExists(hiploc_name) == True:
-            self.hipLoc = hiploc_name
-        else: 
-            self.hipLoc = cmds.spaceLocator(p = cmds.xform(spineJnt,q = True, t = True), n = hiploc_name)[0]
-
         if self.limbType == 'leg':
 
             cmds.addAttr(self.switch, ln = 'SPACES', at = "enum", en = "____________", k = True)
@@ -461,7 +478,6 @@ class limbBuild:
         '''
 
         #Make the locators
-        hipLoc = "hipSpace_LOC"
         worldLoc = cmds.spaceLocator(n =f"{self.side}arm_worldSpace{self.suffix['locator']}" )[0]
         clavSpaceLoc = cmds.spaceLocator(n = f"{self.side}arm_clavSpace{self.suffix['locator']}")[0]
         localSpaceLoc = cmds.spaceLocator(n = f"{self.side}arm_localSpace{self.suffix['locator']}")[0]
@@ -470,12 +486,12 @@ class limbBuild:
         cmds.parent(localSpaceLoc, self.ikGrp)
 
         cmds.matchTransform(clavSpaceLoc, self.clavJnt, pos = True, rot = True)
-        cmds.matchTransform(worldLoc, f"{self.side}{self.joints[2]}{self.suffix['joint']}", pos = True, rot = True)
+        cmds.matchTransform(worldLoc, f"{self.side}{self.jointBaseName[2]}{self.suffix['joint']}", pos = True, rot = True)
 
         #cmds.parent(hipLoc, spineLoc)
         cmds.parent(clavSpaceLoc, self.clavCtrl)
 
-        paCon = cmds.parentConstraint(worldLoc, clavSpaceLoc, hipLoc, self.ikLoc, mo = True, n = f"{self.side}spaceSwitch{self.suffix['parentCon']}")[0]
+        paCon = cmds.parentConstraint(worldLoc, clavSpaceLoc, self.hipLoc, self.ikLoc, mo = True, n = f"{self.side}spaceSwitch{self.suffix['parentCon']}")[0]
 
         cmds.parent(worldLoc, self.ikGrp)
 
@@ -527,65 +543,30 @@ class limbBuild:
 
         cmds.setDrivenKeyframe(drivenPV, at = 'switchAttr', cd = driverPV, dv = 0, v = 0)
         cmds.setDrivenKeyframe(drivenPV, at = 'switchAttr', cd = driverPV, dv = 1, v = 1)
+    
+    def twistSetup(self):
+        startJoints = [self.joints[0], self.joints[1]]
+        endJoints = [self.joints[1], self.joints[2]]
+
+        axis = "X"
+
+        for sj, ej in zip(startJoints, endJoints):
+            twistSetup = twist.TwistJointsGeneration(axis, sj, ej, self.twistAmount, self.rotOrder)
+            twistJoints = twistSetup.creation()
+            self.twistJoints.extend(twistJoints)
 
     def squashNstretch(self):
 
-        startJnt = cmds.xform(self.ikJoints[0], q = True, ws = True, t = True)
-        midJnt = cmds.xform(self.ikJoints[1], q = True, ws = True, t = True)
-        endJnt = cmds.xform(self.ikJoints[2], q = True, ws = True, t = True)
+        stretchLimb = stretch.squashNStretch(self.joints, 
+                                             self.side, 
+                                             self.limbType, 
+                                             self.ikGrp, 
+                                             self.ikCtrl, 
+                                             self.switch, 
+                                             self.twistJoints)
+        stretchLimb.create()
 
-        a1 = cmds.curve(d = 1, ep = [startJnt, midJnt], n = f"{self.side}{self.limbType}_a1Curve")
-        a2 = cmds.curve(d = 1, ep = [midJnt, endJnt], n = f"{self.side}{self.limbType}_a2Curve")
-        b =  cmds.curve(d = 1, ep = [startJnt, endJnt], n = f"{self.side}{self.limbType}_bCurve")
-
-        cmds.select(f"{b}.cv[1]")
-
-        ikCluster = cmds.cluster(n = f"{self.side}ikStretch")
-        #turn on clusterrelative
-        cmds.setAttr(f"{ikCluster[0]}.relative", 1)
-
-        a1ci = cmds.shadingNode('curveInfo', au = True)
-        cmds.connectAttr(f"{a1}.worldSpace[0]", f"{a1ci}.inputCurve")
-        a2ci = cmds.shadingNode('curveInfo', au = True)
-        cmds.connectAttr(f"{a2}.worldSpace[0]", f"{a2ci}.inputCurve")
-        bci = cmds.shadingNode('curveInfo', au = True)
-        cmds.connectAttr(f"{b}.worldSpace[0]", f"{bci}.inputCurve")
-
-        #nodes
-        pma = cmds.shadingNode('plusMinusAverage', au = True, n = f"{self.side}Stretch_PMA")
-        cmds.connectAttr(f"{a1ci}.arcLength", f"{pma}.input1D[0]")
-        cmds.connectAttr(f"{a2ci}.arcLength", f"{pma}.input1D[1]")
-
-        md = cmds.shadingNode('multiplyDivide', au = True, n = f"{self.side}Stretch_MD")
-        cmds.setAttr(f"{md}.operation", 2)
-        cmds.connectAttr(f"{bci}.arcLength", f"{md}.input1X")
-        cmds.connectAttr(f"{pma}.output1D", f"{md}.input2X")
-
-        cnd = cmds.shadingNode('condition', au = True, n = f"{self.side}Stretch_CND")
-        cmds.setAttr(f"{cnd}.operation", 3) 
-        cmds.setAttr (f"{cnd}.secondTerm", 1)
-        cmds.setAttr (f"{cnd}.colorIfFalseR", 1)
-        cmds.connectAttr(f"{md}.outputX", f"{cnd}.colorIfTrueR")
-        cmds.connectAttr(f"{md}.outputX", f"{cnd}.firstTerm")
-
-
-        cmds.connectAttr(f"{cnd}.outColorR", f"{self.ikJoints[0]}.scaleX")
-        cmds.connectAttr(f"{cnd}.outColorR", f"{self.ikJoints[1]}.scaleX")
-
-        cmds.parent(ikCluster, self.ikGrp)
-        clusterpocon = cmds.pointConstraint(self.ikCtrl, ikCluster[1], mo = True, n = f"{self.side}ikCluster{self.suffix['pointCon']}")[0]
-
-        cmds.addAttr(self.switch, ln = 'IK_Stretch', at = "enum", en = "____________", k = True)
-
-        cmds.addAttr(self.switch, at = 'bool', ln = f"{self.side}Stretch", k = True, dv = 1)
-        
-        cmds.setDrivenKeyframe(f"{clusterpocon}.{self.ikCtrl}W0", cd = f"{self.switch}.{self.side}Stretch", dv = 0, v = 0)
-        cmds.setDrivenKeyframe(f"{clusterpocon}.{self.ikCtrl}W0", cd = f"{self.switch}.{self.side}Stretch", dv = 1, v = 1)
-
-        curveGrp = cmds.group(a1, a2, b, n = f"{self.side}{self.limbType}ScaleCurves{self.suffix['group']}", p = self.ikGrp)
-        cmds.hide(curveGrp, ikCluster[1])
-
-    def buildLimb(self, stretch = True):
+    def buildLimb(self):
         self.dupeJoints()
         self.fkSetup()
         self.ikSetup()
@@ -594,6 +575,7 @@ class limbBuild:
         self.ikfkGroups()
         self.findpoleVector()
         self.createPoleVector()
+        self.hipSpace()
         
         self.endlimb()
         if self.limbType == 'arm':
@@ -606,9 +588,14 @@ class limbBuild:
         self.poleVectorSpaceSwitch()
 
         if self.limbType == 'leg':
+            if self.twistLeg:
+                self.twistSetup()
             if self.stretchyLegs: 
-                self.squashNstretch()
+                self.squashNstretch()  
+
         if self.limbType == 'arm':
+            if self.twistArm:
+                self.twistSetup()
             if self.stretchyArms:
                 self.squashNstretch()
             
@@ -616,7 +603,7 @@ class limbBuild:
         shapes.ctrlColour()
         print("Building:", self.side, self.limbType)
 
-def build_limb_set(legOrder, armOrder, handOrder, stretchyArms, stretchyLegs, sides: list, limbs: list):   
+def build_limb_set(legOrder, armOrder, handOrder, stretchyArms, stretchyLegs, twistAmount, twistArms, twistLegs, sides: list, limbs: list):   
     """
     Builds the requested limb types for the specified sides.
 
@@ -628,10 +615,10 @@ def build_limb_set(legOrder, armOrder, handOrder, stretchyArms, stretchyLegs, si
         handOrder (int) : the rotation order of the fingers. 
         stretchylegs (bool):
     """
-
+    print(twistAmount, "ui")
     for side in sides:
         for limb in limbs:
-            limbBuild(side, limb, legOrder, armOrder, handOrder, stretchyArms, stretchyLegs).buildLimb()
+            limbBuild(side, limb, legOrder, armOrder, handOrder, stretchyArms, stretchyLegs, twistArms, twistLegs, twistAmount).buildLimb()
     
     print("All Limbs built")
 

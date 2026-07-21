@@ -15,9 +15,17 @@ class spineBuilder:
         self.suffix = config.suffix
         self.attrs = config.attrs
 
-        self.spineJointsAmount = len(spineJoints)
+        if not spineJoints: 
+            spineJoints = cmds.ls("*spine*", type = 'joint')
+            spineJoints.sort()
+
+        if not spineJoints:
+            raise RuntimeError("No spine joints found.")
+        
         self.spineJoints = spineJoints
 
+        self.spineJointsAmount = len(spineJoints)
+        
         self.spineRoot = spineJoints[0]
         self.spineMiddle = spineJoints[len(spineJoints)//2] #ty stack overflow
         self.spineEnd = spineJoints[-1]
@@ -32,13 +40,13 @@ class spineBuilder:
         self.ikLocs = []
         self.ikCtrls = []
         
-        self.spineHier = hier.hierarchyManager([self.spineRoot], False) 
+        self.spineHier = hier.hierarchyManager([self.spineRoot], False, "transform") 
     
     def duplicatingJoints(self):
         # duplicate joint chains
-        for i in config.fkik:
+        for i in config.fkik.values():
             for joint in self.spineJoints:
-                source = f"{self.prefix[0]}{joint}{self.suffix['joint']}" 
+                source = f"{joint}" 
 
                 if not cmds.objExists(source):
                     cmds.warning(f"{source} does not exist, skipping")
@@ -62,13 +70,13 @@ class spineBuilder:
     def fkSetup(self):
         for count, joint in enumerate(self.fkJoints):
             name = joint.replace(self.suffix['joint'], "") 
-            fkLoc = cmds.spaceLocator(n = f"{self.prefix}{name}{self.suffix['locator']}")
+            fkLoc = cmds.spaceLocator(n = f"{name}{self.suffix['locator']}")[0]
             self.fkLocs.append(fkLoc)
 
             config.setRotationOrder([fkLoc], self.rotOrder)
 
 
-            fkCtrl = cmds.circle(n =f"{self.prefix}{name}{self.suffix['control']}", 
+            fkCtrl = cmds.circle(n =f"{name}{self.suffix['control']}", 
                                  r = self.size['FKspine'], 
                                  nr = (1,0,0))[0]
             config.setRotationOrder([fkCtrl], self.rotOrder)
@@ -90,11 +98,11 @@ class spineBuilder:
     def ikSetup(self):     
 
         curvepoints = []
-
         for joint in self.ikJoints: 
             pos = cmds.xform(joint, q = True, ws = True, t = True)
             curvepoints.append(pos)
-            
+
+           
         self.iKctrlCurve = cmds.curve(d = 3, 
                                  ep = curvepoints, 
                                  n = f"{self.prefix}spine{self.suffix['control']}{self.suffix['curve']}")
@@ -116,21 +124,21 @@ class spineBuilder:
                            self.spineMiddle, 
                            self.spineEnd]
 
-        controlNames = ['hip_', 
-                     'middle_', 
-                     'shoulders_']    
+        controlNames = ['hip', 
+                     'middle', 
+                     'shoulders']    
 
         for joint, name in zip(curveJoints, controlNames):
-            ctrlJoint = cmds.joint(n=f"{self.prefix}spine{name}{self.suffix['joint']}")
+            cmds.select(clear=True)
+            ctrlJoint = cmds.joint(n=f"{self.prefix}spine_{name}{self.suffix['joint']}")
             config.setRotationOrder([ctrlJoint], self.rotOrder)
 
             cmds.delete(cmds.parentConstraint(joint, ctrlJoint))
-            cmds.parent(w=True)
 
             self.ctrlJoints.append(ctrlJoint)
 
         for joint in self.ctrlJoints:
-            ikLoc = cmds.spaceLocator(n = joint.replace(self.suffix['joint'], self.suffix['locator']))
+            ikLoc = cmds.spaceLocator(n = joint.replace(self.suffix['joint'], self.suffix['locator']))[0]
             config.setRotationOrder([ikLoc], self.rotOrder)
             self.ikLocs.append(ikLoc)
 
@@ -165,7 +173,7 @@ class spineBuilder:
         cmds.connectAttr(f"{pma}.output1D", f"{self.ikSpline}.twist")
 
     def ikfkSwitch(self):
-        baseName = f"{self.prefix}spine_FKIK"
+        baseName = f"{self.prefix}spine_FKIK_switch{config.suffix['control']}"
         self.ikBNDLoc = cmds.spaceLocator(n = f"{baseName}{self.suffix['locator']}") [0]
         self.switch = shapes.gearCtrl(name = f"{baseName}{self.suffix['control']}", 
                                  size = 7, 
@@ -190,25 +198,26 @@ class spineBuilder:
     def blends(self):
 
         for blendCount, joint in enumerate(self.spineJoints): 
-            rotBlend = cmds.shadingNode('blendColors', au = True, n = f"{joint}_rot{self.suffix['blend']}")
+            rotBlend = cmds.shadingNode('blendColors', au = True, n = f"{joint}_rot{self.suffix['blendColor']}")
 
-            cmds.connectAttr(self.ikJoints[blendCount] + '.rotate', rotBlend + '.color1')
-            cmds.connectAttr(self.fkJoints[blendCount] + '.rotate', rotBlend + '.color2')
-            cmds.connectAttr(rotBlend + '.output',  self.prefix[0] + joint + self.suffix['joint'] + '.rotate')
+            cmds.connectAttr(f"{self.ikJoints[blendCount]}.rotate", f"{rotBlend}.color1")
+            cmds.connectAttr(f"{self.fkJoints[blendCount]}.rotate", f"{rotBlend}.color2")
+            cmds.connectAttr(f"{rotBlend}.output", f"{joint}.rotate")
 
-            cmds.connectAttr(self.switch + '.FKIK_Switch', rotBlend + '.blender')
+            cmds.connectAttr(f"{self.switch}.FKIK_Switch", f"{rotBlend}.blender")
             
-        trnBlend =  cmds.shadingNode('blendColors', au = True, n = f"{self.spineJoints[0]}_tran{self.suffix['blend']}") 
-        cmds.connectAttr(self.ikJoints[0] + '.translate', trnBlend + '.color1')
-        cmds.connectAttr(self.fkJoints[0] + '.translate', trnBlend + '.color2')
-        cmds.connectAttr(trnBlend + '.output', self.prefix[0] + self.spineJoints[0] + self.suffix['joint'] + '.translate')
+        trnBlend =  cmds.shadingNode('blendColors', au = True, n = f"{self.spineJoints[0]}_tran{self.suffix['blendColor']}") 
+        cmds.connectAttr(f"{self.ikJoints[0]}.translate", f"{trnBlend}.color1")
+        cmds.connectAttr(f"{self.fkJoints[0]}.translate", f"{trnBlend}.color2")
+        cmds.connectAttr(f"{trnBlend}.output", f"{self.spineRoot}.translate")
 
-        cmds.connectAttr(self.switch + '.FKIK_Switch', trnBlend + '.blender')
+        cmds.connectAttr(f"{self.switch}.FKIK_Switch", f"{trnBlend}.blender")
 
     def cleanup(self):
 
-        fkGrp = cmds.group(n = 'spine' + config.fkik['fk'].replace(self.suffix['joint'], self.suffix['group']), em = True)
-        ikGrp = cmds.group(n = 'spine' + config.fkik['ik'].replace(self.suffix['joint'], self.suffix['group']), em = True)
+        fkGrp = cmds.group(n = f"spine{config.fkik['fk']}{config.suffix['group']}", em = True)
+        ikGrp = cmds.group(n = f"spine{config.fkik['ik']}{config.suffix['group']}", em = True)
+
         ikJointCtrlGrp = cmds.group(n = f"spineCtrlJoints_GRP", em = True)
         ikCtrlGrp = cmds.group(n = f"ik_CTRL_GRP", em = True)
 
@@ -228,11 +237,11 @@ class spineBuilder:
 
         fkikRev = cmds.shadingNode('reverse', au = True, n = self.spineJoints[0] + self.suffix['reverse'])
 
-        cmds.connectAttr(self.switch + '.FKIK_Switch', fkikRev + '.inputX')
-        cmds.connectAttr(fkikRev + '.outputX', fkGrp + '.visibility')
+        cmds.connectAttr(f"{self.switch}.FKIK_Switch", f"{fkikRev}.inputX")
+        cmds.connectAttr(f"{fkikRev}.outputX", f"{fkGrp}.visibility")
 
 
-        IkswitchCtrl = cmds.group(em = True, w = True, n = 'spine_IK_switch' + self.suffix['group']) 
+        IkswitchCtrl = cmds.group(em = True, w = True, n = f"spine_IK_switch{self.suffix['group']}")
         cmds.parent(self.ikBNDLoc, IkswitchCtrl)
 
         cmds.hide(self.fkJoints, self.ikJoints, self.ikSpline, ikJointCtrlGrp, self.iKctrlCurve)

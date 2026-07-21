@@ -5,22 +5,30 @@ import autoRigger.utils.config as config  # pyright: ignore[reportMissingImports
 
 # RIBBON MAKER
 
-class ribbonMaker:
-    def __init__(self, joints):
+"""parente the follicle bind joints to the bind skeleton, parent constrain to the follicles
+add func for blendshapes: 
+sine, wave. """
+
+class RibbonMaker:
+    def __init__(self, startJoint, endJoint, limb, side, numDrivers, numFollicles):
         self.suffix = config.suffix
         self.prefix = config.prefix
 
-        self.joints = joints
+        self.startJoint = startJoint
+        self.endJoint = endJoint
+
         self.jointPlacements = []
-        for joint in joints:
+        for joint in [startJoint, endJoint]:
             jointPlacement = cmds.xform(joint, q=True, ws=True, t=True)
             self.jointPlacements.append(jointPlacement)
-        self.limbName = f"{joints[0].replace('JA', '').replace('_JNT', '')}"
+        self.limbName = limb
+        self.side = f"{side}_"
 
-        self.numOfFollicles = 6
-        self.numDrivers = 3
+        self.numDrivers = numDrivers
 
-        self.name = f"{self.limbName}_Ribbon"
+        self.numFollicles = numFollicles
+
+        self.name = f"{self.side}{self.limbName}_Ribbon"
 
     def lengthOfRibbon(self):
         """Calculates the distance between the chosen joints."""
@@ -33,8 +41,8 @@ class ribbonMaker:
         Creates the NURBS plane and orients/positions it between the two joints.
 
         Stores:
-            self.RibbonPlane (str)       – transform node name
-            self.RibbonPlaneShape (str)  – shape node name
+            self.RibbonPlane (str) transform node name
+            self.RibbonPlaneShape (str)shape node name
         """
         self.planeWidth = 3
         plane = cmds.nurbsPlane(
@@ -49,9 +57,9 @@ class ribbonMaker:
         self.RibbonPlane = plane[0]           # keep the transform string, not the list
         self.RibbonPlaneShape = cmds.listRelatives(self.RibbonPlane, shapes=True)[0]
 
-        self._positionRibbonPlane()
+        self.positionRibbonPlane()
 
-    def _positionRibbonPlane(self):
+    def positionRibbonPlane(self):
         """
         Moves and orients the ribbon so its U axis runs from joint[0] to joint[1],
         centred between them.
@@ -59,14 +67,13 @@ class ribbonMaker:
         A = om.MVector(self.jointPlacements[0])
         B = om.MVector(self.jointPlacements[1])
 
-        # ── midpoint ──────────────────────────────────────────────────────────
         mid = (A + B) / 2.0
         cmds.xform(self.RibbonPlane, ws=True, t=(mid.x, mid.y, mid.z))
 
-        # ── aim the plane so its local X points from A→B ──────────────────────
+        # aim the plane so its local X points from a to b
         aimVec = (B - A).normalize()
 
-        # build a stable up vector: prefer world-Y, fall back to world-Z
+        # build a stable up vectorprefer world-Y, fall back to world-Z
         worldUp = om.MVector(0, 1, 0)
         if abs(aimVec * worldUp) > 0.99:
             worldUp = om.MVector(0, 0, 1)
@@ -74,7 +81,6 @@ class ribbonMaker:
         sideVec = (aimVec ^ worldUp).normalize()   # right
         upVec   = (sideVec ^ aimVec).normalize()   # recalculated up
 
-        # matrix rows: [X-axis | Y-axis | Z-axis | position]
         mtx = [
             aimVec.x,  aimVec.y,  aimVec.z,  0,
             upVec.x,   upVec.y,   upVec.z,   0,
@@ -88,20 +94,21 @@ class ribbonMaker:
         Creates follicles evenly distributed along the ribbon (U direction).
 
         Stores:
-            self.ribbonFollicles (list) – follicle transform names
+            self.ribbonFollicles (list) follicle transform names
         """
         self.ribbonFollicles = []
 
-        for index in range(self.numOfFollicles):
+        for index in range(self.numFollicles):
             follicleShape = cmds.createNode("follicle")
             follicleTransform = cmds.listRelatives(follicleShape, parent=True)[0]
             follicleTransform = cmds.rename(
                 follicleTransform,
                 f"{self.name}_follicle{index + 1:02d}",
             )
+            follicleShape = cmds.listRelatives(follicleTransform, children = True, type='follicle')[0]
             self.ribbonFollicles.append(follicleTransform)
 
-            # ── surface connections ───────────────────────────────────────────
+            #surface connections 
             cmds.connectAttr(
                 f"{self.RibbonPlaneShape}.local",
                 f"{follicleShape}.inputSurface",
@@ -113,17 +120,16 @@ class ribbonMaker:
             cmds.connectAttr(f"{follicleShape}.outRotate",    f"{follicleTransform}.rotate")
             cmds.connectAttr(f"{follicleShape}.outTranslate", f"{follicleTransform}.translate")
 
-            # ── UV position ───────────────────────────────────────────────────
-            u = index / (self.numOfFollicles - 1) if self.numOfFollicles > 1 else 0.5
+            u = index / (self.numFollicles - 1) if self.numFollicles > 1 else 0.5
             cmds.setAttr(f"{follicleShape}.parameterU", u)
             cmds.setAttr(f"{follicleShape}.parameterV", 0.5)
 
     def createBindJoints(self):
         """
-        Creates one bind joint per follicle, parented under its follicle.
+        Creates one bind joint per follicle, parented under startjoint and constrained to the follicle .
 
         Stores:
-            self.BindJoints (list) – joint names
+            self.BindJoints (list) joint names
         """
         self.BindJoints = []
         for index, follicle in enumerate(self.ribbonFollicles):
@@ -132,8 +138,11 @@ class ribbonMaker:
                 name=f"{self.name}_follicle{index + 1:02d}_BIND{self.suffix['joint']}"
             )
             cmds.matchTransform(joint, follicle, pos=True, rot=True)
-            cmds.parent(joint, follicle)
+            cmds.parent(joint, self.startJoint)
             self.BindJoints.append(joint)
+        
+        for j, f in zip(self.BindJoints, self.ribbonFollicles):
+            cmds.parentConstraint(f, j, mo = False)
 
     def createDriverJoints(self):
         """
@@ -141,7 +150,7 @@ class ribbonMaker:
         Fixed: positions are now proper (x,y,z) tuples in world space.
 
         Stores:
-            self.DriverJoints (list) – joint names
+            self.DriverJoints (list) joint names
         """
         self.DriverJoints = []
 
@@ -163,10 +172,10 @@ class ribbonMaker:
         """Binds the driver joints to the NURBS plane via a skin cluster."""
         cmds.skinCluster(
             self.DriverJoints,
-            self.RibbonPlane,                     # fixed: was self.RibbonPlane (list)
+            self.RibbonPlane,                 
             toSelectedBones=True,
-            bindMethod=0,                         # closest distance
-            skinMethod=0,                         # linear
+            bindMethod=0,                  
+            skinMethod=0,                         
             normalizeWeights=1,
             name=f"{self.name}{self.suffix['skinCluster']}",
         )
@@ -174,27 +183,22 @@ class ribbonMaker:
     def groupAndClean(self):
         """
         Organises ribbon nodes into a tidy hierarchy:
-
-            {name}_RBN_GRP
-            ├── {name}_geo_GRP       (NURBS plane)
-            ├── {name}_follicles_GRP (follicle transforms + their bind joints)
-            └── {name}_drivers_GRP   (driver joints)
         """
-        self.ribbonGrp      = cmds.group(em=True, name=f"{self.name}_RBN_GRP")
-        self.geoGrp         = cmds.group(em=True, name=f"{self.name}_geo_GRP",       parent=self.ribbonGrp)
-        self.folliclesGrp   = cmds.group(em=True, name=f"{self.name}_follicles_GRP", parent=self.ribbonGrp)
-        self.driversGrp     = cmds.group(em=True, name=f"{self.name}_drivers_GRP",   parent=self.ribbonGrp)
+        self.ribbonGrp = cmds.group(em=True, name=f"{self.name}_RBN_GRP")
+        self.geoGrp = cmds.group(em=True, name=f"{self.name}_geo_GRP",parent=self.ribbonGrp)
+        self.folliclesGrp = cmds.group(em=True, name=f"{self.name}_follicles_GRP", parent=self.ribbonGrp)
+        self.driversGrp = cmds.group(em=True, name=f"{self.name}_drivers_GRP", parent=self.ribbonGrp)
 
-        cmds.parent(self.RibbonPlane,         self.geoGrp)
-        cmds.parent(self.ribbonFollicles,     self.folliclesGrp)
-        cmds.parent(self.DriverJoints,        self.driversGrp)
+        cmds.parent(self.RibbonPlane, self.geoGrp)
+        cmds.parent(self.ribbonFollicles,self.folliclesGrp)
+        cmds.parent(self.DriverJoints, self.driversGrp)
 
-        # hide the geo and follicle groups – only drivers should be selected/keyed
         cmds.setAttr(f"{self.geoGrp}.visibility",       0)
         cmds.setAttr(f"{self.folliclesGrp}.visibility", 0)
 
     def build(self):
         """Runs every step in the correct order."""
+
         self.lengthOfRibbon()
         self.creatingNurbsPlane()
         self.createFollicles()

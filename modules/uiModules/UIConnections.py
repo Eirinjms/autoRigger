@@ -21,8 +21,9 @@ import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports]
 from autoRigger.modules.builderModules import buildRig, locatorBasedFunctions as locFunc, jointGeneration as jointGen
 from autoRigger.modules.rigModules.symmetrySetup import symmetry
 from autoRigger.modules.builderModules import ProceduralSpineCreation
-from autoRigger.utils import config, mirror, hierarchyModule as hier, proceduralLocatorChain as procLoc
+from autoRigger.utils import config, mirror, hierarchyModule as hier, proceduralLocatorChain as procLoc, rigSettings
 import autoRigger.modules.rigModules.twistSetup as twistSetup
+
 
 
 
@@ -146,7 +147,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
         unparentLocsBtn = self.ui.findChild(QtWidgets.QPushButton, "UnparentLocHierarchy_Bipedal")
         reparentLocsBtn = self.ui.findChild(QtWidgets.QPushButton, "ReparentLocHierarchy_Bipedal")
 
-        mirrorLocatorBtn = self.ui.findChild(QtWidgets.QPushButton, "ReparentLocHierarchy_Bipedal")
+        self.mirrorLocatorBtn = self.ui.findChild(QtWidgets.QPushButton, "MirrorSelLocators_Btn")
 
         self.pvVisualizer = self.ui.findChild(QtWidgets.QCheckBox, "pvViz_checkBox")
 
@@ -166,6 +167,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.prefixLocChain = self.ui.findChild(QtWidgets.QLineEdit, "prefix_locChain_text")
         self.baseNameLocChain = self.ui.findChild(QtWidgets.QLineEdit, "baseName_locChain_text")
         self.LocatorChainNumber = self.ui.findChild(QtWidgets.QLabel, "generateLocatorChainNumber_btn")
+        self.locatorUpdater = self.ui.findChild(QtWidgets.QPushButton, "generateLocatorChainUpdate_btn")
         
         #-----------------------------------joint buttons -----------------------------------------------#
 
@@ -221,8 +223,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.twistLegCheck = self.ui.findChild(QtWidgets.QCheckBox, "twistJoints_legs_checkbtn")
         self.twistSlider = self.ui.findChild(QtWidgets.QSlider, "twistJoint_Slider")
 
-        self.stretchyLegsCheck = self.ui.findChild(QtWidgets.QSlider, "StretchyLimbs_legs_checkBttn")
-        self.stretchyArmsCheck = self.ui.findChild(QtWidgets.QSlider, "StretchyLimbs_arms_checkBttn")
+        self.stretchyLegsCheck = self.ui.findChild(QtWidgets.QCheckBox, "StretchyLimbs_legs_checkBttn")
+        self.stretchyArmsCheck = self.ui.findChild(QtWidgets.QCheckBox, "StretchyLimbs_arms_checkBttn")
 
         self.temp = self.ui.findChild(QtWidgets.QPushButton, "TEMP")
         self.twistLabel = self.ui.findChild(QtWidgets.QLabel, "TwistJoint_Number")
@@ -235,9 +237,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         if exportJoints:
             exportJoints.clicked.connect(self.exportJointsjson)
-
-        if self.temp:
-            self.temp.clicked.connect(self.twistCreation)
 
         if self.twistSlider:
             self.twistSlider.valueChanged.connect(self.updateSizeLabelTwist)
@@ -260,6 +259,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         if self.guideChainLength:
             self.guideChainLength.valueChanged.connect(self.generateLocs)
+        
+        if self.locatorUpdater:
+            self.locatorUpdater.clicked.connect(self.generateLocs)
 
         if createLocBtn:
             createLocBtn.clicked.connect(self.buildLocators)
@@ -312,6 +314,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.pvVisualizer.setChecked(False)
             self.pvVisualizer.blockSignals(False)
             self.pvVisualizer.toggled.connect(self.previewPV)
+        
+        if self.mirrorLocatorBtn:
+            self.mirrorLocatorBtn.clicked.connect(lambda: mirror.mirrorLocators())
 
 
         #-----------------------------------rev feet connections -----------------------------------------------#
@@ -361,19 +366,23 @@ class AutoRiggerUI(QtWidgets.QDialog):
     def buildRigButton(self):
         """ Builds the rig :D """
 
-        self.twistCreation()
-
         cmds.undoInfo(openChunk=True)
         try:
-            if not self.revFeetLocList:
-                cmds.warning("Please generate reverse feet before building rig")
-                return
-            
-            if len(self.revFeetLocList) == 4: 
-                print("only one side of rev feet found, generating the other side")
-                rightSideLocs = self.mirrorLocators("L_backOfHeel_LOC")
-                self.revFeetLocList.extend(rightSideLocs)
-                print("Right side created..")
+            expected = {
+                "outerSideFoot_LOC",
+                "innerSideFoot_LOC",
+                "frontFoot_LOC",
+                "backOfHeel_LOC"}
+            sides = [
+                "L_",
+                "R_"
+            ]
+            for side in sides: 
+                for e in expected: 
+                    if cmds.objExists(f"{side}{e}"):
+                        continue
+                    else:
+                        return cmds.warning("Error retrieving the reverse feet generators, delete remainding locators and re-generate")
 
             if not self.jointsList:
                 cmds.warning("No joints found, please generate joints first")
@@ -383,6 +392,11 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.stretchyArms = self.stretchyArmsCheck.isChecked()
             self.stretchyLegs = self.stretchyLegsCheck.isChecked()
 
+            twistArms = self.twistArmCheck.isChecked()
+            twistLegs = self.twistLegCheck.isChecked()
+            twistAmount = self.twistSlider.value()
+            print(twistAmount, "ui")
+
             buildRig.build(
                 self.spineOrder,
                 self.spineJoints,     
@@ -391,37 +405,14 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 self.handOrder,
                 self.neckOrder,
                 self.stretchyArms,
-                self.stretchyLegs
+                self.stretchyLegs,
+                twistAmount,
+                twistArms,
+                twistLegs
             )
             print("..Rig built!")
         finally:
             cmds.undoInfo(closeChunk=True)
-
-    def twistCreation(self):
-        cmds.undoInfo(openChunk = True)
-        try: 
-            self.defineRotOrder()
-            self.twistInput = self.twistSlider.value()
-            startJoints = []
-            endJoints = []
-            axisInput = "X"
-            if self.twistArmCheck.isChecked():
-                for side in self.prefix:
-                    startJoints.extend([f"{side}armJB_JNT", f"{side}armJC_JNT"])
-                    endJoints.extend([f"{side}armJC_JNT", f"{side}armJD_JNT"])
-
-            if self.twistLegCheck.isChecked():
-                for side in self.prefix:
-                    startJoints.extend([f"{side}legJA_JNT", f"{side}legJB_JNT"])
-                    endJoints.extend([f"{side}legJB_JNT", f"{side}legJC_JNT"])
-
-            for sj, ej in zip(startJoints, endJoints):
-                twist = twistSetup.TwistJointsGeneration(axisInput, sj, ej, self.twistInput, self.armOrder, self.legOrder)
-                print(self.legOrder)
-                self.jointsList.extend(twist.creation())
-        finally: 
-            cmds.undoInfo(closeChunk = True)
-            print(self.jointsList)
 
     def spineValue(self):
         value = self.spineSlider.value()
@@ -437,7 +428,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.procSpine.updateSpine(self.spineValue())
         self.spineJoints.clear()
         for loc in self.procSpine.spineLocs:
-            loc.replace("GUIDE", "JNT")
+            loc = loc.replace("GUIDE", "JNT")
             self.spineJoints.append(loc)
 
     def locatorValue(self):
@@ -469,6 +460,15 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 return
             self.generator.updateJointAmount(self.locatorValue())
             self.generator.placementMath()
+
+            self.locatorList[:] = [
+                loc for loc in self.locatorList
+                if cmds.objExists(loc)]
+
+            for loc in self.generator.Locs:
+                if loc not in self.locatorList:
+                    self.locatorList.append(loc)
+            print(self.locatorList)
         finally: 
             cmds.undoInfo(closeChunk = True)
 
@@ -487,18 +487,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
     # ─────────────────────────────────────────────────────────────────────────
     # LOCATORS
     # ─────────────────────────────────────────────────────────────────────────
-
-    def buildLocators(self):
-        "Builds a Locator? "
-        cmds.undoInfo(openChunk=True)
-        try:
-            self.locator = cmds.spaceLocator()[0]
-            self.locatorList.append(self.locator)
-            print(self.locator)
-        finally:
-            cmds.undoInfo(closeChunk=True)
-
-    def importPreset(self, textBox, storeLocators : bool, locatorList):
+    def importPreset(self, textBox, storeLocators : bool, locatorList, filePath=None, allowReverseDispatch=True):
         """
         Imports a JSON preset and recreates the locator hierarchy.
 
@@ -514,12 +503,15 @@ class AutoRiggerUI(QtWidgets.QDialog):
         
         """
         folder = config.find_file_path("presets")
-
-        filePath, _ = QFileDialog.getOpenFileName(
-            self,
-            "Import Locator Preset",
-            folder,
-            "JSON Files (*.json)",)
+        if not filePath:
+            filePath, _ = QFileDialog.getOpenFileName(
+                self,
+                "Import Locator Preset",
+                folder,
+                "JSON Files (*.json)",)
+        
+        if allowReverseDispatch and "reverseFeet" in filePath:
+            return self.build_reverseFeetLocators(filePath = filePath)
 
         if textBox:
             textBox.setText(filePath)
@@ -546,6 +538,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
         
         cmds.undoInfo(openChunk = True)
         for root_name, root_data in presetData.items():
+            print(root_name)
+            if cmds.objExists(root_name.replace('JNT', 'GUIDE')):
+                return cmds.warning("This preset has already been loaded")
+            
             self.build_locator(root_name, root_data, locatorList, storeLocators)
         cmds.undoInfo(closeChunk = True)
 
@@ -581,21 +577,29 @@ class AutoRiggerUI(QtWidgets.QDialog):
         for child_name, child_data in joint_data["children"].items():
             self.build_locator(child_name, child_data, locatorList, storeLocators, loc)
 
-    def build_reverseFeetLocators(self):
+    def build_reverseFeetLocators(self, filePath=None):
         """Recreates the locator hierarchy from the loaded JSON dict."""
 
-        self.importPreset(self.revFeetTextBox, storeLocators = False, locatorList = self.revFeetLocList)
+        cmds.undoInfo(openChunk = True)
+        try:
 
-        mirroredRevFeet = mirror.mirrorLocators("L_backOfHeel_LOC")
+            if cmds.objExists("L_backOfHeel_LOC"):
+                return cmds.warning("Reverse Feet locators already in scene,"
+                                    "delete them before importing new ones.")
+            
+            self.importPreset(self.revFeetTextBox, storeLocators = False, locatorList = self.revFeetLocList, filePath = filePath, allowReverseDispatch=False)
 
-        self.revFeetLocList.extend(mirroredRevFeet)
+            mirroredRevFeet = mirror.mirrorLocators("L_backOfHeel_LOC")
 
-        self.revFeetSymmetry.locator_symmetry()
-     
+            self.revFeetLocList.extend(mirroredRevFeet)
+
+            cmds.select(clear = True)
+        finally: 
+            cmds.undoInfo(closeChunk = True)
 
     def locatorSize(self, value):
         if self.allLocatorsRadio and self.allLocatorsRadio.isChecked():
-            locators = self.locatorList
+            locators = cmds.ls("*_GUIDE", type = 'transform')
         else:
             selected = cmds.ls(sl=True)
             locators = []
@@ -650,6 +654,11 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
     
     def unparentClicked(self): 
+        guides = cmds.ls("*GUIDE", type='transform')
+        for guide in guides: 
+            if guide not in self.locatorList: 
+                self.locatorList.append(guide)
+
         self.spineCustomizationState = self.spineCustomization.isChecked()
         self.guideHier.unparentHierarchy()
         self.spineCustomization.setChecked(False)
@@ -712,12 +721,13 @@ class AutoRiggerUI(QtWidgets.QDialog):
         try:
             if self.locatorSymmetry.isChecked():
                 self.locatorSymmetry.setChecked(False)
+            
+
+            self.locatorList = cmds.ls("*GUIDE", type = 'transform')
                 
             if len(self.locatorList)== 0:
                 return cmds.warning("No guide Locators found, please generate these before generating joints!")
-            
-            self.locatorList = cmds.ls("*GUIDE", type = 'transform')
-            
+
             for loc in self.locatorList:
                 cmds.makeIdentity(loc, 
                                 apply = True, 
@@ -795,6 +805,14 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         """
 
+        roots = config.findRoots(cmds.ls("*JNT", type='joint'))
+        for jnt in roots: 
+            cmds.joint(jnt,                 
+                    e = True, 
+                   oj = "xyz", 
+                   sao = "yup", 
+                   ch = True, 
+                   zso = True)
 
         required = [
             "C_spineJA_JNT",
@@ -803,13 +821,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
             "L_middleFngJEnd_JNT",
             "R_middleFngJEnd_JNT",
         ]
-
+        
         missing = [j for j in required if not cmds.objExists(j)]
-
         if missing:
-            cmds.warning(
-                "Automatic joint orientation currently supports the default biped only."
-            )
             return
         
         cmds.joint("C_spineJA_JNT", 
@@ -822,6 +836,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
         #spinejoints
         centerJoints = cmds.ls("C_*",
                                type='joint')
+        
+        hipJoins = cmds.ls("*legJA", type = 'joint')
         
         
         feetJoints = cmds.ls("*legJC*", "*legJD*", type = 'joint')
@@ -860,6 +876,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
         for joint in self.jointsList:
             if not cmds.listRelatives(joint, c=True, type="joint"):
                 cmds.joint(joint, e=True, zso=True, oj="none")
+        
+        self.mirrorJoints()
 
     def mirrorJoints(self):
         """
@@ -947,28 +965,78 @@ class AutoRiggerUI(QtWidgets.QDialog):
         finally:
             cmds.undoInfo(closeChunk=True)
     
-    def previewPV(self, sel):
-        """
-        Enables a preview version of where the PoleVector will be located.
+    def previewPV(self, checked):
 
-            Parameters: 
-                sel (str) : a selected root for the chain you want to visualize.
-        """
+        cmds.undoInfo(openChunk = True)
+        try:
+            if not checked:
+                # delete the visualization if it exists
+                if cmds.objExists("*_PV_Visualization"):
+                    cmds.delete(cmds.ls("*_PV_Visualization"))
+                return
 
-
-        if not sel:
-            sel = cmds.ls(sl = True, 
-                        type='transform')
+            sel = cmds.ls(sl=True, type='transform')
+            if len(sel) != 1:
+                return cmds.warning("Select ONLY root joint of the chain you want to test")
             
-            children = cmds.listRelatives(sel, 
-                                    ad = True)
+            children = cmds.listRelatives(sel, ad=True, type='transform') or []
+            children.reverse()
+            chain = sel + children
             
-            sel = cmds.ls(sel + children)
 
-            locFunc.poleVectorVisualization(sel, pvDistance = 10)
+            if len(chain) < 3:
+                cmds.warning("Select the root of the limb chain")
+                return
+            for guide in chain[:3]:
+                local, world = config.getGuidePos(guide)
+                pos = config.addTuples(local, world)
 
+                print(guide)
+                print("local:", local)
+                print("world:", world)
+                print("final:", pos)
 
-        # AND ALSO ADD IN THAT HEN THE THANG IS UNCHECKED U DELETE THE plane
+            self.unparentClicked()
+
+            for guide in chain[:3]:
+                shape = cmds.listRelatives(guide, s=True, type="locator")[0]
+
+                # current values
+                translate = cmds.getAttr(f"{guide}.translate")[0]
+                localPos = cmds.getAttr(f"{shape}.localPosition")[0]
+
+                # bake translate into the shape
+                baked = tuple(t + l for t, l in zip(translate, localPos))
+
+                cmds.setAttr(f"{shape}.localPosition", *baked, type="double3")
+                cmds.setAttr(f"{guide}.translate", 0, 0, 0, type="double3")
+
+            for guide in chain[:3]:
+                local, world = config.getGuidePos(guide)
+                pos = config.addTuples(local, world)
+
+                print(guide)
+                print("local:", local)
+                print("world:", world)
+                print("final:", pos)
+
+                for guide in chain[:3]:
+                    shape = cmds.listRelatives(guide, s=True, type="locator")[0]
+
+                    print(guide)
+                    print("transform translate:",
+                        cmds.getAttr(f"{guide}.translate")[0])
+                    print("shape localPosition:",
+                        cmds.getAttr(f"{shape}.localPosition")[0])
+                    print("world xform:",
+                        cmds.xform(guide, q=True, ws=True, t=True))
+
+            locFunc.poleVectorVisualization(chain[:3:], pvDistance=10)
+
+        finally:
+            self.reparentClicked()
+            cmds.select(clear = True)
+            cmds.undoInfo(closeChunk = True)
 
     # ─────────────────────────────────────────────────────────────────────────
     # Rig options

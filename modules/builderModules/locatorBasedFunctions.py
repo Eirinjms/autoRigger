@@ -108,18 +108,22 @@ def getGuidePos(locator):
 
 def poleVectorVisualization(sel, pvDistance):
     '''
-    Enables a visualization of the polevector, creating a polygon 
+    Enables a visualization of the polevector, creating a polygon.
     '''
-
     pv = findpoleVector(sel, pvDistance)
-    joint_positions = []
-    for joint in sel: 
-        pos = cmds.xform(joint, q=True, ws=True, t=True)
-        joint_positions.append(tuple(pos))
-    joint_positions.append((pv.x, pv.y, pv.z)) 
 
-    pvVis = cmds.polyCreateFacet(p = joint_positions,
-                                        n = f"{sel[0]}_PV_Visualization")[0]
+    joint_positions = []
+    for joint in sel:
+        pos, _ = config.getGuidePos(joint)
+        joint_positions.append(tuple(pos))
+    joint_positions.append((pv.x, pv.y, pv.z))
+
+    pvVis = cmds.polyCreateFacet(
+        p=joint_positions,
+        n=f"{sel[0]}_PV_Visualization"
+    )[0]
+
+    return pvVis
 
 
 def findpoleVector(sel, pvDistance):
@@ -128,10 +132,18 @@ def findpoleVector(sel, pvDistance):
     the start, mid, and end joints. 
     '''
 
-    H = om.MVector(cmds.xform(sel[0], q = True, ws = True, t = True))
-    K = om.MVector(cmds.xform(sel[1], q = True, ws = True, t = True))
-    A = om.MVector(cmds.xform(sel[2], q = True, ws = True, t = True))
-   
+    local0, world0 = config.getGuidePos(sel[0])
+    local1, world1 = config.getGuidePos(sel[1])
+    local2, world2 = config.getGuidePos(sel[2])
+
+    pos0 = config.addTuples(local0, world0)
+    pos1 = config.addTuples(local1, world1)
+    pos2 = config.addTuples(local2, world2)
+
+    H = om.MVector(*pos0)
+    K = om.MVector(*pos1)
+    A = om.MVector(*pos2)
+
     HK = K - H
     HA = A - H
 

@@ -20,14 +20,16 @@ class procLocatorGenerator:
     def generateLocs(self):
         if not "_" in self.prefix: 
             self.prefix += "_"
+        
+        if cmds.ls(f"{self.prefix}{self.basename}JA_GUIDE"):
+            return cmds.warning("Chain with specified name already exists, choose a new name")
 
-        self.startGuide = cmds.spaceLocator(n = f"{self.prefix}{self.basename}JA_GUIDE")
-        self.endGuide = cmds.spaceLocator(n = f"{self.prefix}{self.basename}JEnd_GUIDE")
+        self.startGuide = cmds.spaceLocator(n = f"{self.prefix}{self.basename}JA_GUIDE")[0]
+        self.endGuide = cmds.spaceLocator(n = f"{self.prefix}{self.basename}JEnd_GUIDE")[0]
         
 
         startShape = cmds.listRelatives(self.startGuide, shapes=True)[0]
         endShape = cmds.listRelatives(self.endGuide, shapes=True)[0]
-
 
         cmds.xform(self.endGuide, t  = (10,0,0), ws = True)
 
@@ -79,6 +81,8 @@ class procLocatorGenerator:
 
         cmds.parent(self.newlocators[0], self.startGuide)
         cmds.parent(self.endGuide, self.newlocators[-1])
+
+        cmds.select(clear = True)
 
 
     def deleteGuides(self, joints: list):

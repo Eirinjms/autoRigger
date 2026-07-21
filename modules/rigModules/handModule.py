@@ -22,11 +22,13 @@ def build(side, handOrder):
         index = string.ascii_uppercase[:3]
         fingerjoints = [f"{side}{fng}J{i}{suffix['joint']}" for i in index]
 
+
         fkLocs = []
         fkGrps = []
         fkCtrls = []
 
         for count, joint in enumerate(fingerjoints):
+            config.setRotationOrder([joint], handOrder)
             fkLoc = cmds.spaceLocator(n = joint.replace(suffix['joint'], suffix['locator']))[0]
             config.setRotationOrder([fkLoc], handOrder)
             fkLocs.append(fkLoc)
