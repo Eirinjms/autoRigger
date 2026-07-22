@@ -225,10 +225,13 @@ class RibbonMaker:
             cmds.parentConstraint(self.startJoint, joint, n = joint.replace(self.suffix['joint'], self.suffix['parentCon']), mo = True)
     
     def createDriverJointsControls(self):
+        self.startLoc = cmds.spaceLocator(n = self.startJoint.replace("JNT", "LOC"))
+        cmds.matchTransform(self.startLoc, self.startJoint, pos = True, rot = True)
+
         for joint in self.DriverJoints:
             loc = cmds.spaceLocator(n = f"{joint}{config.suffix['locator']}")[0]
             self.locs.append(loc)
-            cmds.matchTransform(loc, joint, pos = True, rot = True)
+
             ctrl = cmds.circle(n = f"{joint}{config.suffix['control']}", r = 4, nr = (1,0,0))[0]
             self.ctrls.append(ctrl)
             cmds.matchTransform(ctrl, joint, rot = True, pos = True)    
@@ -261,6 +264,8 @@ class RibbonMaker:
         self.geoGrp = cmds.group(em=True, name=f"{self.name}_geo_GRP", parent=self.ribbonGrp)
         self.folliclesGrp = cmds.group(em=True, name=f"{self.name}_follicles_GRP", parent=self.ribbonGrp)
         self.driversGrp = cmds.group(em=True, name=f"{self.name}_drivers_GRP", parent=self.ribbonGrp)
+
+        cmds.matchTransform(ctrlGrp, self.startJoint, pos=True, rot = True)
 
         cmds.parent(self.RibbonPlane, self.geoGrp)
         cmds.parent(self.ribbonFollicles,self.folliclesGrp)

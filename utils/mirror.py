@@ -49,9 +49,10 @@ def mirrorLocators(sel: str | list | None = None) -> list:
             newName = shortName.replace("R_", "L_").replace("LOC1", "LOC")
         else:
             newName = f"{shortName}_mirror"
-        
+        print(shortName)        
         child = cmds.rename(child, newName)
         mirroredLocs.append(child)
+    
         
     # ungroup both — restore originals and extract mirrored locs to world
     cmds.parent(cmds.listRelatives(duplicatedGrp, children=True), w=True)

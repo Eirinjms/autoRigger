@@ -11,6 +11,7 @@ Documents/maya/scripts/
 ```
 
 > **Important:** The folder **must** be placed in `maya/scripts`, **not** in a version-specific folder such as `maya/2026/scripts`.
+> **Important:** PLUGIN "QuatNodes" **MUST** be enabled for the twist joints to work. 
 
 ## Running the Tool
 
@@ -18,6 +19,5 @@ Open Maya's Script Editor and run:
 
 from autoRigger.modules.uiModules.UI_launcher import run_autorigger
 run_autorigger()
-
 
 Enjoy pootie! :)
