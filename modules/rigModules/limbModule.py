@@ -1,13 +1,14 @@
 import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
 import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports] 
 import autoRigger.utils.shapes as shapes
-from autoRigger.modules.rigModules import handModule, reverseFoot, twistSetup as twist, squashAndStretch as stretch
+from autoRigger.modules.rigModules import handModule, reverseFoot, twistSetup as twist, squashAndStretch as stretch, ribbonSetup as ribbon
 import autoRigger.utils.config as config
 import importlib
 
 importlib.reload(config)
 importlib.reload(handModule)
 importlib.reload(reverseFoot)
+importlib.reload(ribbon)
 
 class limbBuild:
     def __init__(self, side, 
@@ -19,7 +20,11 @@ class limbBuild:
                  legStretch, 
                  twistArm, 
                  twistLeg, 
-                 twistJoints):
+                 twistJoints,
+                 ribbonArm, 
+                 ribbonLegs, 
+                 ribbonDrivers, 
+                 ribbonBinds,):
         '''
         Builds an IK/FK limb rig including:
             - IK/FK blending
@@ -42,6 +47,11 @@ class limbBuild:
 
         self.stretchyArms = armStretch
         self.stretchyLegs = legStretch
+
+        self.ribbonArm = ribbonArm
+        self.ribbonLeg = ribbonLegs
+        self.ribbonDrivers = ribbonDrivers
+        self.ribbonBinds = ribbonBinds
 
         self.twistArm = twistArm
         self.twistLeg = twistLeg
@@ -79,7 +89,9 @@ class limbBuild:
         for joints in self.jointBaseName: 
             joint = f"{self.side}{joints}{config.suffix['joint']}"
             self.joints.append(joint)
-        
+
+        self.startJoints = [self.joints[0], self.joints[1]]
+        self.endJoints = [self.joints[1], self.joints[2]]
 
     def dupeJoints(self):
         '''
@@ -227,10 +239,10 @@ class limbBuild:
         else: 
             Transform=(-20, 0, 0) 
 
-        cmds.xform(self.switch, t = Transform, ro = (0, 0, 0))
-        cmds.makeIdentity(self.switch, apply = True, t = True, r = True)
+        cmds.xform(self.switch, t = Transform, ro = (90, 0, 0))
+        cmds.makeIdentity(self.switch, apply = True, t = True, r = True, s = True)
 
-        cmds.pointConstraint(self.switch,self.switch, self.ikBNDLoc, n = self.switch + config.suffix['pointCon']) 
+        cmds.pointConstraint(self.ikBNDLoc, self.switch, n = self.switch + config.suffix['pointCon'], mo = True) 
 
         cmds.parentConstraint(f"{self.side}{self.jointBaseName[2]}{self.suffix['joint']}", self.ikBNDLoc, 
                               n = f"{self.side}{self.jointBaseName[0]}_BND{self.suffix['parentCon']}", 
@@ -545,12 +557,9 @@ class limbBuild:
         cmds.setDrivenKeyframe(drivenPV, at = 'switchAttr', cd = driverPV, dv = 1, v = 1)
     
     def twistSetup(self):
-        startJoints = [self.joints[0], self.joints[1]]
-        endJoints = [self.joints[1], self.joints[2]]
-
         axis = "X"
 
-        for sj, ej in zip(startJoints, endJoints):
+        for sj, ej in zip(self.startJoints, self.endJoints):
             twistSetup = twist.TwistJointsGeneration(axis, sj, ej, self.twistAmount, self.rotOrder)
             twistJoints = twistSetup.creation()
             self.twistJoints.extend(twistJoints)
@@ -565,6 +574,22 @@ class limbBuild:
                                              self.switch, 
                                              self.twistJoints)
         stretchLimb.create()
+
+    def ribbonCreation(self):
+        if self.limbType == "arm":
+            names = ['upperArm', 'lowerArm']
+        if self.limbType == "leg":
+            names = ['upperLeg', 'lowerLeg']
+
+        for sj, ej, name in zip(self.startJoints, self.endJoints, names):
+            ribbonLimb = ribbon.RibbonMaker(name, 
+                                            self.side, 
+                                            self.ribbonDrivers, 
+                                            self.ribbonBinds, 
+                                            sj, 
+                                            ej)
+            ribbonLimb.build()
+
 
     def buildLimb(self):
         self.dupeJoints()
@@ -592,18 +617,22 @@ class limbBuild:
                 self.twistSetup()
             if self.stretchyLegs: 
                 self.squashNstretch()  
+            if self.ribbonLeg:
+                self.ribbonCreation()
 
         if self.limbType == 'arm':
             if self.twistArm:
                 self.twistSetup()
             if self.stretchyArms:
                 self.squashNstretch()
+            if self.ribbonArm:
+                self.ribbonCreation()
             
         self.cleanup()
         shapes.ctrlColour()
         print("Building:", self.side, self.limbType)
 
-def build_limb_set(legOrder, armOrder, handOrder, stretchyArms, stretchyLegs, twistAmount, twistArms, twistLegs, sides: list, limbs: list):   
+def build_limb_set(legOrder, armOrder, handOrder, stretchyArms, stretchyLegs, twistAmount, twistArms, twistLegs, ribbonArm, ribbonLegs, ribbonDrivers, ribbonBinds, sides: list, limbs: list):   
     """
     Builds the requested limb types for the specified sides.
 
@@ -618,7 +647,7 @@ def build_limb_set(legOrder, armOrder, handOrder, stretchyArms, stretchyLegs, tw
     print(twistAmount, "ui")
     for side in sides:
         for limb in limbs:
-            limbBuild(side, limb, legOrder, armOrder, handOrder, stretchyArms, stretchyLegs, twistArms, twistLegs, twistAmount).buildLimb()
+            limbBuild(side, limb, legOrder, armOrder, handOrder, stretchyArms, stretchyLegs, twistArms, twistLegs, twistAmount, ribbonArm, ribbonLegs, ribbonDrivers, ribbonBinds,).buildLimb()
     
     print("All Limbs built")
 

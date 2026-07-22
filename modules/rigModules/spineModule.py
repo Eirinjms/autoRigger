@@ -226,7 +226,7 @@ class spineBuilder:
         cmds.parent(self.fkLocs[0], fkGrp)
         cmds.parent(self.ikSpline, ikCtrlGrp, ikJointCtrlGrp, self.iKctrlCurve, ikGrp)
 
-        topSpineLOC = cmds.spaceLocator(n = f"{self.spineJoints[2]}_BND{self.suffix['locator']}")
+        topSpineLOC = cmds.spaceLocator(n = f"{self.spineJoints[-1]}_BND{self.suffix['locator']}")
         bottomSpineLOC = cmds.spaceLocator(n = f"{self.spineJoints[0]}_BND{self.suffix['locator']}")
 
         cmds.parentConstraint(self.spineRoot, bottomSpineLOC, n = f"{self.spineJoints[0]}_BND{self.suffix['parentCon']}")

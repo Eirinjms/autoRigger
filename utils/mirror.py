@@ -37,7 +37,7 @@ def mirrorLocators(sel: str | list | None = None) -> list:
     cmds.setAttr(f"{duplicatedGrp}.scaleX", -1)
     cmds.makeIdentity(duplicatedGrp, a=True, s=True)
 
-    # rename deepest first so parent renames don't invalidate child paths
+    # rename deepest first so parent renames dont invalidate child paths
     children = cmds.listRelatives(duplicatedGrp, allDescendents=True, type='transform', fullPath=True) or []
 
     mirroredLocs = []
@@ -59,6 +59,3 @@ def mirrorLocators(sel: str | list | None = None) -> list:
     cmds.delete(originGrp, duplicatedGrp)
 
     return mirroredLocs
-
-def mirrorJoints():
-     print("hello")

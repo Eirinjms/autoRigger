@@ -246,11 +246,3 @@ def build(side, handOrder):
 
     for attr in attrs: 
         cmds.setAttr(f"{fistCtrl}.{attr}", l = True, k = False, cb = False)
-
-
-
-
-
-
-
-

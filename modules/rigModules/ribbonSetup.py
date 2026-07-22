@@ -1,16 +1,17 @@
 import maya.cmds as cmds  # pyright: ignore[reportMissingImports]
 import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports]
+import maya.mel as mel
 import autoRigger.utils.config as config  # pyright: ignore[reportMissingImports]
 
 
 # RIBBON MAKER
 
-"""parente the follicle bind joints to the bind skeleton, parent constrain to the follicles
+"""
 add func for blendshapes: 
 sine, wave. """
 
 class RibbonMaker:
-    def __init__(self, startJoint, endJoint, limb, side, numDrivers, numFollicles):
+    def __init__(self, limb, side, numDrivers, numFollicles, startJoint, endJoint):
         self.suffix = config.suffix
         self.prefix = config.prefix
 
@@ -22,7 +23,7 @@ class RibbonMaker:
             jointPlacement = cmds.xform(joint, q=True, ws=True, t=True)
             self.jointPlacements.append(jointPlacement)
         self.limbName = limb
-        self.side = f"{side}_"
+        self.side = side
 
         self.numDrivers = numDrivers
 
@@ -48,16 +49,32 @@ class RibbonMaker:
         plane = cmds.nurbsPlane(
             axis=(0, 0, 1),
             degree=3,
-            patchesU=8,
+            patchesU= self.numFollicles + 2,
             patchesV=1,
             width=self.RibbonLength,          # length runs along U
             lengthRatio=self.planeWidth / self.RibbonLength,
             name=self.name,
         )
-        self.RibbonPlane = plane[0]           # keep the transform string, not the list
+
+        self.RibbonPlane = plane[0]      
+
+            # keep the transform string, not the list
         self.RibbonPlaneShape = cmds.listRelatives(self.RibbonPlane, shapes=True)[0]
 
         self.positionRibbonPlane()
+
+        #cmds.select(plane, r=True)
+
+        """        euler = self.extrapolateDifference()
+
+                rx = om.MAngle(euler.x).asDegrees()
+                ry = om.MAngle(euler.y).asDegrees()
+                rz = om.MAngle(euler.z).asDegrees()
+
+                print(rx, ry, rz)
+
+                mel.eval(f"manipPivot -o {rx} {ry} {rz};")
+                mel.eval(f"bakeCustomOrient {rx} {ry} {rz};")"""
 
     def positionRibbonPlane(self):
         """
@@ -81,13 +98,42 @@ class RibbonMaker:
         sideVec = (aimVec ^ worldUp).normalize()   # right
         upVec   = (sideVec ^ aimVec).normalize()   # recalculated up
 
-        mtx = [
+        self.ribbonMtx = [
             aimVec.x,  aimVec.y,  aimVec.z,  0,
             upVec.x,   upVec.y,   upVec.z,   0,
             sideVec.x, sideVec.y, sideVec.z, 0,
             mid.x,     mid.y,     mid.z,     1,
         ]
-        cmds.xform(self.RibbonPlane, ws=True, matrix=mtx)
+        cmds.xform(self.RibbonPlane, ws=True, matrix=self.ribbonMtx)
+
+    def extrapolateDifference(self):
+        A = om.MVector(*self.jointPlacements[0])
+        B = om.MVector(*self.jointPlacements[1])
+        
+        aimVec = (B - A).normalize()  # this is what you want as Y
+        
+        worldUp = om.MVector(0, 1, 0)
+        if abs(aimVec * worldUp) > 0.99:
+            worldUp = om.MVector(0, 0, 1)
+
+        sideVec = (aimVec ^ worldUp).normalize()
+        upVec   = (sideVec ^ aimVec).normalize()
+
+        # imaginary matrix with Y down the bone instead of X
+        targetMtx = om.MMatrix([
+            upVec.x,   upVec.y,   upVec.z,   0,  # X = up
+            aimVec.x,  aimVec.y,  aimVec.z,  0,  # Y = down the bone
+            sideVec.x, sideVec.y, sideVec.z, 0,  # Z = side
+            0,         0,         0,         1,
+        ])
+
+        ribbonMtx = om.MMatrix(self.ribbonMtx)
+
+        difference = ribbonMtx.inverse() * targetMtx
+        transform  = om.MTransformationMatrix(difference)
+        euler      = transform.rotation()
+
+        return euler
 
     def createFollicles(self):
         """
@@ -140,9 +186,12 @@ class RibbonMaker:
             cmds.matchTransform(joint, follicle, pos=True, rot=True)
             cmds.parent(joint, self.startJoint)
             self.BindJoints.append(joint)
+            cmds.setAttr(f"{joint}.drawStyle", 3)
         
         for j, f in zip(self.BindJoints, self.ribbonFollicles):
             cmds.parentConstraint(f, j, mo = False)
+        
+        cmds.hide(self.BindJoints)
 
     def createDriverJoints(self):
         """
@@ -166,7 +215,18 @@ class RibbonMaker:
                 name=f"{self.name}_Driver{index:02d}{self.suffix['joint']}"
             )
             cmds.xform(joint, ws=True, t=(pos.x, pos.y, pos.z))
+            cmds.matchTransform(joint, self.startJoint, rot = True)
+            cmds.makeIdentity(joint, a = True, r = True)
             self.DriverJoints.append(joint)
+
+            cmds.parentConstraint(self.startJoint, joint, n = joint.replace(self.suffix['joint'], self.suffix['parentCon']), mo = True)
+    
+    def createDriverJointsControls(self):
+        for joint in self.DriverJoints:
+            loc = cmds.spaceLocator(n = f"{joint}{config.suffix['locator']}")
+            cmds.matchTransform(loc, joint, pos = True, rot = True)
+            ctrl = cmds.circle()
+
 
     def bindRibbon(self):
         """Binds the driver joints to the NURBS plane via a skin cluster."""
@@ -184,8 +244,8 @@ class RibbonMaker:
         """
         Organises ribbon nodes into a tidy hierarchy:
         """
-        self.ribbonGrp = cmds.group(em=True, name=f"{self.name}_RBN_GRP")
-        self.geoGrp = cmds.group(em=True, name=f"{self.name}_geo_GRP",parent=self.ribbonGrp)
+        self.ribbonGrp = cmds.group(em=True, name=f"{self.name}_GRP")
+        self.geoGrp = cmds.group(em=True, name=f"{self.name}_geo_GRP", parent=self.ribbonGrp)
         self.folliclesGrp = cmds.group(em=True, name=f"{self.name}_follicles_GRP", parent=self.ribbonGrp)
         self.driversGrp = cmds.group(em=True, name=f"{self.name}_drivers_GRP", parent=self.ribbonGrp)
 
@@ -193,8 +253,27 @@ class RibbonMaker:
         cmds.parent(self.ribbonFollicles,self.folliclesGrp)
         cmds.parent(self.DriverJoints, self.driversGrp)
 
+        cmds.setAttr(f"{self.ribbonGrp}.inheritsTransform", 0)
+
         cmds.setAttr(f"{self.geoGrp}.visibility",       0)
         cmds.setAttr(f"{self.folliclesGrp}.visibility", 0)
+    
+    def addSineBlendshape(self):
+
+        sineBSplane = cmds.duplicate(self.RibbonPlane, n = f"{self.name}_sine_blendshape")
+        cmds.xform(sineBSplane, t = [0, -10, 0])
+        sineDef, sineHandle = cmds.nonLinear(sineBSplane, type='sine', n = f"{self.name}_sine")
+        cmds.matchTransform(sineHandle, sineBSplane, pos=True, rot=True)
+
+        bs = cmds.blendShape(sineBSplane, self.RibbonPlane, n = f"{self.name}_sine_BS" )
+    
+    def addTwistDeformer(self):
+        twistBSplane = cmds.duplicate(self.RibbonPlane, n = f"{self.name}_twist_blendshape")
+        cmds.xform(twistBSplane, t = [0, -10, 0])
+        sineDef, twistHandle = cmds.nonLinear(twistBSplane, type='twist', n = f"{self.name}_twist")
+        cmds.matchTransform(twistHandle, twistBSplane, pos=True, rot=True)
+
+        bs = cmds.blendShape(twistBSplane, self.RibbonPlane, n = f"{self.name}_twist_BS" )
 
     def build(self):
         """Runs every step in the correct order."""
@@ -206,6 +285,8 @@ class RibbonMaker:
         self.createDriverJoints()
         self.bindRibbon()
         self.groupAndClean()
+        #self.addSineBlendshape()
+        #self.addTwistDeformer()
         print(f"[ribbonMaker] '{self.name}' built successfully.")
         return {
             "ribbonGrp":    self.ribbonGrp,

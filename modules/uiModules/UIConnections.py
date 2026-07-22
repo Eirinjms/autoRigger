@@ -229,6 +229,14 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.temp = self.ui.findChild(QtWidgets.QPushButton, "TEMP")
         self.twistLabel = self.ui.findChild(QtWidgets.QLabel, "TwistJoint_Number")
 
+        #ribbon
+
+        self.ribbonArmCheck = self.ui.findChild(QtWidgets.QCheckBox, "ArmsRibbon_CheckBttn")
+        self.ribbonLegCheck = self.ui.findChild(QtWidgets.QCheckBox, "LegsRibbon_CheckBttn")
+        self.ribbonDriversSlider = self.ui.findChild(QtWidgets.QSlider, "ribbonDrivers_Slider")
+        self.ribbonBindsSlider = self.ui.findChild(QtWidgets.QSlider, "ribbonBinds_Slider")
+        self.ribbonBindsLabel = self.ui.findChild(QtWidgets.QLabel, "ribbonBinds_Number")
+        self.ribbonDriverLabel = self.ui.findChild(QtWidgets.QLabel, "ribbonDrivers_Number")
 
         #-----------------------------------connections -----------------------------------------------#
 
@@ -240,6 +248,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         if self.twistSlider:
             self.twistSlider.valueChanged.connect(self.updateSizeLabelTwist)
+        
+        if self.ribbonBindsSlider:
+            self.ribbonBindsSlider.valueChanged.connect(self.updateRibbonBindsLabel)
+
+        if self.ribbonDriversSlider: 
+            self.ribbonDriversSlider.valueChanged.connect(self.updateRibbonDriveLabel)
 
         #-----------------------------------Rig Connections-----------------------------------------------#  
         
@@ -392,10 +406,14 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.stretchyArms = self.stretchyArmsCheck.isChecked()
             self.stretchyLegs = self.stretchyLegsCheck.isChecked()
 
+            self.ribbonArms = self.ribbonArmCheck.isChecked()
+            self.ribbonLegs = self.ribbonLegCheck.isChecked()
+            self.ribbonDrivers =self.ribbonDriversSlider.value()
+            self.ribbonBinds = self.ribbonBindsSlider.value()
+
             twistArms = self.twistArmCheck.isChecked()
             twistLegs = self.twistLegCheck.isChecked()
             twistAmount = self.twistSlider.value()
-            print(twistAmount, "ui")
 
             buildRig.build(
                 self.spineOrder,
@@ -408,7 +426,11 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 self.stretchyLegs,
                 twistAmount,
                 twistArms,
-                twistLegs
+                twistLegs,
+                self.ribbonArms,
+                self.ribbonLegs,
+                self.ribbonDrivers,
+                self.ribbonBinds
             )
             print("..Rig built!")
         finally:
@@ -436,6 +458,14 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.LocatorChainNumber.setText(str(value))
 
         return value
+    
+    def updateRibbonDriveLabel(self, value):
+        if self.ribbonDriverLabel:
+            self.ribbonDriverLabel.setText(str(value))
+
+    def updateRibbonBindsLabel(self, value):
+        if self.ribbonBindsLabel:
+            self.ribbonBindsLabel.setText(str(value))
 
     def createInstanceLocChain(self): 
         prefix = self.prefixLocChain.text()
@@ -468,7 +498,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             for loc in self.generator.Locs:
                 if loc not in self.locatorList:
                     self.locatorList.append(loc)
-            print(self.locatorList)
+            
         finally: 
             cmds.undoInfo(closeChunk = True)
 
@@ -537,16 +567,18 @@ class AutoRiggerUI(QtWidgets.QDialog):
         """
         
         cmds.undoInfo(openChunk = True)
-        for root_name, root_data in presetData.items():
-            print(root_name)
-            if cmds.objExists(root_name.replace('JNT', 'GUIDE')):
-                return cmds.warning("This preset has already been loaded")
-            
-            self.build_locator(root_name, root_data, locatorList, storeLocators)
-        cmds.undoInfo(closeChunk = True)
+        try:
+            for root_name, root_data in presetData.items():
+                if cmds.objExists(root_name.replace('JNT', 'GUIDE')):
+                    return cmds.warning("This preset has already been loaded")
+                
+                self.build_locator(root_name, root_data, locatorList, storeLocators)
+            cmds.undoInfo(closeChunk = True)
 
-        cmds.select(clear = True)
-        cmds.makeIdentity(locatorList, apply = True, t = True)
+            cmds.select(clear = True)
+            cmds.makeIdentity(locatorList, apply = True, t = True)
+        finally: 
+            cmds.undoInfo(closeChunk = True)
 
     def build_locator(self, locator_name: str, joint_data: dict, locatorList, storeLocators, parent=None):
         '''
@@ -791,9 +823,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
             self.newJointListText.setText(rootJoint)
             print(f"{rootJoint} chain set as new Joint List")
-
-            print(self.jointsList)
-        
             return self.jointsList
         else: 
             cmds.warning("Joint chain already generated")
@@ -839,10 +868,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
         
         hipJoins = cmds.ls("*legJA", type = 'joint')
         
-        
         feetJoints = cmds.ls("*legJC*", "*legJD*", type = 'joint')
-
-        print(centerJoints)
 
         self.jointHier.unparentHierarchy()
 
@@ -901,14 +927,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
                     rightJoints.append(joint)
                 else:
                     continue
-            
-            print(leftJoints + rightJoints)
+        
             left = config.prefix['left']
             right = config.prefix['right']
 
             leftJoints = [j for j in leftJoints if "eye" not in j]
             rightJoints = [j for j in rightJoints if "eye" not in j] #rebuilds the list but removes the eyejoints
-            print(leftJoints + rightJoints)
 
             if self.leftToRight.isChecked():
                 prefix = left
@@ -991,11 +1015,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 local, world = config.getGuidePos(guide)
                 pos = config.addTuples(local, world)
 
-                print(guide)
-                print("local:", local)
-                print("world:", world)
-                print("final:", pos)
-
             self.unparentClicked()
 
             for guide in chain[:3]:
@@ -1015,21 +1034,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 local, world = config.getGuidePos(guide)
                 pos = config.addTuples(local, world)
 
-                print(guide)
-                print("local:", local)
-                print("world:", world)
-                print("final:", pos)
 
                 for guide in chain[:3]:
                     shape = cmds.listRelatives(guide, s=True, type="locator")[0]
-
-                    print(guide)
-                    print("transform translate:",
-                        cmds.getAttr(f"{guide}.translate")[0])
-                    print("shape localPosition:",
-                        cmds.getAttr(f"{shape}.localPosition")[0])
-                    print("world xform:",
-                        cmds.xform(guide, q=True, ws=True, t=True))
 
             locFunc.poleVectorVisualization(chain[:3:], pvDistance=10)
 
@@ -1052,9 +1059,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         sender = self.sender() #returns the widget that sent the signal to run the function
 
-        if sender == self.ribbonCheckGrp and checked:
+        if sender in (self.ribbonCheckGrp, self.stretchyLimbsCheckGrp) and checked:
             self.twistCheckGrp.setChecked(False)
-            self.stretchyLimbsCheckGrp.setChecked(False)
+            self.twistArmCheck.setChecked(False)
+            self.twistLegCheck.setChecked(False)
 
-        elif sender in (self.twistCheckGrp, self.stretchyLimbsCheckGrp) and checked:
+        elif sender == self.twistCheckGrp and checked:
             self.ribbonCheckGrp.setChecked(False)
+            self.ribbonArmCheck.setChecked(False)
+            self.ribbonLegCheck.setChecked(False)

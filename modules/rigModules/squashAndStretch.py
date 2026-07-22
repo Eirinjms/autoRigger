@@ -75,3 +75,5 @@ class squashNStretch:
 
             curveGrp = cmds.group(a1, a2, b, n = f"{self.side}{self.limbType}ScaleCurves{self.suffix['group']}", p = self.ikGrp)
             cmds.hide(curveGrp, ikCluster[1])
+
+            print(f"[Stretchy Joints] : built {self.side}{self.limbType}")

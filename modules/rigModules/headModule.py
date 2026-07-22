@@ -142,17 +142,24 @@ def headBuild(neckOrder):
 
 #spaceswitching head
 
+    #removeHead
+
+    #unparent from the neck
+    cmds.parent(headLoc, w = True)
+
     #duplicate the headLoc n delete the children x2
     dupeWS = cmds.spaceLocator(
         n=f"{prefix['center']}{joints[1]}_worldSpace{suffix['locator']}"
     )[0]
+
     cmds.matchTransform(dupeWS, headLoc, pos=True, rot=True)
 
     dupeLS = cmds.spaceLocator(
         n=f"{prefix['center']}{joints[1]}_localSpace{suffix['locator']}"
     )[0]
     cmds.matchTransform(dupeLS, headLoc, pos=True, rot=True)
-
+    
+    #Attribute under OG head
 
     cmds.addAttr(headCtrl, ln = 'Spaces', at = 'enum', en = "__________ ", k = True)
 
@@ -160,8 +167,7 @@ def headBuild(neckOrder):
 
     cmds.parent(dupeLS, neckCtrl)
 
-    oCon = cmds.orientConstraint(dupeLS, dupeWS, headLoc, mo = False, n = f"head_spaces{suffix['orientCon']}")[0]
-
+    oCon = cmds.orientConstraint(headLoc, dupeLS, dupeWS, mo = False, n = f"{headJoint}{suffix['orientCon']}")[0]
 
     #SET DRIVEN KEYYYSS
 
@@ -181,4 +187,4 @@ def headBuild(neckOrder):
     cmds.pointConstraint(headLoc, headJoint, mo = True, n = f"{joints[0]}{suffix['pointCon']}") 
 
     eyegrp = cmds.group(eyesLoc, eyesWS[0], n = "eyes_GRP")
-    cmds.group(headLoc ,dupeWS, eyegrp, n = f"head{suffix['group']}")
+    cmds.group(headJoint,dupeWS[0], eyegrp, n = f"head{suffix['group']}")

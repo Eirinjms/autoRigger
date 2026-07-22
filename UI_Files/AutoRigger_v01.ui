@@ -29,7 +29,7 @@
       </size>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -1005,10 +1005,13 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>400</y>
+         <y>420</y>
          <width>341</width>
          <height>51</height>
         </rect>
+       </property>
+       <property name="cursor">
+        <cursorShape>PointingHandCursor</cursorShape>
        </property>
        <property name="text">
         <string>Build Rig!</string>
@@ -1077,7 +1080,7 @@
          <x>0</x>
          <y>280</y>
          <width>351</width>
-         <height>93</height>
+         <height>131</height>
         </rect>
        </property>
        <property name="title">
@@ -1102,7 +1105,7 @@
          <string>Arms</string>
         </property>
         <property name="checkable">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
        </widget>
        <widget class="QCheckBox" name="LegsRibbon_CheckBttn">
@@ -1118,55 +1121,127 @@
          <string>Legs</string>
         </property>
         <property name="checkable">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
        </widget>
-       <widget class="QCheckBox" name="SpineRibbon_CheckBttn">
+       <widget class="QLabel" name="ribbonDrivers_Number">
         <property name="geometry">
          <rect>
-          <x>110</x>
-          <y>20</y>
-          <width>51</width>
-          <height>18</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Spine</string>
-        </property>
-        <property name="checkable">
-         <bool>false</bool>
-        </property>
-       </widget>
-       <widget class="QCheckBox" name="Ribbon_twistDeformer_checkBttn">
-        <property name="geometry">
-         <rect>
-          <x>120</x>
+          <x>290</x>
           <y>50</y>
-          <width>111</width>
+          <width>41</width>
           <height>20</height>
          </rect>
         </property>
-        <property name="text">
-         <string>Twist deformer</string>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
         </property>
-        <property name="checkable">
-         <bool>false</bool>
+        <property name="text">
+         <string>3</string>
+        </property>
+        <property name="textFormat">
+         <enum>Qt::AutoText</enum>
+        </property>
+        <property name="indent">
+         <number>16</number>
         </property>
        </widget>
-       <widget class="QCheckBox" name="Ribbon_SineDeformer_checkBttn">
+       <widget class="QSlider" name="ribbonDrivers_Slider">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>50</y>
+          <width>211</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="minimum">
+         <number>2</number>
+        </property>
+        <property name="maximum">
+         <number>8</number>
+        </property>
+        <property name="singleStep">
+         <number>2</number>
+        </property>
+        <property name="value">
+         <number>3</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+       <widget class="QLabel" name="ribbonBinds_Number">
+        <property name="geometry">
+         <rect>
+          <x>290</x>
+          <y>90</y>
+          <width>41</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
+        <property name="text">
+         <string>6</string>
+        </property>
+        <property name="textFormat">
+         <enum>Qt::AutoText</enum>
+        </property>
+        <property name="indent">
+         <number>16</number>
+        </property>
+       </widget>
+       <widget class="QSlider" name="ribbonBinds_Slider">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>90</y>
+          <width>211</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="minimum">
+         <number>2</number>
+        </property>
+        <property name="maximum">
+         <number>20</number>
+        </property>
+        <property name="singleStep">
+         <number>2</number>
+        </property>
+        <property name="value">
+         <number>6</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_6">
         <property name="geometry">
          <rect>
           <x>10</x>
           <y>50</y>
-          <width>91</width>
-          <height>20</height>
+          <width>51</width>
+          <height>21</height>
          </rect>
         </property>
         <property name="text">
-         <string>Sine deformer</string>
+         <string>Drivers</string>
         </property>
-        <property name="checkable">
-         <bool>false</bool>
+       </widget>
+       <widget class="QLabel" name="label_7">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>90</y>
+          <width>51</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Binds</string>
         </property>
        </widget>
       </widget>

@@ -21,11 +21,13 @@ class TwistJointsGeneration:
 
         self.rotOrder = rotOrder
 
+        self.jointName = None
+
     def twistCreation(self):
         """
         creates Twist
         """
-        jointName = self.startJoint.replace('_JNT', '')
+        self.jointName = self.startJoint.replace('_JNT', '')
 
         # vector lerp between start and end
         A = om.MVector(cmds.xform(self.startJoint, q=True, ws=True, t=True))
@@ -33,7 +35,7 @@ class TwistJointsGeneration:
 
         step = (B - A) / (self.twistInput + 1)
 
-        # create twist joints evenly spaced between start and end
+        # create twist joints evenly
         cmds.select(clear=True)
 
         for i in range(self.twistInput):
@@ -41,17 +43,17 @@ class TwistJointsGeneration:
 
             pos = A + step * (i + 1)
             jnt = cmds.joint(
-                n=f"{jointName}_{i:02d}_TWIST_JNT",
+                n=f"{self.jointName}_{i:02d}_TWIST_JNT",
                 p= pos,
                 rad=1)
             self.twistJointsList.append(jnt)
 
-            if 'leg' in jointName:
+            if 'leg' in self.jointName:
                 cmds.matchTransform(jnt, self.startJoint, rot=True, pos=False, scl=False)
                 config.setRotationOrder([jnt], self.rotOrder)
                 
 
-            elif 'arm' in jointName:
+            elif 'arm' in self.jointName:
                 cmds.matchTransform(jnt, self.startJoint, rot=True, pos=False, scl=False)
                 config.setRotationOrder([jnt], self.rotOrder)
             
@@ -62,8 +64,6 @@ class TwistJointsGeneration:
             cmds.makeIdentity(jnt, apply = True, r = True)
             
 
-
-        # parent into a chain under startJoint
         cmds.select(clear=True)
         for jnt in self.twistJointsList:
             cmds.parent(jnt, self.startJoint)
@@ -110,6 +110,8 @@ class TwistJointsGeneration:
         print(self.twistInput, "ui")
         self.twistCreation()
         self.matrixTwistSetup()
+
+        print(f"[Twist joints] : built {self.jointName}")
 
         return self.twistJointsList
             
