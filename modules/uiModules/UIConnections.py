@@ -1001,6 +1001,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
             sel = cmds.ls(sl=True, type='transform')
             if len(sel) != 1:
+                self.pvVisualizer.setChecked(False)
                 return cmds.warning("Select ONLY root joint of the chain you want to test")
             
             children = cmds.listRelatives(sel, ad=True, type='transform') or []

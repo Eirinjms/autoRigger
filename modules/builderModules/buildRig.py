@@ -11,6 +11,7 @@ importlib.reload(shapes)
 importlib.reload(headModule)
 importlib.reload(limbModule)
 importlib.reload(spineModule)
+importlib.reload(cleanup)
 
 def build(spineOrder, spineJoints, armOrder, legOrder, handOrder, neckOrder, stretchyArms, stretchylegs, twistAmount, twistArm, twistLeg, ribbonArms, ribbonLegs, ribbonDrivers, ribbonBinds):
     """

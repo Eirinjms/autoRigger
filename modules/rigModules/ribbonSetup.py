@@ -11,7 +11,7 @@ add func for blendshapes:
 sine, wave. """
 
 class RibbonMaker:
-    def __init__(self, limb, side, numDrivers, numFollicles, startJoint, endJoint):
+    def __init__(self, limb, side, numDrivers, numFollicles, startJoint, endJoint, switch):
         self.suffix = config.suffix
         self.prefix = config.prefix
 
@@ -26,10 +26,13 @@ class RibbonMaker:
         self.side = side
 
         self.numDrivers = numDrivers
-
+        self.locs = []
+        self.ctrls =[]
         self.numFollicles = numFollicles
+        
+        self.switch = switch
 
-        self.name = f"{self.side}{self.limbName}_Ribbon"
+        self.name = f"{self.side}{self.limbName}_RBN"
 
     def lengthOfRibbon(self):
         """Calculates the distance between the chosen joints."""
@@ -223,9 +226,17 @@ class RibbonMaker:
     
     def createDriverJointsControls(self):
         for joint in self.DriverJoints:
-            loc = cmds.spaceLocator(n = f"{joint}{config.suffix['locator']}")
+            loc = cmds.spaceLocator(n = f"{joint}{config.suffix['locator']}")[0]
+            self.locs.append(loc)
             cmds.matchTransform(loc, joint, pos = True, rot = True)
-            ctrl = cmds.circle()
+            ctrl = cmds.circle(n = f"{joint}{config.suffix['control']}", r = 4, nr = (1,0,0))[0]
+            self.ctrls.append(ctrl)
+            cmds.matchTransform(ctrl, joint, rot = True, pos = True)    
+            cmds.parent(ctrl, loc)
+            cmds.makeIdentity(ctrl, a = True, t = True, r = True)
+            
+            cmds.parentConstraint(ctrl, joint, name = f"{joint}{self.suffix['parentCon']}", mo = True)
+        
 
 
     def bindRibbon(self):
@@ -244,7 +255,9 @@ class RibbonMaker:
         """
         Organises ribbon nodes into a tidy hierarchy:
         """
-        self.ribbonGrp = cmds.group(em=True, name=f"{self.name}_GRP")
+
+        self.ribbonGrp = cmds.group(em=True, name=f"{self.name}_RIBBONS_GRP")
+        ctrlGrp = cmds.group(self.locs, n = f"{self.name}_CTRL_GRP", parent = self.ribbonGrp)
         self.geoGrp = cmds.group(em=True, name=f"{self.name}_geo_GRP", parent=self.ribbonGrp)
         self.folliclesGrp = cmds.group(em=True, name=f"{self.name}_follicles_GRP", parent=self.ribbonGrp)
         self.driversGrp = cmds.group(em=True, name=f"{self.name}_drivers_GRP", parent=self.ribbonGrp)
@@ -255,8 +268,21 @@ class RibbonMaker:
 
         cmds.setAttr(f"{self.ribbonGrp}.inheritsTransform", 0)
 
-        cmds.setAttr(f"{self.geoGrp}.visibility",       0)
+        cmds.setAttr(f"{self.geoGrp}.visibility", 0)
         cmds.setAttr(f"{self.folliclesGrp}.visibility", 0)
+
+        if not cmds.attributeQuery("Ribbon_Ctrls", node=self.switch, exists=True):
+            cmds.addAttr(
+                self.switch,
+            ln="Ribbon_Ctrls",
+            at="bool",
+            dv=0,
+            k=True)
+
+        cmds.connectAttr(
+            f"{self.switch}.Ribbon_Ctrls",
+            f"{ctrlGrp}.visibility",
+            force=True)
     
     def addSineBlendshape(self):
 
@@ -283,6 +309,7 @@ class RibbonMaker:
         self.createFollicles()
         self.createBindJoints()
         self.createDriverJoints()
+        self.createDriverJointsControls()
         self.bindRibbon()
         self.groupAndClean()
         #self.addSineBlendshape()

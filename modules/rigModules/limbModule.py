@@ -587,7 +587,8 @@ class limbBuild:
                                             self.ribbonDrivers, 
                                             self.ribbonBinds, 
                                             sj, 
-                                            ej)
+                                            ej,
+                                            self.switch)
             ribbonLimb.build()
 
 

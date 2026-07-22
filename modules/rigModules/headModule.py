@@ -167,7 +167,7 @@ def headBuild(neckOrder):
 
     cmds.parent(dupeLS, neckCtrl)
 
-    oCon = cmds.orientConstraint(headLoc, dupeLS, dupeWS, mo = False, n = f"{headJoint}{suffix['orientCon']}")[0]
+    oCon = cmds.orientConstraint(dupeLS, dupeWS, headLoc, mo = False, n = f"{headLoc}{suffix['orientCon']}")[0]
 
     #SET DRIVEN KEYYYSS
 
@@ -186,5 +186,9 @@ def headBuild(neckOrder):
 
     cmds.pointConstraint(headLoc, headJoint, mo = True, n = f"{joints[0]}{suffix['pointCon']}") 
 
+    neckLoc = cmds.listRelatives(neckCtrl, parent = True)
+
+    cmds.parent(headLoc, neckLoc)
+
     eyegrp = cmds.group(eyesLoc, eyesWS[0], n = "eyes_GRP")
-    cmds.group(headJoint,dupeWS[0], eyegrp, n = f"head{suffix['group']}")
+    cmds.group(headLoc,dupeWS, eyegrp, n = f"head{suffix['group']}")

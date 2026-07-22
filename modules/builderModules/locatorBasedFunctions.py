@@ -123,6 +123,10 @@ def poleVectorVisualization(sel, pvDistance):
         n=f"{sel[0]}_PV_Visualization"
     )[0]
 
+    cmds.setAttr(f"{pvVis}.displayTriangles", 1)
+    cmds.setAttr("openPBR_shader1.baseColor", 1, 0, 0.7, type="double3")
+    cmds.setAttr("openPBR_shader1.baseDiffuseRoughness", 1)
+
     return pvVis
 
 
