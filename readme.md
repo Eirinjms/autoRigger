@@ -6,6 +6,8 @@ A modular auto-rigger for Autodesk Maya, developed in Python. The current implem
 
 - Modular rigging architecture
 - Automatic skeleton generation from guide locators
+- IK/FK limb systems
+- IK/FK procedrual spine
 - Twist joint support
 - Ribbon deformation system
 - JSON preset import/export
@@ -29,7 +31,7 @@ Documents/maya/scripts/
 
 > **Note:** The folder must be placed in `maya/scripts`, not in a version-specific folder such as `maya/2026/scripts`.
 
-Enable the **QuatNodes** plugin before building a rig, as it is required for the twist joint system.
+Enable the **QuatNodes** plugin before building a rig, as it is required for the twist joint system.s
 
 ## Running
 
