@@ -231,6 +231,7 @@ class RibbonMaker:
         for joint in self.DriverJoints:
             loc = cmds.spaceLocator(n = f"{joint}{config.suffix['locator']}")[0]
             self.locs.append(loc)
+            cmds.matchTransform(loc, joint, pos = True, rot = True)
 
             ctrl = cmds.circle(n = f"{joint}{config.suffix['control']}", r = 4, nr = (1,0,0))[0]
             self.ctrls.append(ctrl)
