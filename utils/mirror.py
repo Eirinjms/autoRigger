@@ -67,8 +67,7 @@ def mirrorLocators(sel: str | list | None = None) -> list:
             elif shortName.startswith("R_"):
                 newName = shortName.replace("R_", "L_")
             else:
-                newName = f"{child}_mirror"
-            print(child)        
+                newName = f"{child}_mirror"     
             child = cmds.rename(child, newName)
             mirroredLocs.append(child)
         

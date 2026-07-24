@@ -950,6 +950,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         cmds.undoInfo(openChunk = True)
         try: 
+            self.jointsList[:] = cmds.ls("*_JNT", type="joint") or []
+
             if len(self.jointsList) == 0:
                 return cmds.warning("No joints found, unable to mirror joints.")
 
@@ -969,29 +971,42 @@ class AutoRiggerUI(QtWidgets.QDialog):
             left = config.prefix['left']
             right = config.prefix['right']
 
-            leftJoints = [j for j in leftJoints if "eye" not in j]
-            rightJoints = [j for j in rightJoints if "eye" not in j] #rebuilds the list but removes the eyejoints
+            leftJoints = [j for j in leftJoints if "eye" not in j and "Ear" not in j]
+            rightJoints = [j for j in rightJoints if "eye" not in j and "Ear" not in j]  #rebuilds the list but removes the eyejoints
+
 
             if self.leftToRight.isChecked():
+                sourceJoints = leftJoints
+                targetJoints = rightJoints
                 prefix = left
                 mirror = right
-                cmds.delete(rightJoints)
+                side = "Left to right"
 
             elif self.rightToLeft.isChecked():
+                sourceJoints = rightJoints
+                targetJoints = leftJoints
                 prefix = right
                 mirror = left
-                cmds.delete(leftJoints)
+                side = "Right to left"
 
-            clavJoint = f"{prefix}armJA_JNT"
-            hipJoint = f"{prefix}legJA_JNT"
+            cmds.delete(targetJoints)
 
-            for joint in [clavJoint, hipJoint]:
+            mirrorRoots = []
+
+            for joint in sourceJoints:
+                parent = cmds.listRelatives(joint, parent=True)
+
+                if parent and parent[0].startswith("C_"):
+                    mirrorRoots.append(joint)
+
+            for joint in mirrorRoots:
                 cmds.mirrorJoint(joint, 
                                 mirrorBehavior = True,
                                 mirrorYZ = True,
                                 searchReplace = (prefix, mirror))
             
             cmds.select(cl = True)
+            print(f"Joints mirrored {side}")
         finally: 
             cmds.undoInfo(closeChunk = True)
 

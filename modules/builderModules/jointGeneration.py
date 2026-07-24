@@ -56,7 +56,7 @@ class jointGeneration():
     def build_json(self, file_name: str):
         '''Writes self.result to the preset file path.'''
 
-        file_path = config.find_file_path("presets", f"{file_name}.json")
+        file_path = config.find_file_path("presets", f"{file_name}")
 
         with open(file_path, "w") as f:
             json.dump(self.result, f, indent=4)
