@@ -79,58 +79,6 @@ class jointGeneration():
         self.build_json(file_name)
 
 
-    # JSON Import → Locators
-
-    def build_locator(self, joint_name: str, joint_data: dict, parent=None):
-        '''
-        Recursively creates locators from a joint hierarchy dict.
-
-        Parameters:
-            joint_name (str): Name to give the locator (JNT replaced with GUIDE)
-            joint_data (dict): Dictionary of joint data including children
-            parent (str): Parent locator name, if any
-        '''
-        cmds.select(clear=True)
-
-        loc = cmds.spaceLocator(
-            n=joint_name.replace('JNT', 'GUIDE'),
-            p=joint_data["pos"]
-        )[0]
-
-        if parent:
-            cmds.parent(loc, parent)
-
-        print(f"Created: {loc}")
-
-        for child_name, child_data in joint_data["children"].items():
-            self.build_locator(child_name, child_data, loc)
-
-    def import_json_locators(self):
-        '''Loads the hierarchy JSON and recreates the locator hierarchy.'''
-        with open(self.json_file_path, "r") as f:
-            data = json.load(f)
-
-        for root_name, root_data in data.items():
-            self.build_locator(root_name, root_data)
-
-
-    # Joint Generation from Locators
-
-    def generateJoints(self):
-        '''
-        Finds all GUIDE locators in the scene and creates a joint at each one.
-        '''
-        guides = cmds.ls("*GUIDE", type="locator")
-
-        joints = []
-        for loc in guides:
-            loc_pos = cmds.xform(loc, q=True, ws=True, t=True)
-            jnt = cmds.joint(p=loc_pos, n=loc.replace("GUIDE", "JNT"))
-            joints.append(jnt)
-
-        cmds.group(joints, n="Skeleton_GRP")
-
-
     # Hierarchy Utilities
   
     def separate_module_from_hierarchy(self, data: dict, root_joint: str) -> dict:

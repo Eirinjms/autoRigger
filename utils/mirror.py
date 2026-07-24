@@ -16,47 +16,68 @@ def mirrorLocators(sel: str | list | None = None) -> list:
     Returns:
         list: The mirrored locator transforms.
     """
-    if not sel:
-        sel = cmds.ls(sl=True, long=True)
 
-    if not sel:
-        cmds.warning("Please select what you want to mirror")
-        return []
+    cmds.undoInfo(openChunk=True)
+    try:
+        if not sel:
+            sel = cmds.ls(sl=True, long=False)
 
-    if isinstance(sel, str):
-        sel = [sel]
+        if not sel:
+            cmds.warning("Please select what you want to mirror")
+            return []
 
-    cmds.select(clear=True)
+        if isinstance(sel, str):
+            sel = [sel]
 
-    # group originals temporarily so we can duplicate the whole hierarchy at once
-    originGrp = cmds.group(em=True, name="tempOrigin_GRP")
-    cmds.parent(sel, originGrp)
+        if len(sel) != 1:
+            cmds.warning("please select root to mirror")
+            return []
 
-    # duplicate and mirror
-    duplicatedGrp = cmds.duplicate(originGrp)[0]
-    cmds.setAttr(f"{duplicatedGrp}.scaleX", -1)
-    cmds.makeIdentity(duplicatedGrp, a=True, s=True)
+        cmds.select(clear=True)
 
-    # rename deepest first so parent renames dont invalidate child paths
-    children = cmds.listRelatives(duplicatedGrp, allDescendents=True, type='transform', fullPath=True) or []
+        print(sel)
+        for obj in sel: 
+            print(obj)
+            if obj.startswith("L_"):
+                mirror = obj.replace("L_", "R_")
+            if obj.startswith("R_"):
+                mirror = obj.replace("R_", "L_")    
 
-    mirroredLocs = []
-    for child in children:
-        shortName = child.split("|")[-1]  # get the actual node name without the path
-        if shortName.startswith("L_"):
-            newName = shortName.replace("L_", "R_").replace("LOC1", "LOC")
-        elif shortName.startswith("R_"):
-            newName = shortName.replace("R_", "L_").replace("LOC1", "LOC")
-        else:
-            newName = f"{shortName}_mirror"
-        print(shortName)        
-        child = cmds.rename(child, newName)
-        mirroredLocs.append(child)
-    
+            if cmds.objExists(mirror):
+                cmds.delete(mirror)
+
+        # group originals temporarily so we can duplicate the whole hierarchy at once
+        originGrp = cmds.group(em=True, name="tempOrigin_GRP")
+        cmds.parent(sel, originGrp)
+
+        # duplicate and mirror
+        duplicatedGrp = cmds.duplicate(originGrp, n="tempMirror_GRP")[0]
+        cmds.setAttr(f"{duplicatedGrp}.scaleX", -1)
+        cmds.makeIdentity(duplicatedGrp, a=True, s=True)
+
+        # rename deepest first so parent renames dont invalidate child paths
+        children = cmds.listRelatives(duplicatedGrp, allDescendents=True, type='transform', fullPath=True) or []
+
+        mirroredLocs=[]
+        for child in children:
+            shortName = child.split("|")[-1]
+
+            if shortName.startswith("L_"):
+                newName = shortName.replace("L_", "R_")
+            elif shortName.startswith("R_"):
+                newName = shortName.replace("R_", "L_")
+            else:
+                newName = f"{child}_mirror"
+            print(child)        
+            child = cmds.rename(child, newName)
+            mirroredLocs.append(child)
         
-    # ungroup both — restore originals and extract mirrored locs to world
-    cmds.parent(cmds.listRelatives(duplicatedGrp, children=True), w=True)
-    cmds.parent(cmds.listRelatives(originGrp, children=True), w=True)
-    cmds.delete(originGrp, duplicatedGrp)
+            
+        # ungroup both — restore originals and extract mirrored locs to world
+        cmds.parent(cmds.listRelatives(duplicatedGrp, children=True), w=True, relative=False)
+        cmds.parent(cmds.listRelatives(originGrp, children=True), w=True, relative=False)
+        cmds.delete(originGrp, duplicatedGrp)
 
-    return mirroredLocs
+        return mirroredLocs 
+    finally: 
+        cmds.undoInfo(closeChunk=True)

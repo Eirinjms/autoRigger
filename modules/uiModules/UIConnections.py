@@ -16,6 +16,7 @@ import maya.cmds as cmds # pyright: ignore[reportMissingImports]
 import maya.OpenMayaUI as omui # pyright: ignore[reportMissingImports]
 #from maya.app.general.mayaMixin import MayaQWidgetDockableMixin as MQwidgetMixin # pyright: ignore[reportMissingImports]
 import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports]
+import maya.mel as mel
 
 #my own modules
 from autoRigger.modules.builderModules import buildRig, locatorBasedFunctions as locFunc, jointGeneration as jointGen
@@ -151,6 +152,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         self.pvVisualizer = self.ui.findChild(QtWidgets.QCheckBox, "pvViz_checkBox")
 
+        self.spineChecker = self.ui.findChild(QtWidgets.QGroupBox, "")
+
         self.spineSlider = self.ui.findChild(QtWidgets.QSlider,"SpineAmount_Slider")
         self.spineCustomization = self.ui.findChild(QtWidgets.QGroupBox,"CustomizableSpine_grp")
 
@@ -158,6 +161,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         self.spineAmntText = self.ui.findChild(QtWidgets.QLabel, "SpineAmnt_Number")
         self.spineCurveText = self.ui.findChild(QtWidgets.QLabel, "SpineCurve_text")
+
+        self.updateLocatorList = self.ui.findChild(QtWidgets.QPushButton, "rediscoverGuides_Btn")
 
 
         #generative locator
@@ -297,6 +302,13 @@ class AutoRiggerUI(QtWidgets.QDialog):
              self.curveMult.valueChanged.connect(self.procSpine.updateCurvature)    
              self.curveMult.valueChanged.connect(lambda value: self.spineCurveText.setText(f"{value}"))    
 
+        if self.spineCustomization:
+            self.spineCustomization.toggled.connect(self.spineUpdate)
+
+
+        if self.updateLocatorList:
+            self.updateLocatorList.clicked.connect(self.discoverGuides)
+                
             
         if self.locatorSymmetry:
             self.locatorSymmetry.toggled.connect(lambda checked: self.symmetryToggle(checked, 
@@ -330,7 +342,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.pvVisualizer.toggled.connect(self.previewPV)
         
         if self.mirrorLocatorBtn:
-            self.mirrorLocatorBtn.clicked.connect(lambda: mirror.mirrorLocators())
+            self.mirrorLocatorBtn.clicked.connect(self.mirrorLocs)
 
 
         #-----------------------------------rev feet connections -----------------------------------------------#
@@ -442,16 +454,18 @@ class AutoRiggerUI(QtWidgets.QDialog):
         if value % 2 == 0:
             value += 1
 
-        self.spineAmntText.setText(f"{value}")
+        text = value + 2
+        self.spineAmntText.setText(f"{text}")
 
         return value
     
-    def spineUpdate(self):
-        self.procSpine.updateSpine(self.spineValue())
-        self.spineJoints.clear()
-        for loc in self.procSpine.spineLocs:
-            loc = loc.replace("GUIDE", "JNT")
-            self.spineJoints.append(loc)
+    def spineUpdate(self, checked):
+        if checked: 
+            self.procSpine.updateSpine(self.spineValue())
+            self.spineJoints.clear()
+            for loc in self.procSpine.spineLocs:
+                loc = loc.replace("GUIDE", "JNT")
+                self.spineJoints.append(loc)
 
     def locatorValue(self):
         value = self.guideChainLength.value()
@@ -594,6 +608,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         loc = cmds.spaceLocator(
             n=locator_name.replace('JNT', 'GUIDE'))[0]
+
+        cmds.setAttr(f"{loc}.overrideEnabled", 1)
+        cmds.setAttr(f"{loc}.overrideColor", 17)        
         
         cmds.xform(loc,
                    ws=True,
@@ -667,6 +684,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 if self.sizeLabel:
                     self.sizeLabel.setText(str(value))
                 return  # just sync to the first locator found
+
+    def mirrorLocs(self):
+        mirror.mirrorLocators()
+        self.locatorList[:] = list(dict.fromkeys(self.locatorList))
                 
     def symmetryToggle(self, checked, symmetry, checkBox):
         if checked:
@@ -700,6 +721,19 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.guideHier.reparentHierarchy()
         self.spineCustomization.setChecked(self.spineCustomizationState)
         self.spineCustomization.blockSignals(False)
+
+
+    def discoverGuides(self):
+        self.locatorList.clear()
+
+        locators = cmds.ls("*_GUIDE", type='transform') or []
+        if not locators: 
+            return cmds.warning("No guides within the scene")
+
+        for loc in locators: 
+            cmds.setAttr(f"{loc}.overrideEnabled", 1)
+            cmds.setAttr(f"{loc}.overrideColor", 17)
+            self.locatorList.append(loc)
 
     # ─────────────────────────────────────────────────────────────────────────
     # JOINTS
@@ -751,21 +785,22 @@ class AutoRiggerUI(QtWidgets.QDialog):
         '''
         cmds.undoInfo(openChunk=True)
         try:
+            self.jointsList.clear()
             if self.locatorSymmetry.isChecked():
                 self.locatorSymmetry.setChecked(False)
             
 
-            self.locatorList = cmds.ls("*GUIDE", type = 'transform')
+            self.locatorList[:] = cmds.ls("*GUIDE", type="transform") or []
                 
             if len(self.locatorList)== 0:
                 return cmds.warning("No guide Locators found, please generate these before generating joints!")
 
             for loc in self.locatorList:
                 cmds.makeIdentity(loc, 
-                                apply = True, 
-                                t = True, 
-                                r = True)
-                
+                            apply = True, 
+                            t = True, 
+                            r = True)
+                        
             
             roots = []
             for loc in self.locatorList:
@@ -781,10 +816,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.jointOrientation()
 
             cmds.select(clear = True)   
-            locGrp = cmds.group(roots, n = "Guide_Locator_GRP")
+            #locGrp = cmds.group(roots, n = "Guide_Locator_GRP")
             cmds.select(clear = True)   
             #skelGrp = cmds.group(roots[0].replace("GUIDE", "JNT"), n = "_Skeleton_GRP")
-            cmds.hide(locGrp)
+            cmds.hide(roots)
 
             cmds.select(clear = True)   
             
@@ -900,6 +935,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         #endjoints
         for joint in self.jointsList:
+            if not cmds.objExists(joint):
+                cmds.warning(f"{joint} does not exist, check your scene")
+                continue
             if not cmds.listRelatives(joint, c=True, type="joint"):
                 cmds.joint(joint, e=True, zso=True, oj="none")
         
@@ -1002,7 +1040,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             sel = cmds.ls(sl=True, type='transform')
             if len(sel) != 1:
                 self.pvVisualizer.setChecked(False)
-                return cmds.warning("Select ONLY root joint of the chain you want to test")
+                return cmds.warning("Please select exactly one root joint.")
             
             children = cmds.listRelatives(sel, ad=True, type='transform') or []
             children.reverse()
@@ -1010,7 +1048,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
             
 
             if len(chain) < 3:
-                cmds.warning("Select the root of the limb chain")
+                self.pvVisualizer.setChecked(False)
+                cmds.warning("Not enough joints to create a visualiser")
                 return
             for guide in chain[:3]:
                 local, world = config.getGuidePos(guide)
@@ -1069,3 +1108,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.ribbonCheckGrp.setChecked(False)
             self.ribbonArmCheck.setChecked(False)
             self.ribbonLegCheck.setChecked(False)
+
+    def closeEvent(self, event):
+        self.locatorSymmetry.setChecked(False)
+        super().closeEvent(event)

@@ -29,7 +29,7 @@
       </size>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -152,6 +152,25 @@
         </property>
         <property name="text">
          <string>Unparent Loc Hierarchy</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="rediscoverGuides_Btn">
+        <property name="geometry">
+         <rect>
+          <x>170</x>
+          <y>90</y>
+          <width>141</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Mirrors the selected root</string>
+        </property>
+        <property name="statusTip">
+         <string>Mirrors the selected root</string>
+        </property>
+        <property name="text">
+         <string>Re-discover Guides</string>
         </property>
        </widget>
       </widget>
@@ -372,7 +391,7 @@
        <widget class="QLabel" name="TwistJoint_Number_4">
         <property name="geometry">
          <rect>
-          <x>0</x>
+          <x>-10</x>
           <y>20</y>
           <width>91</width>
           <height>20</height>
@@ -441,7 +460,7 @@
        <widget class="QLabel" name="TwistJoint_Number_6">
         <property name="geometry">
          <rect>
-          <x>0</x>
+          <x>-10</x>
           <y>50</y>
           <width>91</width>
           <height>20</height>

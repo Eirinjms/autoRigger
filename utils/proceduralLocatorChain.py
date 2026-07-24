@@ -18,71 +18,82 @@ class procLocatorGenerator:
 
         
     def generateLocs(self):
-        if not "_" in self.prefix: 
-            self.prefix += "_"
-        
-        if cmds.ls(f"{self.prefix}{self.basename}JA_GUIDE"):
-            return cmds.warning("Chain with specified name already exists, choose a new name")
 
-        self.startGuide = cmds.spaceLocator(n = f"{self.prefix}{self.basename}JA_GUIDE")[0]
-        self.endGuide = cmds.spaceLocator(n = f"{self.prefix}{self.basename}JEnd_GUIDE")[0]
-        
+        cmds.undoInfo(openChunk = True)
+        try:
+            if not "_" in self.prefix: 
+                self.prefix += "_"
+            
+            if cmds.ls(f"{self.prefix}{self.basename}JA_GUIDE"):
+                return cmds.warning("Chain with specified name already exists, choose a new name")
 
-        startShape = cmds.listRelatives(self.startGuide, shapes=True)[0]
-        endShape = cmds.listRelatives(self.endGuide, shapes=True)[0]
+            self.startGuide = cmds.spaceLocator(n = f"{self.prefix}{self.basename}JA_GUIDE")[0]
+            self.endGuide = cmds.spaceLocator(n = f"{self.prefix}{self.basename}JEnd_GUIDE")[0]
+            
 
-        cmds.xform(self.endGuide, t  = (10,0,0), ws = True)
+            startShape = cmds.listRelatives(self.startGuide, shapes=True)[0]
+            endShape = cmds.listRelatives(self.endGuide, shapes=True)[0]
 
-        colours = [14, 13]
-        shapes = [startShape, endShape]
+            cmds.xform(self.endGuide, t  = (10,0,0), ws = True)
 
-        for c, s in zip(colours, shapes):
-            cmds.setAttr(f"{s}.overrideEnabled", 1)
-            cmds.setAttr(f"{s}.overrideColor", c)
+            colours = [14, 13]
+            shapes = [startShape, endShape]
+
+            for c, s in zip(colours, shapes):
+                cmds.setAttr(f"{s}.overrideEnabled", 1)
+                cmds.setAttr(f"{s}.overrideColor", c)
+        finally: 
+            cmds.undoInfo(closeChunk = True)
 
 
     def placementMath(self):
-        
-        if self.newlocators:
-            self.deleteGuides(self.newlocators)
-            
-        self.newlocators.clear()
-        self.Locs.clear()
-        self.positions.clear()
 
-        self.Locs.append(self.startGuide)
-        self.rootLocalPos, self.rootWorldPos = config.getGuidePos(self.startGuide)
-        self.endLocalPos, self.endWorldPos = config.getGuidePos(self.endGuide)
+        cmds.undoInfo(openChunk = True)
+        try:
+            if self.newlocators:
+                self.deleteGuides(self.newlocators)
+                
+            self.newlocators.clear()
+            self.Locs.clear()
+            self.positions.clear()
 
-        self.rootFinalPos = tuple(a + b for a, b in zip(self.rootLocalPos, self.rootWorldPos)) #adds the local and world position together
-        self.endFinalPos = tuple(a + b for a, b in zip(self.endLocalPos, self.endWorldPos))
+            self.Locs.append(self.startGuide)
+            self.rootLocalPos, self.rootWorldPos = config.getGuidePos(self.startGuide)
+            self.endLocalPos, self.endWorldPos = config.getGuidePos(self.endGuide)
 
-        self.startVector = om.MVector(self.rootFinalPos)
-        self.endVector = om.MVector(self.endFinalPos)
+            self.rootFinalPos = tuple(a + b for a, b in zip(self.rootLocalPos, self.rootWorldPos)) #adds the local and world position together
+            self.endFinalPos = tuple(a + b for a, b in zip(self.endLocalPos, self.endWorldPos))
 
-        distanceVector = self.endVector - self.startVector
-        distanceBetweenJoints = distanceVector.length() / (self.jointAmount + 1)
-        self.direction = distanceVector.normal()
+            self.startVector = om.MVector(self.rootFinalPos)
+            self.endVector = om.MVector(self.endFinalPos)
 
-        for i in range(1, self.jointAmount + 1):
-            pos = self.startVector + self.direction * distanceBetweenJoints * i
-            self.positions.append(pos)
+            distanceVector = self.endVector - self.startVector
+            distanceBetweenJoints = distanceVector.length() / (self.jointAmount + 1)
+            self.direction = distanceVector.normal()
 
-        for index, (pos, letter) in enumerate(zip(self.positions, string.ascii_uppercase[1:])):
-            spinename = f"{self.prefix}{self.basename}J{letter}_GUIDE"
-            loc = cmds.spaceLocator(n=spinename)[0]
-            cmds.xform(loc, t=pos, ws=True)
-            self.newlocators.append(spinename)
-            self.Locs.append(spinename)
+            for i in range(1, self.jointAmount + 1):
+                pos = self.startVector + self.direction * distanceBetweenJoints * i
+                self.positions.append(pos)
 
-            if index > 0:
-                cmds.parent(loc, self.newlocators[index - 1])
-        self.Locs.append(self.endGuide)
+            for index, (pos, letter) in enumerate(zip(self.positions, string.ascii_uppercase[1:])):
+                spinename = f"{self.prefix}{self.basename}J{letter}_GUIDE"
+                loc = cmds.spaceLocator(n=spinename)[0]
+                cmds.setAttr(f"{loc}.overrideEnabled", 1)
+                cmds.setAttr(f"{loc}.overrideColor", 17)
+                cmds.xform(loc, t=pos, ws=True)
+                self.newlocators.append(spinename)
+                self.Locs.append(spinename)
 
-        cmds.parent(self.newlocators[0], self.startGuide)
-        cmds.parent(self.endGuide, self.newlocators[-1])
+                if index > 0:
+                    cmds.parent(loc, self.newlocators[index - 1])
+            self.Locs.append(self.endGuide)
 
-        cmds.select(clear = True)
+            cmds.parent(self.newlocators[0], self.startGuide)
+            cmds.parent(self.endGuide, self.newlocators[-1])
+
+        finally:
+            cmds.undoInfo(closeChunk = True)
+            cmds.select(clear = True)
 
 
     def deleteGuides(self, joints: list):

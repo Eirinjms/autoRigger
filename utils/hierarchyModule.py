@@ -25,7 +25,9 @@ class hierarchyManager:
 
         self.hierarchy = {}
         roots = []
-        for node in self.nodeList: 
+        for node in self.nodeList:
+            if not cmds.objExists(node):
+                continue
             parent = cmds.listRelatives(node, 
                                         parent = True)
             
@@ -65,6 +67,7 @@ class hierarchyManager:
                 if cmds.listRelatives(node, parent = True) is not None:  
                     cmds.parent(node, world = True)
         finally: 
+            cmds.select(clear = True)
             cmds.undoInfo(closeChunk = True)
 
 
@@ -85,4 +88,5 @@ class hierarchyManager:
             self.hierarchy.clear()
             
         finally: 
+            cmds.select(clear = True)
             cmds.undoInfo(closeChunk = True)

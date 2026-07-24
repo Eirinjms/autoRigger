@@ -113,6 +113,8 @@ class ProceduralSpine:
         for index, (pos, letter) in enumerate(zip(self.positions, string.ascii_uppercase[1:])):
             spinename = f"C_spineJ{letter}_GUIDE"
             loc = cmds.spaceLocator(n=spinename)[0]
+            cmds.setAttr(f"{loc}.overrideEnabled", 1)
+            cmds.setAttr(f"{loc}.overrideColor", 17)
             cmds.xform(loc, t=pos, ws=True)
             self.newSpinelocators.append(spinename)
             self.spineLocs.append(spinename)

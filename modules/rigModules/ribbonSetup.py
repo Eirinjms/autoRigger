@@ -232,7 +232,6 @@ class RibbonMaker:
             loc = cmds.spaceLocator(n = f"{joint}{config.suffix['locator']}")[0]
             self.locs.append(loc)
             cmds.matchTransform(loc, joint, pos = True, rot = True)
-
             ctrl = cmds.circle(n = f"{joint}{config.suffix['control']}", r = 4, nr = (1,0,0))[0]
             self.ctrls.append(ctrl)
             cmds.matchTransform(ctrl, joint, rot = True, pos = True)    
@@ -261,7 +260,7 @@ class RibbonMaker:
         """
 
         self.ribbonGrp = cmds.group(em=True, name=f"{self.name}_RIBBONS_GRP")
-        ctrlGrp = cmds.group(self.locs, n = f"{self.name}_CTRL_GRP", parent = self.ribbonGrp)
+        ctrlGrp = cmds.group(em = True, n = f"{self.name}_CTRL_GRP", parent = self.ribbonGrp)
         self.geoGrp = cmds.group(em=True, name=f"{self.name}_geo_GRP", parent=self.ribbonGrp)
         self.folliclesGrp = cmds.group(em=True, name=f"{self.name}_follicles_GRP", parent=self.ribbonGrp)
         self.driversGrp = cmds.group(em=True, name=f"{self.name}_drivers_GRP", parent=self.ribbonGrp)

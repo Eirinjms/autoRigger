@@ -400,9 +400,9 @@ class limbBuild:
         cvs = cmds.ls(shape + ".cv[*]", fl=True)
 
         if self.side == 'L_':
-            cmds.xform(cvs, t=(10,6,0), ro=(0,0,-20), r=True)
+            cmds.xform(cvs, t=(10,6,0), ro=(0,0,-20), ws =True, r=True)
         else:
-            cmds.xform(cvs, t=(-10,-6,0), ro=(0,0,-20), r=True)
+            cmds.xform(cvs, t=(-10,6,0), ro=(0,0,20), ws=True, r=True)
 
         for i in [1,5]:
             cv = cvs[i]
