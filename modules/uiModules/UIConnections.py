@@ -243,6 +243,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.ribbonBindsLabel = self.ui.findChild(QtWidgets.QLabel, "ribbonBinds_Number")
         self.ribbonDriverLabel = self.ui.findChild(QtWidgets.QLabel, "ribbonDrivers_Number")
 
+        self.digigradeCheck = self.ui.findChild(QtWidgets.QCheckBox, "DigiGradeLegs_btn")
+
         #-----------------------------------connections -----------------------------------------------#
 
         if rigBuildBtn:
@@ -383,6 +385,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
     def closeEvent(self, event):
         if getattr(self, "selectionJob", None):
             cmds.scriptJob(kill=self.selectionJob, force=True)
+        self.locatorSymmetry.setChecked(False)
         super().closeEvent(event)
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -426,6 +429,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             twistArms = self.twistArmCheck.isChecked()
             twistLegs = self.twistLegCheck.isChecked()
             twistAmount = self.twistSlider.value()
+            self.digigradeLeg = self.digigradeCheck.isChecked()
 
             buildRig.build(
                 self.spineOrder,
@@ -442,9 +446,11 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 self.ribbonArms,
                 self.ribbonLegs,
                 self.ribbonDrivers,
-                self.ribbonBinds
+                self.ribbonBinds,
+                self.digigradeLeg
             )
-            print("..Rig built!")
+            print("\n ^^^^^^^^^^^^^^^^^^^^^^^^ \n ..Rig built!") 
+
         finally:
             cmds.undoInfo(closeChunk=True)
 
@@ -1060,9 +1066,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
             children = cmds.listRelatives(sel, ad=True, type='transform') or []
             children.reverse()
             chain = sel + children
-            
 
-            if len(chain) < 3:
+            chainlength = 4 if self.digigrade else 3
+
+            if len(chain) < chainlength:
                 self.pvVisualizer.setChecked(False)
                 cmds.warning("Not enough joints to create a visualiser")
                 return
@@ -1123,7 +1130,3 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.ribbonCheckGrp.setChecked(False)
             self.ribbonArmCheck.setChecked(False)
             self.ribbonLegCheck.setChecked(False)
-
-    def closeEvent(self, event):
-        self.locatorSymmetry.setChecked(False)
-        super().closeEvent(event)

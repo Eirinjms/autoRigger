@@ -138,7 +138,7 @@ def findpoleVector(sel, pvDistance):
 
     local0, world0 = config.getGuidePos(sel[0])
     local1, world1 = config.getGuidePos(sel[1])
-    local2, world2 = config.getGuidePos(sel[2])
+    local2, world2 = config.getGuidePos(sel[-1])
 
     pos0 = config.addTuples(local0, world0)
     pos1 = config.addTuples(local1, world1)

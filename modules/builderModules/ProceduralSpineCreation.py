@@ -166,6 +166,12 @@ class ProceduralSpine:
         finally:
             cmds.undoInfo(closeChunk=True)
 
+    def globalSpine(self):
+        globalSpineCtrl = cmds.circle(n = "C_spine_global_CTRL", r = 10)
+        cmds.matchTransform(globalSpineCtrl, self.spineRoot)
+        cmds.parent(globalSpineCtrl, self.spineRoot)
+
+
     # ─────────────────────────────────────────────────────────────────────────
     # CLEANUP
     # ─────────────────────────────────────────────────────────────────────────

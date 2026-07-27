@@ -225,15 +225,18 @@ class RibbonMaker:
             cmds.parentConstraint(self.startJoint, joint, n = joint.replace(self.suffix['joint'], self.suffix['parentCon']), mo = True)
     
     def createDriverJointsControls(self):
-        self.startLoc = cmds.spaceLocator(n = self.startJoint.replace("JNT", "LOC"))
+        self.startLoc = cmds.spaceLocator(n = self.startJoint.replace("JNT", "LOC"))[0]
         cmds.matchTransform(self.startLoc, self.startJoint, pos = True, rot = True)
 
         for joint in self.DriverJoints:
             loc = cmds.spaceLocator(n = f"{joint}{config.suffix['locator']}")[0]
             self.locs.append(loc)
+            cmds.parent(loc, self.startLoc)
+
             cmds.matchTransform(loc, joint, pos = True, rot = True)
             ctrl = cmds.circle(n = f"{joint}{config.suffix['control']}", r = 4, nr = (1,0,0))[0]
             self.ctrls.append(ctrl)
+            
             cmds.matchTransform(ctrl, joint, rot = True, pos = True)    
             cmds.parent(ctrl, loc)
             cmds.makeIdentity(ctrl, a = True, t = True, r = True)
@@ -286,7 +289,7 @@ class RibbonMaker:
 
         cmds.connectAttr(
             f"{self.switch}.Ribbon_Ctrls",
-            f"{ctrlGrp}.visibility",
+            f"{self.startLoc}.visibility",
             force=True)
     
     def addSineBlendshape(self):

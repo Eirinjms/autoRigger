@@ -1,5 +1,6 @@
 import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
 import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports] 
+import maya.mel as mel
 import autoRigger.utils.shapes as shapes
 from autoRigger.modules.rigModules import handModule, reverseFoot, twistSetup as twist, squashAndStretch as stretch, ribbonSetup as ribbon
 import autoRigger.utils.config as config
@@ -22,9 +23,10 @@ class limbBuild:
                  twistLeg, 
                  twistJoints,
                  ribbonArm, 
-                 ribbonLegs, 
+                 ribbonLegs,
+                 digigradeLegs, 
                  ribbonDrivers, 
-                 ribbonBinds,):
+                 ribbonBinds):
         '''
         Builds an IK/FK limb rig including:
             - IK/FK blending
@@ -48,6 +50,8 @@ class limbBuild:
         self.stretchyArms = armStretch
         self.stretchyLegs = legStretch
 
+        self.digigradeLegs = digigradeLegs
+
         self.ribbonArm = ribbonArm
         self.ribbonLeg = ribbonLegs
         self.ribbonDrivers = ribbonDrivers
@@ -62,14 +66,6 @@ class limbBuild:
         self.size = config.bipedal
         self.suffix = config.suffix
 
-        if limbType == "arm":
-            self.pvDistance = self.size['pvArmDistance']
-            self.rotOrder = armOrder
-            self.handOrder = handOrder
-        else:
-            self.pvDistance = self.size['pvLegDistance'] 
-            self.rotOrder = legOrder       
-
         self.fkIK = config.fkik
         self.attrs = config.attrs
         self.prefix = config.prefix
@@ -78,12 +74,20 @@ class limbBuild:
 
         self.limbType = limbType
 
-        #makes a list of the joints depending on limb, will integrate "categories" later
-        if self.limbType == 'arm':
+        if limbType == "arm":
+            self.pvDistance = self.size['pvArmDistance']
+            self.rotOrder = armOrder
+            self.handOrder = handOrder
             index = 'BCD'
-        else: 
-            index = 'ABC'
 
+        else:
+            self.pvDistance = self.size['pvLegDistance'] 
+            self.rotOrder = legOrder     
+            index = 'ABC'  
+            if digigradeLegs:
+                index = 'ABCD'
+
+        #makes a list of the joints depending on limb, will integrate "categories" later
         self.jointBaseName = [f"{self.limbType}J{i}" for i in index]
         self.joints = []
         for joints in self.jointBaseName: 
@@ -182,9 +186,16 @@ class limbBuild:
         The IK setup for selected limb, creates the solver + control
         '''
 
+        if self.digigradeLegs:
+            solver = "ikSpringSolver"
+        else:
+            solver = "ikRPsolver"
+
         self.ikHandle = cmds.ikHandle(n = self.ikJoints[0].replace(self.fkIK['ik'], self.suffix ['ikHandle']), 
                                  sj = self.ikJoints[0], 
-                                 ee = self.ikJoints[-1])[0]
+                                 ee = self.ikJoints[-1],
+                                 sol = solver)[0]
+        print(solver)
         
         self.ikLoc = cmds.spaceLocator(n = self.ikJoints[0].replace(self.suffix['joint'], self.suffix['locator']))[0]
 
@@ -194,7 +205,7 @@ class limbBuild:
             size = self.size['IKarms']
 
 
-        self.ikCtrl = shapes.cubeCtrl(name = f"{self.side}{self.limbType}{self.fkIK['ik']}'{self.suffix['control']}", 
+        self.ikCtrl = shapes.cubeCtrl(name = f"{self.side}{self.limbType}{self.fkIK['ik']}{self.suffix['control']}", 
                                  X = size, 
                                  Y = size, 
                                  Z = size)
@@ -315,7 +326,7 @@ class limbBuild:
         '''
         self.H = om.MVector(cmds.xform(f"{self.side}{self.jointBaseName[0]}{self.suffix['joint']}", q = True, ws = True, t = True))
         self.K = om.MVector(cmds.xform(f"{self.side}{self.jointBaseName[1]}{self.suffix['joint']}", q = True, ws = True, t = True))
-        self.A = om.MVector(cmds.xform(f"{self.side}{self.jointBaseName[2]}{self.suffix['joint']}", q = True, ws = True, t = True))
+        self.A = om.MVector(cmds.xform(f"{self.side}{self.jointBaseName[-1]}{self.suffix['joint']}", q = True, ws = True, t = True))
 
         HK = self.K - self.H
         HA = self.A - self.H
@@ -351,6 +362,25 @@ class limbBuild:
         cmds.makeIdentity(self.pvCtrl, apply = True, t = True)
 
         cmds.parent(self.pvLoc, self.ikGrp)
+
+    def poleVectorLine(self):
+        points = [cmds.xform(self.joints[1], q = True, t = True), config.getGuidePos(self.pvLoc)[0]]
+        pvVizCurve = cmds.curve(n = f"{self.side}{self.limbType}_PV_VIZ", p = points,  d = 1)
+
+        cmds.addAttr(self.switch, ln = "PV_VIZ_Line", at = "bool", dv = 1, k = True)
+        cmds.connectAttr(
+            f"{self.switch}.PV_VIZ_Line",
+            f"{pvVizCurve}.visibility",
+            force=True)
+
+        cluster0 = cmds.cluster(f"{pvVizCurve}.cv[0]", n=f"{pvVizCurve}_0_CLS")[1]
+        cluster1 = cmds.cluster(f"{pvVizCurve}.cv[1]", n=f"{pvVizCurve}_1_CLS")[1]
+
+        cmds.pointConstraint(self.joints[1], cluster0, mo=False)
+        cmds.pointConstraint(self.pvLoc, cluster1, mo=False)
+
+        cmds.setAttr(f"{cluster0}.visibility", 0)
+        cmds.setAttr(f"{cluster1}.visibility", 0)
 
 
     def poleVectorVisualization(self):
@@ -427,6 +457,10 @@ class limbBuild:
         cmds.parent(self.ikBNDLoc, IkswitchCtrl)
 
         cmds.hide(self.fkJoints, self.ikJoints, self.ikHandle)
+
+        if self.digigradeLegs:
+            cmds.connectAttr("global_CTRL.rotateY", 
+                             f"{self.ikHandle}.twist")  #Assumes world rotations for global, change if needed
 
         
     def endlimb(self):  
@@ -601,6 +635,7 @@ class limbBuild:
         self.ikfkGroups()
         self.findpoleVector()
         self.createPoleVector()
+        #self.poleVectorLine()
         self.hipSpace()
         
         self.endlimb()
@@ -633,7 +668,21 @@ class limbBuild:
         shapes.ctrlColour()
         print("Building:", self.side, self.limbType)
 
-def build_limb_set(legOrder, armOrder, handOrder, stretchyArms, stretchyLegs, twistAmount, twistArms, twistLegs, ribbonArm, ribbonLegs, ribbonDrivers, ribbonBinds, sides: list, limbs: list):   
+def build_limb_set(legOrder, 
+                   armOrder, 
+                   handOrder, 
+                   stretchyArms, 
+                   stretchyLegs, 
+                   twistAmount, 
+                   twistArms, 
+                   twistLegs, 
+                   ribbonArm, 
+                   ribbonLegs,
+                   ribbonDrivers, 
+                   ribbonBinds,
+                   digigradeLegs, 
+                   sides: list, 
+                   limbs: list):   
     """
     Builds the requested limb types for the specified sides.
 
@@ -645,10 +694,24 @@ def build_limb_set(legOrder, armOrder, handOrder, stretchyArms, stretchyLegs, tw
         handOrder (int) : the rotation order of the fingers. 
         stretchylegs (bool):
     """
-    print(twistAmount, "ui")
+
     for side in sides:
         for limb in limbs:
-            limbBuild(side, limb, legOrder, armOrder, handOrder, stretchyArms, stretchyLegs, twistArms, twistLegs, twistAmount, ribbonArm, ribbonLegs, ribbonDrivers, ribbonBinds,).buildLimb()
+            limbBuild(side, 
+                      limb, 
+                      legOrder, 
+                      armOrder, 
+                      handOrder, 
+                      stretchyArms, 
+                      stretchyLegs, 
+                      twistArms, 
+                      twistLegs, 
+                      twistAmount, 
+                      ribbonArm, 
+                      ribbonLegs, 
+                      digigradeLegs,
+                      ribbonDrivers, 
+                      ribbonBinds).buildLimb()
     
     print("All Limbs built")
 

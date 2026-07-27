@@ -17,10 +17,8 @@ def fourWayArrowCtrl(name, size):
         k=list(range(25)),
         name=name
     )
-
-    curve = cmds.ls(sl=True)[0]
     
-    shape = cmds.listRelatives(curve, shapes=True, type="nurbsCurve")[0]
+    shape = cmds.listRelatives(ctrl, shapes=True, type="nurbsCurve")[0]
     
     cvs = cmds.ls(shape + ".cv[*]", fl=True)
 
@@ -33,11 +31,10 @@ def fourWayArrowCtrl(name, size):
     cmds.xform(ctrl, s=(size, size, size))
     cmds.makeIdentity(ctrl, apply=True, t=True, r=True, s=True)
 
-    shape = cmds.listRelatives(ctrl, shapes=True, path=True)[0]
-    cmds.rename(shape, f"{ctrl}Shape")
+    shape = cmds.rename(shape, f"{ctrl}Shape")
 
 
-    return ctrl
+    return ctrl, shape
 # ------------------------------
 # CUBE
 # ------------------------------
@@ -127,7 +124,7 @@ def oneWayArrowCtrl(name, size):
     cmds.makeIdentity(ctrl, apply=True, t=True, r=True, s=True)
 
     shape = cmds.listRelatives(ctrl, shapes=True, path=True)[0]
-    cmds.rename(shape, f"{ctrl}Shape")
+    shape = cmds.rename(shape, f"{ctrl}Shape")
 
     return ctrl
 

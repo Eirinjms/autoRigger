@@ -58,7 +58,7 @@ bipedal = {
     "IKlegs"       : 7,
     "IKswitchLegs" : 6,
     "PVlegs"       : -3,
-    "pvLegDistance": 15,
+    "pvLegDistance": 10,
     "pvArmDistance": 10,
     "FKarms"       : 10,
     "IKarms"       : 5,
@@ -128,6 +128,12 @@ def getGuidePos(locator):
 
 def addTuples(tuple1, tuple2):
     return tuple(x + y for x, y in zip(tuple1, tuple2))
+
+def addedGuidePos(locator):
+    lp, wp = getGuidePos(locator)
+    finalpos = addTuples(lp, wp)
+
+    return finalpos
 
      
 

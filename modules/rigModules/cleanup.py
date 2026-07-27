@@ -5,7 +5,7 @@ import importlib
 importlib.reload(shapes)
 
 def cleanup():
-    globalCtrl = shapes.fourWayArrowCtrl(name = "C_global_CTRL", size = 20)
+    globalCtrl = shapes.fourWayArrowCtrl(name = "global_CTRL", size = 20)
 
     #Automated color selection based on name
     shapes.ctrlColour()
@@ -20,6 +20,7 @@ def cleanup():
     handGrps = cmds.group(cmds.ls("*hand_LOC"), n = "handCTRL_GRP")
     neck = cmds.ls('C_neckJA_LOC')
     headGRP = cmds.ls('head_GRP')
+    globalCtrl = "global_CTRL"
 
     ribbonGrps = cmds.ls("*RIBBONS*GRP", type='transform') or []
     if ribbonGrps: 
