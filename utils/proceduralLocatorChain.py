@@ -29,6 +29,7 @@ class procLocatorGenerator:
 
             self.startGuide = cmds.spaceLocator(n = f"{self.prefix}{self.basename}JA_GUIDE")[0]
             self.endGuide = cmds.spaceLocator(n = f"{self.prefix}{self.basename}JEnd_GUIDE")[0]
+
             
 
             startShape = cmds.listRelatives(self.startGuide, shapes=True)[0]
@@ -42,6 +43,8 @@ class procLocatorGenerator:
             for c, s in zip(colours, shapes):
                 cmds.setAttr(f"{s}.overrideEnabled", 1)
                 cmds.setAttr(f"{s}.overrideColor", c)
+
+            cmds.parent(self.endGuide, self.startGuide)
         finally: 
             cmds.undoInfo(closeChunk = True)
 

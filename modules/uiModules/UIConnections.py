@@ -386,6 +386,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
         if getattr(self, "selectionJob", None):
             cmds.scriptJob(kill=self.selectionJob, force=True)
         self.locatorSymmetry.setChecked(False)
+        for loc in self.locatorList:
+            for attr in config.attrs:
+                mel.eval(f"CBdeleteConnection {loc}.{attr}")
         super().closeEvent(event)
 
     # ─────────────────────────────────────────────────────────────────────────

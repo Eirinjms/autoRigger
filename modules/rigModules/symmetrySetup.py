@@ -16,6 +16,12 @@ class symmetry:
                 cmds.delete(left, ch = True)
                 if left.startswith("L_"):
                     right = left.replace("L_", "R_")
+                    print(right)
+                    print(cmds.listConnections(f"{right}.translateX",
+                                            source=True,
+                                            destination=False,
+                                            plugs=True))
+                    cmds.makeIdentity(right, apply = True, t = True, r = True)
 
                     if cmds.objExists(right):
                         for transform in ["translate", "rotate"]:
