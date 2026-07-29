@@ -386,9 +386,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
         if getattr(self, "selectionJob", None):
             cmds.scriptJob(kill=self.selectionJob, force=True)
         self.locatorSymmetry.setChecked(False)
-        for loc in self.locatorList:
-            for attr in config.attrs:
-                mel.eval(f"CBdeleteConnection {loc}.{attr}")
         super().closeEvent(event)
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -470,7 +467,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
     
     def spineUpdate(self, checked):
         if checked: 
-            self.procSpine.updateSpine(self.spineValue())
+            self.procSpine.updateSpine(self.spineValue(), self.slider.value())
             self.spineJoints.clear()
             for loc in self.procSpine.spineLocs:
                 loc = loc.replace("GUIDE", "JNT")

@@ -12,6 +12,8 @@ class ProceduralSpine:
         self.oldSpinelocators = []
         self.newSpinelocators = []
 
+        self.locatorScale = 1
+
         self.spineLocs = []
 
         self.positions = []
@@ -19,8 +21,9 @@ class ProceduralSpine:
         self.spineRoot = None
         self.hier = hierarchyModule.hierarchyManager([self.spineRoot], True, 'transform')
 
-    def updateSpine(self, jointAmount):
+    def updateSpine(self, jointAmount, locatorScale):
         self.jointAmount = jointAmount
+        self.locatorScale = locatorScale
         self.spineFunc()
 
     def updateCurvature(self, curvatureAmount):
@@ -113,8 +116,10 @@ class ProceduralSpine:
         for index, (pos, letter) in enumerate(zip(self.positions, string.ascii_uppercase[1:])):
             spinename = f"C_spineJ{letter}_GUIDE"
             loc = cmds.spaceLocator(n=spinename)[0]
+
             cmds.setAttr(f"{loc}.overrideEnabled", 1)
             cmds.setAttr(f"{loc}.overrideColor", 17)
+            
             cmds.xform(loc, t=pos, ws=True)
             self.newSpinelocators.append(spinename)
             self.spineLocs.append(spinename)
@@ -122,6 +127,11 @@ class ProceduralSpine:
             if index > 0:
                 cmds.parent(loc, self.newSpinelocators[index - 1])
         self.spineLocs.append(self.spineEnd)
+
+        for loc in self.spineLocs:
+            shape = cmds.listRelatives(loc, s = True)[0]
+            for i in ["X", "Y", "Z"]:
+                cmds.setAttr(f"{shape}.localScale{i}", self.locatorScale)
 
     # ─────────────────────────────────────────────────────────────────────────
     # CURVE OFFSET
@@ -166,10 +176,7 @@ class ProceduralSpine:
         finally:
             cmds.undoInfo(closeChunk=True)
 
-    def globalSpine(self):
-        globalSpineCtrl = cmds.circle(n = "C_spine_global_CTRL", r = 10)
-        cmds.matchTransform(globalSpineCtrl, self.spineRoot)
-        cmds.parent(globalSpineCtrl, self.spineRoot)
+
 
 
     # ─────────────────────────────────────────────────────────────────────────
