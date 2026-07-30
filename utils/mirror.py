@@ -35,7 +35,7 @@ def mirrorLocators(sel: str | list | None = None) -> list:
 
         cmds.select(clear=True)
 
-        parent = cmds.listRelatives(sel, p = True, type='transform')
+        parent = cmds.listRelatives(sel, p = True, type='transform')[0]
 
         print(sel)
         for obj in sel: 
@@ -80,7 +80,17 @@ def mirrorLocators(sel: str | list | None = None) -> list:
         cmds.delete(originGrp, duplicatedGrp)
 
         if parent: 
-            cmds.parent(sel, mirror, parent)
+            if parent.startswith('L'):
+                mirrorparent = parent.replace('L_', 'R_')
+
+            elif parent.startswith('R'):
+                mirrorparent = parent.replace('R_', 'L_')
+
+            else:
+                mirrorparent = parent
+
+            cmds.parent(sel, parent)
+            cmds.parent(mirror, mirrorparent)
 
         return mirroredLocs 
     finally: 
