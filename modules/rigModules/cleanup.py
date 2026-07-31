@@ -5,12 +5,11 @@ import importlib
 importlib.reload(shapes)
 
 def cleanup():
-    globalCtrl = shapes.fourWayArrowCtrl(name = "global_CTRL", size = 20)
 
     #Automated color selection based on name
     shapes.ctrlColour()
 
-    skeleton = cmds.ls('root_JA_JNT')
+    skeleton = cmds.ls('root_JNT')
     skeletonGrp = cmds.group(skeleton, name = "Skeleton_GRP")
     ikGrps = cmds.ls('*_IK_GRP')
     spineStart = cmds.ls("spineJA_BND_LOC")

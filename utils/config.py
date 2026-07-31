@@ -38,6 +38,9 @@ fkik = {
     'ik' : '_IK'}
 
 
+RIG_HELPER_GRP = "rig_helpers_GRP"
+
+
 class RotationOrder(enum.Enum):
     XYZ = 0
     YZX = 1

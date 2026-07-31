@@ -10,6 +10,8 @@ import string
 import os
 import json
 import math
+import cProfile
+import pstats
 
 #maya improts 
 import maya.cmds as cmds # pyright: ignore[reportMissingImports]
@@ -80,6 +82,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         self.locator = None
         self.locatorList = []
+        if not self.locatorList:
+            self.locatorList[:] = cmds.ls("*GUIDE", type="transform") or []
         self.revFeetLocList = []
         self.jointsList = []
         self.ui = None
@@ -96,6 +100,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.procSpine = ProceduralSpineCreation.ProceduralSpine()
         self.spineJoints = []
         self.spineCustomizationState = False
+
+        self.locsParentedState = True
 
         self.locGuidesCreated = False
 
@@ -386,6 +392,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
         if getattr(self, "selectionJob", None):
             cmds.scriptJob(kill=self.selectionJob, force=True)
         self.locatorSymmetry.setChecked(False)
+        if not self.locsParentedState:
+            self.guideHier.reparentHierarchy()
         super().closeEvent(event)
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -466,6 +474,20 @@ class AutoRiggerUI(QtWidgets.QDialog):
         return value
     
     def spineUpdate(self, checked):
+
+        required = ["C_spineJA_GUIDE", 
+                    "C_spineJEnd_GUIDE"]
+
+        if not all(cmds.objExists(guide) for guide in required):
+            if checked:
+                self.spineCustomization.setChecked(False)
+                return cmds.warning("Spine does not exist. Generate using prefix C and basename spine")
+        
+        if not self.locsParentedState: 
+            if checked:
+                self.spineCustomization.setChecked(False)
+                return cmds.warning("Guides are unparented, spine customization currently unavailable")
+            
         if checked: 
             self.procSpine.updateSpine(self.spineValue(), self.slider.value())
             self.spineJoints.clear()
@@ -593,6 +615,15 @@ class AutoRiggerUI(QtWidgets.QDialog):
                     return cmds.warning("This preset has already been loaded")
                 
                 self.build_locator(root_name, root_data, locatorList, storeLocators)
+                root = cmds.ls("root_*", type = 'transform')
+                if not root: 
+                    print("no root")
+                    rootguide = cmds.spaceLocator(n = "root_GUIDE")
+                    cmds.setAttr(f"{rootguide}.overrideEnabled", 1)
+                    cmds.setAttr(f"{rootguide}.overrideColor", 17) 
+                    
+                if rootguide:
+                    cmds.parent(locatorList[0], rootguide)
             cmds.undoInfo(closeChunk = True)
 
             cmds.select(clear = True)
@@ -637,7 +668,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         cmds.undoInfo(openChunk = True)
         try:
-
+            self.revFeetLocList.clear()
             if cmds.objExists("L_backOfHeel_LOC"):
                 return cmds.warning("Reverse Feet locators already in scene,"
                                     "delete them before importing new ones.")
@@ -697,6 +728,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 
     def symmetryToggle(self, checked, symmetry, checkBox):
         if checked:
+            locs = cmds.ls("*_GUIDE", type='transform')
+            cmds.makeIdentity(locs, a = True, t = True, r = True)
+
             if not symmetry.locatorList:
                 checkBox.blockSignals(True)
                 try:
@@ -708,25 +742,28 @@ class AutoRiggerUI(QtWidgets.QDialog):
             
             else:
                 symmetry.locator_symmetry()
+
         else:
             symmetry.disconnectSymmetry()
-
     
     def unparentClicked(self): 
+        self.locsParentedState = False
+        if self.locatorSymmetry.isChecked():
+            self.locatorSymmetry.setChecked(False)
         guides = cmds.ls("*GUIDE", type='transform')
         for guide in guides: 
             if guide not in self.locatorList: 
                 self.locatorList.append(guide)
 
         self.spineCustomizationState = self.spineCustomization.isChecked()
-        self.guideHier.unparentHierarchy()
         self.spineCustomization.setChecked(False)
-        self.spineCustomization.blockSignals(True)
+        self.guideHier.unparentHierarchy()
 
     def reparentClicked(self):
+        self.locsParentedState = True
         self.guideHier.reparentHierarchy()
         self.spineCustomization.setChecked(self.spineCustomizationState)
-        self.spineCustomization.blockSignals(False)
+
 
 
     def discoverGuides(self):

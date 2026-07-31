@@ -106,8 +106,9 @@ class TwistJointsGeneration:
             cmds.connectAttr(f"{quatEuler}.outputRotateX", f"{md}.input1X")
             cmds.connectAttr(f"{md}.outputX", f"{jnt}.rotateX")
 
+        cmds.parent(locatorStart, locatorEnd, config.RIG_HELPER_GRP)
+
     def creation(self):
-        print(self.twistInput, "ui")
         self.twistCreation()
         self.matrixTwistSetup()
 

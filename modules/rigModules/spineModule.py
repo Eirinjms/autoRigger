@@ -261,3 +261,5 @@ class spineBuilder:
             self.blends()
             self.cleanup()
 
+            print(f"[SpineBuilder] : Spine built")
+

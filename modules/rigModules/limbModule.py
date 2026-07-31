@@ -651,22 +651,35 @@ class limbBuild:
         if self.limbType == 'leg':
             if self.twistLeg:
                 self.twistSetup()
+                print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                print(f"[Twist Joints] : built {self.side}{self.limbType}")
+
             if self.stretchyLegs: 
                 self.squashNstretch()  
+                print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                print(f"[Stretchy Joints] : built {self.side}{self.limbType}")
+
             if self.ribbonLeg:
                 self.ribbonCreation()
 
         if self.limbType == 'arm':
             if self.twistArm:
                 self.twistSetup()
+                print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                print(f"[Twist Joints] : built {self.side}{self.limbType}")
+                
             if self.stretchyArms:
                 self.squashNstretch()
+                print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                print(f"[Stretchy Joints] : built {self.side}{self.limbType}")
+
             if self.ribbonArm:
                 self.ribbonCreation()
             
         self.cleanup()
         shapes.ctrlColour()
-        print("Building:", self.side, self.limbType)
+        print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+        print("[LimbBuilder] :", self.side, self.limbType)
 
 def build_limb_set(legOrder, 
                    armOrder, 

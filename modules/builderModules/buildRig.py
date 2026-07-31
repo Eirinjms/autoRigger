@@ -4,7 +4,7 @@ import autoRigger.modules.rigModules.spineModule as spineModule
 import autoRigger.modules.rigModules.limbModule as limbModule
 import autoRigger.modules.rigModules.headModule as headModule
 import autoRigger.modules.rigModules.cleanup as cleanup
-import autoRigger.utils.shapes as shapes
+from autoRigger.utils import shapes, config
 import importlib
 
 #importlib.reload(spineModule)
@@ -42,6 +42,8 @@ def build(spineOrder,
     print(globalCtrl, glblShape)
     cmds.setAttr(f"{glblShape}.overrideEnabled", 1)
     cmds.setAttr(f"{glblShape}.overrideColor", 31)
+
+    cmds.group(n = config.RIG_HELPER_GRP , em = True)
 
 
     if len(cmds.ls("*spine*", type='joint')) != 0:

@@ -62,7 +62,6 @@ class hierarchyManager:
                 return cmds.warning("Hierarchy already saved, please reparent first!")            
 
             self.saveHierarchy()
-            print(self.hierarchy)
             for node in self.hierarchy:
                 if cmds.listRelatives(node, parent = True) is not None:  
                     cmds.parent(node, world = True)

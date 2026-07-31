@@ -35,7 +35,8 @@ def mirrorLocators(sel: str | list | None = None) -> list:
 
         cmds.select(clear=True)
 
-        parent = cmds.listRelatives(sel, p = True, type='transform')[0]
+        parents = cmds.listRelatives(sel, p = True, type='transform') or []
+        parent = parents[0] if parents else None
 
         print(sel)
         for obj in sel: 

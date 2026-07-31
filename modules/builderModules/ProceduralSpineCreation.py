@@ -68,7 +68,11 @@ class ProceduralSpine:
     def spineLocators(self, spineJointNumber):
         self.jointAmount = spineJointNumber
 
-        self.spineRoot = cmds.listRelatives("root_JA_GUIDE", children=True, type='transform')[0]
+        root = "root_GUIDE"
+        if cmds.objExists(root): 
+            self.spineRoot = cmds.listRelatives(root, children=True, type='transform')[0]
+        else: 
+            self.spineRoot = "C_spineJA_GUIDE"
 
         self.spineEnd = "C_spineJEnd_GUIDE"
 

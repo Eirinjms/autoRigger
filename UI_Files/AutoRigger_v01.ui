@@ -1646,7 +1646,7 @@
          <enum>Qt::LeftToRight</enum>
         </property>
         <property name="text">
-         <string>0</string>
+         <string>1</string>
         </property>
         <property name="textFormat">
          <enum>Qt::AutoText</enum>

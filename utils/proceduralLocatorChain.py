@@ -7,9 +7,10 @@ import string
 class procLocatorGenerator:
     def __init__(self, slider, naming, prefix):
 
-        self.basename = naming 
+        self.chains = {}
+        self.basename = naming.lower()
         self.jointAmount = slider
-        self.prefix = prefix
+        self.prefix = prefix.upper()
         self.suffix = config.suffix
 
         self.newlocators = []
@@ -23,14 +24,15 @@ class procLocatorGenerator:
         try:
             if not "_" in self.prefix: 
                 self.prefix += "_"
+
+            if self.prefix.lower():
+                self.prefix.upper()
             
             if cmds.ls(f"{self.prefix}{self.basename}JA_GUIDE"):
                 return cmds.warning("Chain with specified name already exists, choose a new name")
 
             self.startGuide = cmds.spaceLocator(n = f"{self.prefix}{self.basename}JA_GUIDE")[0]
             self.endGuide = cmds.spaceLocator(n = f"{self.prefix}{self.basename}JEnd_GUIDE")[0]
-
-            
 
             startShape = cmds.listRelatives(self.startGuide, shapes=True)[0]
             endShape = cmds.listRelatives(self.endGuide, shapes=True)[0]
@@ -45,7 +47,10 @@ class procLocatorGenerator:
                 cmds.setAttr(f"{s}.overrideColor", c)
 
             cmds.parent(self.endGuide, self.startGuide)
+
+            self.chainRegistry()
         finally: 
+            cmds.select(clear = True)
             cmds.undoInfo(closeChunk = True)
 
 
@@ -95,15 +100,30 @@ class procLocatorGenerator:
             cmds.parent(self.endGuide, self.newlocators[-1])
 
         finally:
+            self.chainRegistry()
             cmds.undoInfo(closeChunk = True)
             cmds.select(clear = True)
 
+    def chainRegistry(self):
+        self.chains[self.basename] = {
+            "startGuide" : self.startGuide,
+            "endGuide" : self.endGuide, 
+            "count" : self.jointAmount,
+            "guides" : self.Locs[1:-1]
+        }
 
     def deleteGuides(self, joints: list):
 
         cmds.parent(self.endGuide, w=True)
 
         cmds.delete(joints)
+
+    def findCurrentChain(self):
+        selection = cmds.ls(sl = True, type = 'transform')[0]
+        if not selection: 
+            return
+
+        children = cmds.listRelatives()
 
     def updateJointAmount(self, value):
         self.jointAmount = value
