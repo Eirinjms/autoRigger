@@ -64,25 +64,22 @@ class RibbonMaker:
             # keep the transform string, not the list
         self.RibbonPlaneShape = cmds.listRelatives(self.RibbonPlane, shapes=True)[0]
 
-        cmds.select(plane, r=True)
-
-        mel.eval(f"manipPivot -o 0 0 -90;")
-        mel.eval(f"bakeCustomOrient 0 0 -90;") #fixes orient to be correct according to deformer
-
         sinePlane, sineHandle = self.addSineBlendshape()
-        twistplane, twistHandle = self.addTwistDeformer()
+        twistPlane, twistHandle = self.addTwistDeformer()
 
-        cmds.makeIdentity(plane, a = True, r = True) # resets piv orientation before positioning
-        cmds.delete(plane, ch = True)
+        handles = [twistHandle, sineHandle]
 
-        cmds.parent(sinePlane, sineHandle, twistplane, twistHandle, self.RibbonPlane) #temp parenting to the plane
+        cmds.xform(handles, ro=(0, 0, -90))
+        cmds.makeIdentity(handles, a=True, r=True)
 
-        self.positionRibbonPlane() #positions plane and deformers
+        cmds.parent(sinePlane, sineHandle, twistPlane, twistHandle, self.RibbonPlane) #temp parenting to the plane
+
+        self.positionRibbonPlane() 
  
-        cmds.parent(sinePlane, sineHandle, twistplane, twistHandle, w = True)
+        cmds.parent(sinePlane, sineHandle, twistPlane, twistHandle, w = True)
         self.ribbonDeformerGrp = cmds.group(sinePlane, 
                                             sineHandle, 
-                                            twistplane, 
+                                            twistPlane, 
                                             twistHandle, 
                                             n = f"{self.name}ribbon_deformers_GRP")
 
@@ -187,9 +184,10 @@ class RibbonMaker:
         A = om.MVector(self.jointPlacements[0])
         B = om.MVector(self.jointPlacements[1])
 
-        for index in range(self.numDrivers):
+        count = self.numDrivers +2
+        for index in range(count):
             cmds.select(clear=True)
-            t = (index +1) / (self.numDrivers + 1) if self.numDrivers > 1 else 0.5
+            t = index / (count - 1) if self.numDrivers > 1 else 0.5
             pos = A + (B - A) * t                                                    # lerp along ribbon direction
 
             joint = cmds.joint(
@@ -203,10 +201,13 @@ class RibbonMaker:
             cmds.parentConstraint(self.startJoint, joint, n = joint.replace(self.suffix['joint'], self.suffix['parentCon']), mo = True)
     
     def createDriverJointsControls(self):
-        self.startLoc = cmds.spaceLocator(n = self.startJoint.replace("JNT", "LOC"))[0]
+        self.startLoc = cmds.spaceLocator(n = f"{self.name}{config.suffix['control']}{config.suffix['locator']}")[0]
         cmds.matchTransform(self.startLoc, self.startJoint, pos = True, rot = True)
 
-        for joint in self.DriverJoints:
+        for i, joint in enumerate(self.DriverJoints):
+
+            if i == 0 or i == len(self.DriverJoints) -1: 
+                continue
             loc = cmds.spaceLocator(n = f"{joint}{config.suffix['locator']}")[0]
             self.locs.append(loc)
             cmds.parent(loc, self.startLoc)
@@ -246,7 +247,10 @@ class RibbonMaker:
         self.folliclesGrp = cmds.group(em=True, name=f"{self.name}_follicles_GRP", parent=self.ribbonGrp)
         self.driversGrp = cmds.group(em=True, name=f"{self.name}_drivers_GRP", parent=self.ribbonGrp)
 
-        cmds.matchTransform(ctrlGrp, self.startJoint, pos=True, rot = True)
+        cmds.parentConstraint(self.startJoint, ctrlGrp, 
+                              n= f"{self.name}{config.suffix['parentCon']}", 
+                              mo = False)
+        cmds.parent(self.startLoc, ctrlGrp)
 
         cmds.parent(self.RibbonPlane, self.geoGrp)
         cmds.parent(self.ribbonFollicles,self.folliclesGrp)
@@ -259,32 +263,25 @@ class RibbonMaker:
         cmds.setAttr(f"{self.folliclesGrp}.visibility", 0)
         cmds.setAttr(f"{self.ribbonDeformerGrp}.visibility", 0)
 
-        if not cmds.attributeQuery("Ribbon_Ctrls", node=self.switch, exists=True):
-            cmds.addAttr(
-                self.switch,
-            ln="Ribbon_Ctrls",
-            at="bool",
-            dv=0,
-            k=True)
-
-        cmds.connectAttr(
-            f"{self.switch}.Ribbon_Ctrls",
-            f"{self.startLoc}.visibility",
-            force=True)
+        if not cmds.isConnected(f"{self.switch}.Ribbon_Ctrls", 
+                                f"{self.startLoc}.visibility"):
+            cmds.connectAttr(
+                f"{self.switch}.Ribbon_Ctrls",
+                f"{self.startLoc}.visibility")
     
     def addSineBlendshape(self):
 
         self.sineBSplane = cmds.duplicate(self.RibbonPlane, n = f"{self.name}_sine_blendshape")
-        cmds.xform(self.sineBSplane, t = [0, 0, -10])
-        sineDef, sineHandle = cmds.nonLinear(self.sineBSplane, type='sine', n = f"{self.name}_sine")
+        cmds.xform(self.sineBSplane, t = [0, 0, -10], r = True, ws = True)
+        self.sineDef, sineHandle = cmds.nonLinear(self.sineBSplane, type='sine', n = f"{self.name}_sine")
         cmds.matchTransform(sineHandle, self.sineBSplane, pos=True, rot=True)
 
         return self.sineBSplane, sineHandle
     
     def addTwistDeformer(self):
         self.twistBSplane = cmds.duplicate(self.RibbonPlane, n = f"{self.name}_twist_blendshape")
-        cmds.xform(self.twistBSplane, t = [0, 0, -10])
-        sineDef, twistHandle = cmds.nonLinear(self.twistBSplane, type='twist', n = f"{self.name}_twist")
+        cmds.xform(self.twistBSplane, t = [0, 0, -10], r = True, ws = True)
+        self.twistDef, twistHandle = cmds.nonLinear(self.twistBSplane, type='twist', n = f"{self.name}_twist")
         cmds.matchTransform(twistHandle, self.twistBSplane, pos=True, rot=True)
 
         return self.twistBSplane, twistHandle
@@ -308,10 +305,40 @@ class RibbonMaker:
             f"{self.switch}.Ribbon_Ctrls",
             f"{self.startLoc}.visibility",
             force=True)
-    
+            
+        """        cmds.addAttr(self.switch, ln = "Twist_controls", at = "enum", en = "____________", k = True)
+                cmds.addAttr(self.switch, ln = f"{self.side}{self.limbName}Twist_Upper", at = "double", dv = 0, k = True)
+                cmds.addAttr(self.switch, ln = f"{self.side}{self.limbName}Twist_Lower", at = "double", dv = 0, k = True)
+        """
+        #cmds.connectAttr(f"{self.endJoint}.rotateX", f"{self.twistDef}.endAngle")
+        #cmds.connectAttr(f"{self.startJoint}.rotateX", f"{self.twistDef}.startAngle")
+        #print(cmds.connectAttr(f"{self.endJoint}.rotateX", f"{self.twistDef}.endAngle"))
 
-        cmds.addAttr(self.switch, ln = f"{self.side}{self.limbName}Twist_Top", at = "double", dv = 0, k = True)
-        cmds.addAttr(self.switch, ln = f"{self.side}{self.limbName}Twist_Bottom", at = "double", dv = 0, k = True)
+        for suffix in ["Upper", "Lower"]:
+            cmds.addAttr(self.switch, 
+                     ln = f"{self.side}{self.limbName}{suffix}_Sine", 
+                     at = "enum", 
+                     en = "____________", 
+                     k = True)
+            
+            longname = [f"{self.limbName}SineOffset_{suffix}",
+                        f"{self.limbName}SineAmplitude_{suffix}", 
+                        f"{self.limbName}SineWavelength_{suffix}"]
+            
+            nicename = ["Offset",
+                        "Amplitude",
+                        "Wavelength"]
+
+            for ln, nn in zip(longname, nicename):
+                cmds.addAttr(self.switch, 
+                        ln = ln, 
+                        nn = nn, 
+                        at = "double", 
+                        dv = 0, 
+                        k = True)
+
+        
+
 
     def build(self):
         """Runs every step in the correct order."""
@@ -325,8 +352,8 @@ class RibbonMaker:
         self.bindRibbon()
         self.addBlendshapeControls()
         self.groupAndClean()
-        print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-        print(f"[ribbonMaker] '{self.name}' built successfully.")
+
+        print(f"\n [ribbonMaker] '{self.name}' built successfully. \n ")
         return {
             "ribbonGrp":    self.ribbonGrp,
             "bindJoints":   self.BindJoints,

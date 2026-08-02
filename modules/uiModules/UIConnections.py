@@ -86,6 +86,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.locatorList[:] = cmds.ls("*GUIDE", type="transform") or []
         self.revFeetLocList = []
         self.jointsList = []
+        if not self.jointsList:
+            self.jointsList[:] = cmds.ls("*JNT", type = 'joint')
         self.ui = None
         self.oldSpinelocators = []
         self.newSpinelocators = []
@@ -615,16 +617,18 @@ class AutoRiggerUI(QtWidgets.QDialog):
                     return cmds.warning("This preset has already been loaded")
                 
                 self.build_locator(root_name, root_data, locatorList, storeLocators)
-                root = cmds.ls("root_*", type = 'transform')
-                if not root: 
-                    print("no root")
-                    rootguide = cmds.spaceLocator(n = "root_GUIDE")
-                    cmds.setAttr(f"{rootguide}.overrideEnabled", 1)
-                    cmds.setAttr(f"{rootguide}.overrideColor", 17) 
+
+                if locatorList is not self.revFeetLocList:
+                    root = cmds.ls("root_*", type = 'transform') 
+
+                    if not root: 
+                        print("no root")
+                        rootguide = cmds.spaceLocator(n = "root_GUIDE")[0]
+                        cmds.setAttr(f"{rootguide}.overrideEnabled", 1)
+                        cmds.setAttr(f"{rootguide}.overrideColor", 17) 
                     
-                if rootguide:
-                    cmds.parent(locatorList[0], rootguide)
-            cmds.undoInfo(closeChunk = True)
+                        if rootguide:
+                            cmds.parent(locatorList[0], rootguide)
 
             cmds.select(clear = True)
             cmds.makeIdentity(locatorList, apply = True, t = True)

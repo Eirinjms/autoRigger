@@ -73,9 +73,6 @@ def build(side, ikHandle, ikCtrl, switch, joints):
 
     footCtrlGrp = cmds.group(sliderCtrl, borderCtrl, n = f"{side}foot{suffix['control']}{suffix['group']}")
 
-    print("L:", cmds.xform("L_frontFoot_LOC", q=True, ws=True, t=True))
-    print("R:", cmds.xform("R_frontFoot_LOC", q=True, ws=True, t=True))
-
     cmds.matchTransform(footCtrlGrp, frontLoc, pos = True, rot = True)  
 
     #cmds.xform(footCtrlGrp, t = (1,0,7), r = True)

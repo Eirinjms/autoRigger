@@ -38,8 +38,16 @@ def build(spineOrder,
             armOrder : defines the rotation order for the arm, and is a passed value from the UI. 
             (counts for the other orders too) 
     """
+
+    if not cmds.pluginInfo("ikSpringSolver", q=True, loaded=True):
+        cmds.loadPlugin("ikSpringSolver")
+        print("[Plugin Loaded]: ikSpringSolver")
+
+    if not cmds.pluginInfo("quatNodes", q=True, loaded=True):
+        cmds.loadPlugin("quatNodes")
+        print("[Plugin Loaded]: quatNodes")
+
     globalCtrl, glblShape = shapes.fourWayArrowCtrl(name = "global_CTRL", size = 20)
-    print(globalCtrl, glblShape)
     cmds.setAttr(f"{glblShape}.overrideEnabled", 1)
     cmds.setAttr(f"{glblShape}.overrideColor", 31)
 
@@ -52,10 +60,7 @@ def build(spineOrder,
     else: 
         return cmds.warning("Spine does not exist.")
 
-    if not cmds.pluginInfo("ikSpringSolver", q=True, loaded=True):
-        cmds.loadPlugin("ikSpringSolver")
-
-    mel.eval('ikSpringSolver;')
+    #mel.eval('ikSpringSolver;')
     
     limbs=[]
     if len(cmds.ls("*arm*", type='joint')) != 0:

@@ -195,7 +195,6 @@ class limbBuild:
                                  sj = self.ikJoints[0], 
                                  ee = self.ikJoints[-1],
                                  sol = solver)[0]
-        print(solver)
         
         self.ikLoc = cmds.spaceLocator(n = self.ikJoints[0].replace(self.suffix['joint'], self.suffix['locator']))[0]
 
@@ -651,13 +650,11 @@ class limbBuild:
         if self.limbType == 'leg':
             if self.twistLeg:
                 self.twistSetup()
-                print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                print(f"[Twist Joints] : built {self.side}{self.limbType}")
+                print(f"\n [Twist Joints] : built {self.side}{self.limbType}\n ")
 
             if self.stretchyLegs: 
                 self.squashNstretch()  
-                print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                print(f"[Stretchy Joints] : built {self.side}{self.limbType}")
+                print(f"\n [Stretchy Joints] : built {self.side}{self.limbType}\n ")
 
             if self.ribbonLeg:
                 self.ribbonCreation()
@@ -665,21 +662,18 @@ class limbBuild:
         if self.limbType == 'arm':
             if self.twistArm:
                 self.twistSetup()
-                print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                print(f"[Twist Joints] : built {self.side}{self.limbType}")
+                print(f"\n [Twist Joints] : built {self.side}{self.limbType}\n ")
                 
             if self.stretchyArms:
                 self.squashNstretch()
-                print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                print(f"[Stretchy Joints] : built {self.side}{self.limbType}")
+                print(f"\n [Stretchy Joints] : built {self.side}{self.limbType}\n ")
 
             if self.ribbonArm:
                 self.ribbonCreation()
             
         self.cleanup()
         shapes.ctrlColour()
-        print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-        print("[LimbBuilder] :", self.side, self.limbType)
+        print("\n [LimbBuilder] :", self.side, self.limbType)
 
 def build_limb_set(legOrder, 
                    armOrder, 
@@ -726,6 +720,6 @@ def build_limb_set(legOrder,
                       ribbonDrivers, 
                       ribbonBinds).buildLimb()
     
-    print("All Limbs built")
+    print("\n All Limbs built \n ")
 
         

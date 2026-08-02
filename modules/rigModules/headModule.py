@@ -193,4 +193,4 @@ def headBuild(neckOrder):
     eyegrp = cmds.group(eyesLoc, eyesWS[0], n = "eyes_GRP")
     cmds.group(headLoc,dupeWS, eyegrp, n = f"head{suffix['group']}")
 
-    print(f"[Head Builder] : built head")
+    print(f"\n [Head Builder] : built head\n ")

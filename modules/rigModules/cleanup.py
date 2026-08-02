@@ -10,7 +10,7 @@ def cleanup():
     shapes.ctrlColour()
 
     skeleton = cmds.ls('root_JNT')
-    skeletonGrp = cmds.group(skeleton, name = "Skeleton_GRP")
+    #skeletonGrp = cmds.group(skeleton, name = "Skeleton_GRP")
     ikGrps = cmds.ls('*_IK_GRP')
     spineStart = cmds.ls("spineJA_BND_LOC")
     spineEnd = cmds.ls("spineJEnd_BND_LOC")
@@ -26,7 +26,7 @@ def cleanup():
         cmds.group(ribbonGrps, n = "Ribbons_GRP")
 
 
-    cmds.parent(ikGrps, spineEnd, spineStart, spineFK, handGrps, headGRP, skeletonGrp, globalCtrl)
+    cmds.parent(ikGrps, spineEnd, spineStart, spineFK, handGrps, headGRP, globalCtrl)
     cmds.parent(fistCtrl, handGrps)
 
     legFKs = cmds.ls('*_leg_FK_GRP')

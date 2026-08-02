@@ -71,7 +71,7 @@ def build(side, handOrder):
     cmds.addAttr(fistCtrl, ln = 'FIST', at = 'enum', en = "__________ ", k = True)
 
 
-    if side == 'L':
+    if side.startswith("L"):
         cmds.xform(fistCtrl, t = (5,0,0), ws = True, r = True)
 
     else:

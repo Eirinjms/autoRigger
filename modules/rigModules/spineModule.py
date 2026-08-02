@@ -240,8 +240,8 @@ class spineBuilder:
         cmds.connectAttr(f"{self.switch}.FKIK_Switch", f"{fkikRev}.inputX")
         cmds.connectAttr(f"{fkikRev}.outputX", f"{fkGrp}.visibility")
 
-        globalSpineCtrl = cmds.circle(n = f"{self.prefix}spine_global{self.suffix['control']}", r = 10)[0]
-        cmds.matchTransform(globalSpineCtrl, bottomSpineLOC)
+        globalSpineCtrl = cmds.circle(n = f"{self.prefix}spine_global{self.suffix['control']}", r = 10, nr = (0,1,0))[0]
+        cmds.matchTransform(globalSpineCtrl, bottomSpineLOC, pos = True)
         cmds.makeIdentity(globalSpineCtrl, a = True, t = True, r = True, s = True)
         cmds.parent(ikCtrlGrp, globalSpineCtrl)
         cmds.parent(globalSpineCtrl, ikGrp)
