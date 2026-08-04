@@ -1,7 +1,9 @@
 import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
 from autoRigger.utils import shapes, config
+import autoRigger.modules.rigModules.cleanup as cleanup
 
-#Creating lists for later use
+#CURRENT MODULE ALLOWS FOR 1 NECK JOINT. 
+#Head module will be refactored at a later time to support multiple neckjoints. 
 def headBuild(neckOrder):
 
     prefix = config.prefix
@@ -41,11 +43,12 @@ def headBuild(neckOrder):
             
 
         elif "head" in joint:
-            headCtrl = cmds.circle(n=ctrlName, r=10, nr=(1,0,0))[0]
+            headCtrl = shapes.gearCtrl(name =ctrlName, size = 8, limb = "head", side = "C")
             fkCtrl = headCtrl
-            shape = cmds.listRelatives(fkCtrl, shapes=True, type="nurbsCurve")[0]
-            cvs = cmds.ls(shape + ".cv[*]", fl=True)
-            cmds.xform(cvs, t=(20,0,0), r=True, os=True)
+            allShapes = cmds.listRelatives(fkCtrl, shapes=True, type="nurbsCurve")
+            for shape in allShapes:
+                cvs = cmds.ls(shape + ".cv[*]", fl=True)
+                cmds.xform(cvs, t=(0,20,0), ro = (0,0,90), r=True, ws=True)
 
         elif "neck" in joint:
             neckCtrl = cmds.circle(n=ctrlName, r=10, nr=(1,0,0))[0]
@@ -110,7 +113,9 @@ def headBuild(neckOrder):
 ###############################
 
     headJoint = headCtrl.replace('CTRL', 'JNT')
+    print(headJoint)
     headLoc = headCtrl.replace('CTRL', 'LOC')
+    print(headLoc)
 
     eyesWS = cmds.spaceLocator(n = f"{eyes[0]}_worldSpace{suffix['locator']}")
     cmds.delete(cmds.parentConstraint(eyectrl, eyesWS, mo = False))
@@ -167,7 +172,8 @@ def headBuild(neckOrder):
 
     cmds.parent(dupeLS, neckCtrl)
 
-    oCon = cmds.orientConstraint(dupeLS, dupeWS, headLoc, mo = False, n = f"{headLoc}{suffix['orientCon']}")[0]
+    cmds.select(clear = True)
+    oCon = cmds.orientConstraint(dupeLS, dupeWS, headLoc, mo = False, n = f"{headLoc}_spaces{suffix['orientCon']}")[0]
 
     #SET DRIVEN KEYYYSS
 
@@ -184,13 +190,19 @@ def headBuild(neckOrder):
 
     #parent the head jnt to the og loc
 
-    cmds.pointConstraint(headLoc, headJoint, mo = True, n = f"{joints[0]}{suffix['pointCon']}") 
+    cmds.pointConstraint(headJoint,headLoc, mo = True, n = f"{joints[0]}{suffix['pointCon']}") 
 
-    neckLoc = cmds.listRelatives(neckCtrl, parent = True)
+    neckLoc = cmds.listRelatives(neckCtrl, parent = True)[0]
 
     cmds.parent(headLoc, neckLoc)
 
     eyegrp = cmds.group(eyesLoc, eyesWS[0], n = "eyes_GRP")
-    cmds.group(headLoc,dupeWS, eyegrp, n = f"head{suffix['group']}")
+    cmds.select(clear = True)
+    headgrp = cmds.group(headLoc,dupeWS, eyegrp, n = f"head{suffix['group']}")
+
+    cleanup.cleanupData['headGRP'].append(headgrp)
+    cleanup.cleanupData['neckLoc'].append(neckLoc)
+
+
 
     print(f"\n [Head Builder] : built head\n ")

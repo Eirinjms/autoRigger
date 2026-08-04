@@ -113,6 +113,9 @@ def poleVectorVisualization(sel, pvDistance):
     pv = findpoleVector(sel, pvDistance)
 
     joint_positions = []
+    if len(sel) > 3:
+        sel = [sel[0], sel[1], sel[-1]]
+        
     for joint in sel:
         pos, _ = config.getGuidePos(joint)
         joint_positions.append(tuple(pos))

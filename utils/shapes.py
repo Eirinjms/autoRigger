@@ -312,7 +312,7 @@ def gearCtrl(name, size, side, limb):
             innerCircle = cmds.circle(r = 0.7, n = "R_armInnerCircle", nr = (0,1,0))[0]
 
     else: 
-     innerCircle = cmds.circle(r = 0.7, n = "InnerCircle", nr = (0,1,0))[0]   
+     innerCircle = cmds.circle(r = 0.7, n = f"{side}_{limb}_InnerCircle", nr = (0,1,0))[0]   
        
     innerShape = cmds.listRelatives(innerCircle, s=True)[0]
 
@@ -323,10 +323,66 @@ def gearCtrl(name, size, side, limb):
     shape = cmds.listRelatives(ctrl, shapes=True, path=True)[0]
     cmds.rename(shape, f"{ctrl}Shape")
 
+    cmds.makeIdentity(ctrl, a = True, s = True)
+    
+
     cmds.delete(innerCircle)
     
 
     return ctrl
+
+
+def gearShape(name, size):
+    ctrl = cmds.curve(
+        d = 1, p = [
+    (-0.923879, 0,  0.22961),
+    (-1.123879, 0,  0.229611),
+    (-1.12388,  0, -0.22961),
+    (-0.92388,  0, -0.22961),
+    (-0.81564,  0, -0.490923),
+    (-0.957062, 0, -0.632344),
+    (-0.632344, 0, -0.957062),
+    (-0.490923, 0, -0.81564),
+    (-0.22961,  0, -0.923879),
+    (-0.22961,  0, -1.123879),
+    ( 0.22961,  0, -1.12388),
+    ( 0.22961,  0, -0.92388),
+    ( 0.490923, 0, -0.81564),
+    ( 0.632344, 0, -0.957062),
+    ( 0.957062, 0, -0.632344),
+    ( 0.81564,  0, -0.490923),
+    ( 0.92388,  0, -0.22961),
+    ( 1.12388,  0, -0.22961),
+    ( 1.12388,  0,  0.22961),
+    ( 0.92388,  0,  0.22961),
+    ( 0.81564,  0,  0.490923),
+    ( 0.957062, 0,  0.632344),
+    ( 0.632344, 0,  0.957062),
+    ( 0.490923, 0,  0.81564),
+    ( 0.22961,  0,  0.92388),
+    ( 0.22961,  0,  1.12388),
+    (-0.22961,  0,  1.12388),
+    (-0.22961,  0,  0.92388),
+    (-0.490923, 0,  0.81564),
+    (-0.632344, 0,  0.957062),
+    (-0.957061, 0,  0.632344),
+    (-0.81564,  0,  0.490923),
+    (-0.923879, 0,  0.22961),]
+    , n = name)
+
+
+    shape = cmds.listRelatives(ctrl, shapes=True, path=True)[0]
+
+    cvs = cmds.ls(f"{shape}.cv[*]", fl=True)
+
+    cmds.xform(ctrl, s = (size, size, size))
+    cmds.makeIdentity(ctrl, a = True, s = True)
+    cmds.delete(ch = True)
+    cmds.rename(shape, f"{ctrl}Shape")
+
+    
+    return ctrl
+
 
 
 def squareCtrl(name, size):

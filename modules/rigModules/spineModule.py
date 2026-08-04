@@ -2,6 +2,7 @@ import maya.cmds as cmds # pyright: ignore[reportMissingImports]
 import autoRigger.utils.shapes as shapes
 import autoRigger.utils.config as config
 import autoRigger.utils.hierarchyModule as hier
+import autoRigger.modules.rigModules.cleanup as cleanup
 
 import importlib
 importlib.reload(shapes)
@@ -112,9 +113,9 @@ class spineBuilder:
         self.ikSpline, _ = cmds.ikHandle(ccv = False, 
                                  sol="ikSplineSolver", 
                                  c = self.iKctrlCurve, 
-                                 sj = self.spineRoot, 
-                                 ee = self.spineEnd, 
-                                 rtm = False, 
+                                sj=self.ikJoints[0],
+                                ee=self.ikJoints[-1],
+                                 rtm = False,
                                  n = f"spine{self.suffix['ikspline']}")
         
         if self.spineJointsAmount <= 3:
@@ -224,13 +225,21 @@ class spineBuilder:
         cmds.parent(*self.ikLocs, ikCtrlGrp)
         cmds.parent(self.ctrlJoints, ikJointCtrlGrp)
         cmds.parent(self.fkLocs[0], fkGrp)
-        cmds.parent(self.ikSpline, ikCtrlGrp, ikJointCtrlGrp, self.iKctrlCurve, ikGrp)
 
-        topSpineLOC = cmds.spaceLocator(n = f"{self.spineJoints[-1]}_BND{self.suffix['locator']}")
-        bottomSpineLOC = cmds.spaceLocator(n = f"{self.spineJoints[0]}_BND{self.suffix['locator']}")
+        cmds.parent(self.ikSpline, 
+                    ikCtrlGrp, 
+                    ikJointCtrlGrp, 
+                    self.iKctrlCurve, 
+                    ikGrp)
 
-        cmds.parentConstraint(self.spineRoot, bottomSpineLOC, n = f"{self.spineJoints[0]}_BND{self.suffix['parentCon']}")
-        cmds.parentConstraint(self.spineEnd, topSpineLOC, n = f"{self.spineJoints[2]}_BND{self.suffix['parentCon']}")
+        topSpineLOC = cmds.spaceLocator(n = f"{self.spineJoints[-1].replace('_JNT', '')}_BND{self.suffix['locator']}")[0]
+        bottomSpineLOC = cmds.spaceLocator(n = f"{self.spineJoints[0].replace('_JNT', '')}_BND{self.suffix['locator']}")[0]
+
+        cmds.parentConstraint(self.spineRoot, bottomSpineLOC, 
+                              n = f"{self.spineJoints[0]}_BND{self.suffix['parentCon']}")
+        
+        cmds.parentConstraint(self.spineEnd, topSpineLOC, 
+                              n = f"{self.spineJoints[2]}_BND{self.suffix['parentCon']}")
         
 
         cmds.connectAttr(self.switch + '.FKIK_Switch', ikGrp + '.visibility')
@@ -240,7 +249,7 @@ class spineBuilder:
         cmds.connectAttr(f"{self.switch}.FKIK_Switch", f"{fkikRev}.inputX")
         cmds.connectAttr(f"{fkikRev}.outputX", f"{fkGrp}.visibility")
 
-        globalSpineCtrl = cmds.circle(n = f"{self.prefix}spine_global{self.suffix['control']}", r = 10, nr = (0,1,0))[0]
+        globalSpineCtrl = shapes.gearShape(name = f"{self.prefix}spine_global{self.suffix['control']}", size = 15)
         cmds.matchTransform(globalSpineCtrl, bottomSpineLOC, pos = True)
         cmds.makeIdentity(globalSpineCtrl, a = True, t = True, r = True, s = True)
         cmds.parent(ikCtrlGrp, globalSpineCtrl)
@@ -251,6 +260,10 @@ class spineBuilder:
         cmds.parent(self.ikBNDLoc, IkswitchCtrl)
 
         cmds.hide(self.fkJoints, self.ikJoints, self.ikSpline, ikJointCtrlGrp, self.iKctrlCurve)
+
+        cleanup.cleanupData['spineStart'].append(topSpineLOC)
+        cleanup.cleanupData['spineEnd'].append(bottomSpineLOC)
+        cleanup.cleanupData['spine_FK_GRP'].append(fkGrp)
 
     def buildSpine(self):
             self.duplicatingJoints()

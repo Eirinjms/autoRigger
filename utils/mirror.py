@@ -38,9 +38,7 @@ def mirrorLocators(sel: str | list | None = None) -> list:
         parents = cmds.listRelatives(sel, p = True, type='transform') or []
         parent = parents[0] if parents else None
 
-        print(sel)
         for obj in sel: 
-            print(obj)
             if obj.startswith("L_"):
                 mirror = obj.replace("L_", "R_")
             if obj.startswith("R_"):

@@ -61,6 +61,7 @@ class symmetry:
             if self.leftAttrs and cmds.isConnected(self.leftAttrs[0], self.rightAttrs[0]):
                 for leftNode, RightNode in zip(self.leftAttrs, self.rightAttrs):
                     cmds.disconnectAttr(leftNode, RightNode)
+            if self.reverseNodes:
                 cmds.delete(self.reverseNodes)
                 print("Successfully disconnected symmetry from all nodes")
             else:

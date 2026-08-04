@@ -1,6 +1,7 @@
 import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
 import autoRigger.utils.config as config
 import string
+import autoRigger.modules.rigModules.cleanup as cleanup
 
 
 import importlib
@@ -241,8 +242,11 @@ def build(side, handOrder):
                 
 
     #finalCleanup
-
     cmds.parentConstraint(wrist[0], fistCtrl, mo=True, n = f"{side}fist{suffix['parentCon']}")
+
+    cleanup.cleanupData['fist_CTRL_GRP'].append(fistCtrl)
+    cleanup.cleanupData['handCTRL_GRP'].append(wrist[0])
+
 
     for attr in attrs: 
         cmds.setAttr(f"{fistCtrl}.{attr}", l = True, k = False, cb = False)

@@ -48,10 +48,13 @@ def build(spineOrder,
         print("[Plugin Loaded]: quatNodes")
 
     globalCtrl, glblShape = shapes.fourWayArrowCtrl(name = "global_CTRL", size = 20)
+    cleanup.cleanupData['globalCtrl'].append(globalCtrl)
+
     cmds.setAttr(f"{glblShape}.overrideEnabled", 1)
     cmds.setAttr(f"{glblShape}.overrideColor", 31)
 
-    cmds.group(n = config.RIG_HELPER_GRP , em = True)
+    righelper = cmds.group(n = config.RIG_HELPER_GRP , em = True)
+    cleanup.cleanupData['rig_helper_GRP'].append(righelper)
 
 
     if len(cmds.ls("*spine*", type='joint')) != 0:
@@ -89,3 +92,4 @@ def build(spineOrder,
         headModule.headBuild(neckOrder)
 
     cleanup.cleanup()
+    cmds.select(clear = True)

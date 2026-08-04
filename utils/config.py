@@ -155,3 +155,42 @@ def findRoots(nodes):
             roots.append(node)
 
     return roots
+
+
+def setConstraintWeights(constraintType : str, con, values=None, query = False) -> list:
+    """
+    Queries and optionally sets a constraint's weight aliases.
+
+    Args:
+        constraintType (str): Constraint type ("point", "orient", or "parent").
+        con (str): Constraint node.
+        values (list, optional): Weight values to assign. Order must match the
+            constraint's weight aliases.
+        query (bool, optional): If True, only returns the weight aliases.
+
+    Returns:
+        list: The constraint's weight aliases.
+    """
+    constraintType = constraintType.lower()
+
+    if "orient" in constraintType:
+        constraint = cmds.orientConstraint
+    elif "parent" in constraintType:
+        constraint = cmds.parentConstraint
+    elif "point" in constraintType:
+        constraint = cmds.pointConstraint
+    else:
+        raise ValueError(f"Unsupported constraint type: {constraintType}")
+    
+    if isinstance(con, list):
+        con = con[0]
+
+    conWeights = constraint(con, q = True, wal = True)
+    weights = [f"{con}.{weight}" for weight in conWeights]
+
+    if not query and values is not None:
+        for weight, value in zip(weights, values):
+            cmds.setAttr(weight, value)
+
+
+    return weights

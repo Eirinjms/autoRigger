@@ -3,13 +3,6 @@ import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports]
 import maya.mel as mel
 import autoRigger.utils.config as config  # pyright: ignore[reportMissingImports]
 
-
-# RIBBON MAKER
-
-"""
-add func for blendshapes: 
-sine, wave. """
-
 class RibbonMaker:
     def __init__(self, limb, side, numDrivers, numFollicles, startJoint, endJoint, switch):
         self.suffix = config.suffix
@@ -179,11 +172,11 @@ class RibbonMaker:
         Stores:
             self.DriverJoints (list) joint names
         """
-        self.DriverJoints = []
+        self.driverJoints = []
 
         A = om.MVector(self.jointPlacements[0])
         B = om.MVector(self.jointPlacements[1])
-
+        
         count = self.numDrivers +2
         for index in range(count):
             cmds.select(clear=True)
@@ -196,7 +189,7 @@ class RibbonMaker:
             cmds.xform(joint, ws=True, t=(pos.x, pos.y, pos.z))
             cmds.matchTransform(joint, self.startJoint, rot = True)
             cmds.makeIdentity(joint, a = True, r = True)
-            self.DriverJoints.append(joint)
+            self.driverJoints.append(joint)
 
             cmds.parentConstraint(self.startJoint, joint, n = joint.replace(self.suffix['joint'], self.suffix['parentCon']), mo = True)
     
@@ -204,10 +197,11 @@ class RibbonMaker:
         self.startLoc = cmds.spaceLocator(n = f"{self.name}{config.suffix['control']}{config.suffix['locator']}")[0]
         cmds.matchTransform(self.startLoc, self.startJoint, pos = True, rot = True)
 
-        for i, joint in enumerate(self.DriverJoints):
+        for (index, joint), weight in zip(
+            (enumerate(self.driverJoints[1:-1], start = 1)),
+              (range(self.numDrivers, 0, -1))
+              ):
 
-            if i == 0 or i == len(self.DriverJoints) -1: 
-                continue
             loc = cmds.spaceLocator(n = f"{joint}{config.suffix['locator']}")[0]
             self.locs.append(loc)
             cmds.parent(loc, self.startLoc)
@@ -221,13 +215,19 @@ class RibbonMaker:
             cmds.makeIdentity(ctrl, a = True, t = True, r = True)
             
             cmds.parentConstraint(ctrl, joint, name = f"{joint}{self.suffix['parentCon']}", mo = True)
-        
+
+            pocon = cmds.pointConstraint(self.startJoint, self.endJoint, loc, n = f"{joint}{self.suffix['pointCon']}", mo = False)
+            ocon = cmds.orientConstraint(self.startJoint, loc, n = f"{joint}{self.suffix['orientCon']}", mo = False)
+
+            config.setConstraintWeights("point", pocon, [index, weight])
+
+
 
 
     def bindRibbon(self):
         """Binds the driver joints to the NURBS plane via a skin cluster."""
         cmds.skinCluster(
-            self.DriverJoints,
+            self.driverJoints,
             self.RibbonPlane,                 
             toSelectedBones=True,
             bindMethod=0,                  
@@ -248,13 +248,13 @@ class RibbonMaker:
         self.driversGrp = cmds.group(em=True, name=f"{self.name}_drivers_GRP", parent=self.ribbonGrp)
 
         cmds.parentConstraint(self.startJoint, ctrlGrp, 
-                              n= f"{self.name}{config.suffix['parentCon']}", 
+                              n= f"{self.name}{config.suffix['parentCon']}",  #ensures the controlers follow the limb (i) realize after fixing stretch that the same could be applied but go away
                               mo = False)
         cmds.parent(self.startLoc, ctrlGrp)
 
         cmds.parent(self.RibbonPlane, self.geoGrp)
         cmds.parent(self.ribbonFollicles,self.folliclesGrp)
-        cmds.parent(self.DriverJoints, self.driversGrp)
+        cmds.parent(self.driverJoints, self.driversGrp)
         cmds.parent(self.ribbonDeformerGrp, self.ribbonGrp)
 
         cmds.setAttr(f"{self.ribbonGrp}.inheritsTransform", 0)
@@ -268,7 +268,17 @@ class RibbonMaker:
             cmds.connectAttr(
                 f"{self.switch}.Ribbon_Ctrls",
                 f"{self.startLoc}.visibility")
-    
+
+        """for loc in self.locs:
+            parentcon = cmds.parentConstraint(self.endJoint, self.startJoint,                       # maya quirk: 
+                                              loc,                                                  # A two-target parentConstraint (with one target weight set to 0)
+                                              n = f"{loc}{self.suffix['pointCon']}",                # produces correct ribbon spacing. A single-target parentConstraint does not
+                                              mo = True)[0]                                         # Could be more negatives, to be tested. 
+
+            weights = cmds.parentConstraint(parentcon, q=True, wal=True)
+
+            cmds.setAttr(f"{parentcon}.{weights[0]}", 0)"""
+
     def addSineBlendshape(self):
 
         self.sineBSplane = cmds.duplicate(self.RibbonPlane, n = f"{self.name}_sine_blendshape")
@@ -314,30 +324,35 @@ class RibbonMaker:
         #cmds.connectAttr(f"{self.startJoint}.rotateX", f"{self.twistDef}.startAngle")
         #print(cmds.connectAttr(f"{self.endJoint}.rotateX", f"{self.twistDef}.endAngle"))
 
-        for suffix in ["Upper", "Lower"]:
-            cmds.addAttr(self.switch, 
-                     ln = f"{self.side}{self.limbName}{suffix}_Sine", 
-                     at = "enum", 
-                     en = "____________", 
-                     k = True)
-            
-            longname = [f"{self.limbName}SineOffset_{suffix}",
-                        f"{self.limbName}SineAmplitude_{suffix}", 
-                        f"{self.limbName}SineWavelength_{suffix}"]
-            
-            nicename = ["Offset",
-                        "Amplitude",
-                        "Wavelength"]
 
-            for ln, nn in zip(longname, nicename):
-                cmds.addAttr(self.switch, 
-                        ln = ln, 
-                        nn = nn, 
-                        at = "double", 
-                        dv = 0, 
-                        k = True)
+        if "upper" in self.limbName.lower():
+            suffix = "Upper"
+        else:
+            suffix = "Lower"
 
+        cmds.addAttr(self.switch, 
+                    ln = f"{self.side}{self.limbName}_Sine", 
+                    at = "enum", 
+                    en = "____________", 
+                    k = True)
         
+        longname = [f"{self.limbName}SineOffset_{suffix}",
+                    f"{self.limbName}SineAmplitude_{suffix}", 
+                    f"{self.limbName}SineWavelength_{suffix}"]
+        
+        nicename = ["Offset",
+                    "Amplitude",
+                    "Wavelength"]
+
+        for ln, nn in zip(longname, nicename):
+            cmds.addAttr(self.switch, 
+                    ln = ln, 
+                    nn = nn, 
+                    at = "double", 
+                    dv = 0, 
+                    k = True)
+
+    
 
 
     def build(self):
@@ -357,6 +372,6 @@ class RibbonMaker:
         return {
             "ribbonGrp":    self.ribbonGrp,
             "bindJoints":   self.BindJoints,
-            "driverJoints": self.DriverJoints,
+            "driverJoints": self.driverJoints,
             "follicles":    self.ribbonFollicles,
         }

@@ -4,7 +4,7 @@ import autoRigger.utils.config as config
 
 
 class TwistJointsGeneration:
-    def __init__(self, axisInput, startJoint, endJoint, twistInput, rotOrder):
+    def __init__(self, axisInput, startJoint, endJoint, twistInput, rotOrder, name):
         """
         Creates an instance of the twist setup, can be used on any chain hopefully. 
         
@@ -22,12 +22,21 @@ class TwistJointsGeneration:
         self.rotOrder = rotOrder
 
         self.jointName = None
+        self.name = name
+
+    
 
     def twistCreation(self):
         """
         creates Twist
         """
         self.jointName = self.startJoint.replace('_JNT', '')
+        if "leg" in self.jointName: 
+            limb = "leg"
+        elif "arm" in self.jointName:
+            limb = "arm"
+        side = self.startJoint[0]
+        self.jointName = f"{side}_{limb}_{self.name}"
 
         # vector lerp between start and end
         A = om.MVector(cmds.xform(self.startJoint, q=True, ws=True, t=True))
@@ -81,8 +90,8 @@ class TwistJointsGeneration:
         return self.twistJointsList
     
     def matrixTwistSetup(self):
-        locatorStart = cmds.spaceLocator(n = self.startJoint.replace("JNT", "MTX_LOC"))[0]
-        locatorEnd = cmds.spaceLocator(n = self.endJoint.replace("JNT", "MTX_LOC"))[0]
+        locatorStart = cmds.spaceLocator(n = f"{self.jointName}_start_MTX{config.suffix['locator']}")[0]
+        locatorEnd = cmds.spaceLocator(n = f"{self.jointName}_end_MTX{config.suffix['locator']}")[0]
         
         cmds.matchTransform(locatorEnd, self.endJoint, pos = True)
         cmds.matchTransform(locatorStart, self.startJoint, rot = True)
@@ -94,6 +103,7 @@ class TwistJointsGeneration:
         multMtx = cmds.createNode('multMatrix', name = self.startJoint.replace("JNT", "MM"))
         decomposeMtx = cmds.createNode('decomposeMatrix', name = self.startJoint.replace("JNT", "DM"))
         quatEuler = cmds.createNode('quatToEuler', name = self.startJoint.replace("JNT", "QTE") )
+        cmds.setAttr(f"{quatEuler}.inputRotateOrder", self.rotOrder)
 
         cmds.connectAttr(f"{locatorEnd}.worldMatrix[0]", f"{multMtx}.matrixIn[0]")
         cmds.connectAttr(f"{locatorStart}.worldInverseMatrix[0]", f"{multMtx}.matrixIn[1]")
@@ -106,7 +116,9 @@ class TwistJointsGeneration:
             cmds.connectAttr(f"{quatEuler}.outputRotateX", f"{md}.input1X")
             cmds.connectAttr(f"{md}.outputX", f"{jnt}.rotateX")
 
-        cmds.parent(locatorStart, locatorEnd, config.RIG_HELPER_GRP)
+        group = cmds.group(locatorStart,locatorEnd, n = f"{self.jointName}{config.suffix['group']}")
+
+        cmds.parent(group, config.RIG_HELPER_GRP)
 
     def creation(self):
         self.twistCreation()

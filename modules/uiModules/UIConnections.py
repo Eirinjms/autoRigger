@@ -93,7 +93,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.newSpinelocators = []
 
         self.revFeetSymmetry = symmetry(self.revFeetLocList)
-        self.guideSymmetry = symmetry(self.locatorList)
+        self.guideSymmetry = symmetry(cmds.ls("*_GUIDE", type='transform'))
 
         self.guideHier = hier.hierarchyManager(self.locatorList, False, 'transform')
         self.revFeetHier = hier.hierarchyManager(self.revFeetLocList, False, 'transform')
@@ -651,7 +651,14 @@ class AutoRiggerUI(QtWidgets.QDialog):
             n=locator_name.replace('JNT', 'GUIDE'))[0]
 
         cmds.setAttr(f"{loc}.overrideEnabled", 1)
-        cmds.setAttr(f"{loc}.overrideColor", 17)        
+        if "JA" in loc:
+            colour = 14
+        elif "JEnd" in loc:
+            colour = 13
+        else: 
+            colour = 17
+            
+        cmds.setAttr(f"{loc}.overrideColor", colour)        
         
         cmds.xform(loc,
                    ws=True,
@@ -1108,40 +1115,39 @@ class AutoRiggerUI(QtWidgets.QDialog):
             children.reverse()
             chain = sel + children
 
-            chainlength = 4 if self.digigrade else 3
+            isLeg = "leg" in chain[0].lower()
+            chainlength = 4 if (self.digigradeCheck.isChecked() and isLeg) else 3
 
             if len(chain) < chainlength:
                 self.pvVisualizer.setChecked(False)
                 cmds.warning("Not enough joints to create a visualiser")
                 return
-            for guide in chain[:3]:
+            for guide in chain[:chainlength]:
                 local, world = config.getGuidePos(guide)
                 pos = config.addTuples(local, world)
 
             self.unparentClicked()
 
-            for guide in chain[:3]:
+            for guide in chain[:chainlength]:
                 shape = cmds.listRelatives(guide, s=True, type="locator")[0]
 
-                # current values
                 translate = cmds.getAttr(f"{guide}.translate")[0]
                 localPos = cmds.getAttr(f"{shape}.localPosition")[0]
 
-                # bake translate into the shape
                 baked = tuple(t + l for t, l in zip(translate, localPos))
 
                 cmds.setAttr(f"{shape}.localPosition", *baked, type="double3")
                 cmds.setAttr(f"{guide}.translate", 0, 0, 0, type="double3")
 
-            for guide in chain[:3]:
+            for guide in chain[:chainlength]:
                 local, world = config.getGuidePos(guide)
                 pos = config.addTuples(local, world)
 
 
-                for guide in chain[:3]:
+                for guide in chain[:chainlength]:
                     shape = cmds.listRelatives(guide, s=True, type="locator")[0]
 
-            locFunc.poleVectorVisualization(chain[:3:], pvDistance=10)
+            locFunc.poleVectorVisualization(chain[:chainlength:], pvDistance=10)
 
         finally:
             self.reparentClicked()

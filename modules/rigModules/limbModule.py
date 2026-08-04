@@ -2,7 +2,7 @@ import maya.cmds as cmds # pyright: ignore[reportMissingImports]
 import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports] 
 import maya.mel as mel
 import autoRigger.utils.shapes as shapes
-from autoRigger.modules.rigModules import handModule, reverseFoot, twistSetup as twist, squashAndStretch as stretch, ribbonSetup as ribbon
+from autoRigger.modules.rigModules import handModule, reverseFoot, twistSetup as twist, squashAndStretch as stretch, ribbonSetup as ribbon, cleanup
 import autoRigger.utils.config as config
 import importlib
 
@@ -10,6 +10,7 @@ importlib.reload(config)
 importlib.reload(handModule)
 importlib.reload(reverseFoot)
 importlib.reload(ribbon)
+importlib.reload(stretch)
 
 class limbBuild:
     def __init__(self, side, 
@@ -62,6 +63,7 @@ class limbBuild:
         self.twistAmount = twistJoints
 
         self.twistJoints = []
+        self.ribbonJoints = []
 
         self.size = config.bipedal
         self.suffix = config.suffix
@@ -399,8 +401,7 @@ class limbBuild:
 
     def clavicle(self):
         '''
-        Calculates a pole vector position using the plane defined by
-        the start, mid, and end joints. 
+        cLAVICEL
         '''            
 
         self.clavJnt = f"{self.side}armJA{self.suffix['joint']}"
@@ -451,15 +452,20 @@ class limbBuild:
             - creates a group for the ik switch to parent the bindlocator
         
         '''
-        IkswitchCtrl = cmds.group(em = True, w = True,n = f"{self.side}{self.limbType}_IK_switch{self.suffix['group']}") 
+        IkswitchCtrl = cmds.group(em = True, w = True,n = f"{self.side}{self.limbType}_FKIK_switch{self.suffix['group']}") 
 
-        cmds.parent(self.ikBNDLoc, IkswitchCtrl)
+        cmds.parent(self.ikBNDLoc,self.switch, IkswitchCtrl)
 
         cmds.hide(self.fkJoints, self.ikJoints, self.ikHandle)
 
         if self.digigradeLegs:
             cmds.connectAttr("global_CTRL.rotateY", 
                              f"{self.ikHandle}.twist")  #Assumes world rotations for global, change if needed
+
+        cleanup.cleanupData['FKIK_switches'].append(IkswitchCtrl)
+        cleanup.cleanupData[f"{self.limbType}_IK_GRP"].append(self.ikGrp)
+        cleanup.cleanupData[f"{self.limbType}_FK_GRP"].append(self.fkGrp)
+
 
         
     def endlimb(self):  
@@ -488,6 +494,8 @@ class limbBuild:
         spinePos = cmds.xform(spineJnt, q = True, t = True, ws = True)
 
         cmds.xform(self.hipLoc, t = spinePos)
+
+        cleanup.cleanupData['hipSpace'] = [self.hipLoc]
 
     def legSpaceSwitch(self):
         '''
@@ -546,23 +554,14 @@ class limbBuild:
     
         cmds.addAttr(self.switch, ln = "Hand_Follow", at = "enum", en = " World : Clavicle : Hip ", k = True)
 
-        space_names = ["worldSpace", "clavSpace", "hipSpace"]
-        spaces = []
-        for space in space_names:
-            if space == space_names[2]:
-                name = f"{paCon}.{space}"
-            else:
-                name = f"{paCon}.{self.side}arm_{space}"
-            spaces.append(name)
+        weights  = config.setConstraintWeights("parent", paCon, query = True)
 
         driver = f"{self.switch}.Hand_Follow"
 
-        for i, name in enumerate(spaces):
-            driven = f"{name}_LOCW{i}"
-            
-            for dv in range(len(spaces)):
+        for i, name in enumerate(weights ):
+            for dv in range(len(weights )):
                 v = 1 if dv == i else 0
-                cmds.setDrivenKeyframe(driven, cd=driver, dv=dv, v=v)
+                cmds.setDrivenKeyframe(name, cd=driver, dv=dv, v=v)
 
     def poleVectorSpaceSwitch(self):
         '''
@@ -591,22 +590,12 @@ class limbBuild:
     
     def twistSetup(self):
         axis = "X"
+        names = ['Upper', 'Lower']
 
-        for sj, ej in zip(self.startJoints, self.endJoints):
-            twistSetup = twist.TwistJointsGeneration(axis, sj, ej, self.twistAmount, self.rotOrder)
+        for sj, ej, n  in zip(self.startJoints, self.endJoints, names):
+            twistSetup = twist.TwistJointsGeneration(axis, sj, ej, self.twistAmount, self.rotOrder, name = n)
             twistJoints = twistSetup.creation()
             self.twistJoints.extend(twistJoints)
-
-    def squashNstretch(self):
-
-        stretchLimb = stretch.squashNStretch(self.joints, 
-                                             self.side, 
-                                             self.limbType, 
-                                             self.ikGrp, 
-                                             self.ikCtrl, 
-                                             self.switch, 
-                                             self.twistJoints)
-        stretchLimb.create()
 
     def ribbonCreation(self):
         if self.limbType == "arm":
@@ -622,7 +611,22 @@ class limbBuild:
                                             sj, 
                                             ej,
                                             self.switch)
-            ribbonLimb.build()
+            ribbonData =  ribbonLimb.build()
+            self.ribbonjoints = ribbonData['driverJoints']
+
+            cleanup.cleanupData["Ribbons_GRP"].append(ribbonData['ribbonGrp'])
+
+    def squashNstretch(self):
+
+        stretchLimb = stretch.squashNStretch(self.ikJoints, 
+                                             self.side, 
+                                             self.limbType, 
+                                             self.ikGrp, 
+                                             self.ikCtrl, 
+                                             self.switch, 
+                                             self.twistJoints,
+                                             self.ribbonJoints)
+        stretchLimb.create()
 
 
     def buildLimb(self):

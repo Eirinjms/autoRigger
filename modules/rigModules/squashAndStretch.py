@@ -2,7 +2,7 @@ import maya.cmds as cmds
 import autoRigger.utils.config as config
 
 class squashNStretch:
-    def __init__(self, joints, side, limb, ikgrp, ikCtrl, switch, twistJoints):
+    def __init__(self, joints, side, limb, ikgrp, ikCtrl, switch, twistJoints, ribbonJoints):
             
             self.joints = joints
             self.side = side
@@ -11,6 +11,7 @@ class squashNStretch:
             self.ikGrp = ikgrp
             self.ikCtrl = ikCtrl
             self.twistJoints = twistJoints
+            self.ribbonJoints = ribbonJoints
 
             self.suffix = config.suffix
 
@@ -57,7 +58,6 @@ class squashNStretch:
             
             scaleJoints = self.joints[:-1]
             if self.twistJoints: 
-                  print(self.twistJoints)
                   scaleJoints.extend(self.twistJoints[:-1])
 
             for joint in scaleJoints:
