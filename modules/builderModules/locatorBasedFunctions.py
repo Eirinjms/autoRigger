@@ -109,16 +109,24 @@ def getGuidePos(locator):
 def poleVectorVisualization(sel, pvDistance):
     '''
     Enables a visualization of the polevector, creating a polygon.
+    Works on both locators and joints.
     '''
+    if len(sel) > 3:
+        sel = [sel[0], sel[1], sel[-1]]
+
     pv = findpoleVector(sel, pvDistance)
 
     joint_positions = []
-    if len(sel) > 3:
-        sel = [sel[0], sel[1], sel[-1]]
-        
-    for joint in sel:
-        pos, _ = config.getGuidePos(joint)
-        joint_positions.append(tuple(pos))
+
+    for node in sel:
+        shapes = cmds.listRelatives(node, shapes=True, type='locator') or []
+        if shapes:
+            pos, _ = config.getGuidePos(node)
+            joint_positions.append(tuple(pos))
+        else:
+            pos = cmds.xform(node, q=True, ws=True, t=True)
+            joint_positions.append(tuple(pos))
+
     joint_positions.append((pv.x, pv.y, pv.z))
 
     pvVis = cmds.polyCreateFacet(
@@ -136,30 +144,24 @@ def poleVectorVisualization(sel, pvDistance):
 def findpoleVector(sel, pvDistance):
     '''
     Calculates a pole vector position using the plane defined by
-    the start, mid, and end joints. 
+    the start, mid, and end joints/locators.
     '''
+    def getPos(node):
+        shapes = cmds.listRelatives(node, shapes=True, type='locator') or []
+        if shapes:
+            local, world = config.getGuidePos(node)
+            return config.addTuples(local, world)
+        return cmds.xform(node, q=True, ws=True, t=True)
 
-    local0, world0 = config.getGuidePos(sel[0])
-    local1, world1 = config.getGuidePos(sel[1])
-    local2, world2 = config.getGuidePos(sel[-1])
-
-    pos0 = config.addTuples(local0, world0)
-    pos1 = config.addTuples(local1, world1)
-    pos2 = config.addTuples(local2, world2)
-
-    H = om.MVector(*pos0)
-    K = om.MVector(*pos1)
-    A = om.MVector(*pos2)
+    H = om.MVector(*getPos(sel[0]))
+    K = om.MVector(*getPos(sel[1]))
+    A = om.MVector(*getPos(sel[-1]))
 
     HK = K - H
     HA = A - H
-
     dot = HK * HA
-
-    proj = (dot/(HA.length()**2)) * HA
-
+    proj = (dot / (HA.length() ** 2)) * HA
     projK = HK - proj
-
     pv = (projK * pvDistance) + K
 
     return pv

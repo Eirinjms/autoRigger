@@ -317,7 +317,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
 
         if self.updateLocatorList:
-            self.updateLocatorList.clicked.connect(self.discoverGuides)
+            self.updateLocatorList.clicked.connect(self.jointOrientation)
                 
             
         if self.locatorSymmetry:
@@ -922,80 +922,87 @@ class AutoRiggerUI(QtWidgets.QDialog):
         Sets a basis for joint orientation across the skeleton (FOR BIPEDAL ONLY SO FAR)
 
         """
+        cmds.undoInfo(openChunk=True)
+        try:
+            joints = cmds.ls(type='joint')
+            cmds.makeIdentity(joints, a = True, r = True)
+            roots = config.findRoots(cmds.ls("*JNT", type='joint'))
+            for jnt in roots: 
+                cmds.joint(jnt,                 
+                        e = True, 
+                    oj = "xyz", 
+                    sao = "yup", 
+                    ch = True, 
+                    zso = True)
 
-        roots = config.findRoots(cmds.ls("*JNT", type='joint'))
-        for jnt in roots: 
-            cmds.joint(jnt,                 
+            required = [
+                "C_spineJA_JNT",
+                "L_armJD_JNT",
+                "R_armJD_JNT",
+                "L_middleFngJEnd_JNT",
+                "R_middleFngJEnd_JNT",
+            ]
+            
+            missing = [j for j in required if not cmds.objExists(j)]
+            if missing:
+                return
+            
+            cmds.joint("C_spineJA_JNT", 
                     e = True, 
-                   oj = "xyz", 
-                   sao = "yup", 
-                   ch = True, 
-                   zso = True)
-
-        required = [
-            "C_spineJA_JNT",
-            "L_armJD_JNT",
-            "R_armJD_JNT",
-            "L_middleFngJEnd_JNT",
-            "R_middleFngJEnd_JNT",
-        ]
-        
-        missing = [j for j in required if not cmds.objExists(j)]
-        if missing:
-            return
-        
-        cmds.joint("C_spineJA_JNT", 
-                   e = True, 
-                   oj = "xyz", 
-                   sao = "yup", 
-                   ch = True, 
-                   zso = True)
-        
-        #spinejoints
-        centerJoints = cmds.ls("C_*",
-                               type='joint')
-        
-        hipJoins = cmds.ls("*legJA", type = 'joint')
-        
-        feetJoints = cmds.ls("*legJC*", "*legJD*", type = 'joint')
-
-        self.jointHier.unparentHierarchy()
-
-        for joint in centerJoints + feetJoints:
-            if "jaw" in joint:
-                continue
+                    oj = "xyz", 
+                    sao = "yup", 
+                    ch = True, 
+                    zso = True)
             
-            pos = cmds.xform(joint, q = True, t = True, ws = True)
-            loc = cmds.spaceLocator(n = f"{joint}_temp")[0]
-            cmds.xform(loc, ws=True, t=(pos[0], pos[1] + 10, pos[2]))
-            cmds.delete(cmds.aimConstraint(loc, joint, 
-                                           offset = (90,0,0), 
-                                           aimVector = (1,0,0), 
-                                           upVector = (0,0,-1), 
-                                           worldUpType = 'scene'))
-            cmds.delete(loc) 
-
-        wristPairs = [
-            ("L_armJD_JNT", "L_middleFngJEnd_JNT"),
-            ("R_armJD_JNT", "R_middleFngJEnd_JNT")] 
+            #spinejoints
+            centerJoints = cmds.ls("C_*",
+                                type='joint')
             
-        
-        for joint, aim in wristPairs:
-            cmds.delete(cmds.aimConstraint(aim, joint, 
-                               aimVector = (1,0,0),
-                               worldUpType = 'scene'))
-        
-        self.jointHier.reparentHierarchy()
+            hipJoins = cmds.ls("*legJA", type = 'joint')
+            
+            feetJoints = cmds.ls("*legJC*", "*legJD*", type = 'joint')
+            if self.digigradeCheck.isChecked():
+                feetJoints = cmds.ls("*legJD*", type = 'joint')
 
-        #endjoints
-        for joint in self.jointsList:
-            if not cmds.objExists(joint):
-                cmds.warning(f"{joint} does not exist, check your scene")
-                continue
-            if not cmds.listRelatives(joint, c=True, type="joint"):
-                cmds.joint(joint, e=True, zso=True, oj="none")
-        
-        self.mirrorJoints()
+            self.jointHier.unparentHierarchy()
+
+            for joint in centerJoints + feetJoints:
+                if "jaw" in joint:
+                    continue
+                
+                pos = cmds.xform(joint, q = True, t = True, ws = True)
+                loc = cmds.spaceLocator(n = f"{joint}_temp")[0]
+                cmds.xform(loc, ws=True, t=(pos[0], pos[1] + 10, pos[2]))
+                cmds.delete(cmds.aimConstraint(loc, joint, 
+                                            offset = (90,0,0), 
+                                            aimVector = (1,0,0), 
+                                            upVector = (0,0,-1), 
+                                            worldUpType = 'scene'))
+                cmds.delete(loc) 
+
+            wristPairs = [
+                ("L_armJD_JNT", "L_middleFngJEnd_JNT"),
+                ("R_armJD_JNT", "R_middleFngJEnd_JNT")] 
+                
+            
+            for joint, aim in wristPairs:
+                cmds.delete(cmds.aimConstraint(aim, joint, 
+                                aimVector = (1,0,0),
+                                worldUpType = 'scene'))
+            
+            self.jointHier.reparentHierarchy()
+
+            #endjoints
+            for joint in self.jointsList:
+                if not cmds.objExists(joint):
+                    cmds.warning(f"{joint} does not exist, check your scene")
+                    continue
+                if not cmds.listRelatives(joint, c=True, type="joint"):
+                    cmds.joint(joint, e=True, zso=True, oj="none")
+            
+            self.mirrorJoints()
+        finally:
+            cmds.undoInfo(closeChunk=True)
 
     def mirrorJoints(self):
         """
@@ -1097,11 +1104,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
             cmds.undoInfo(closeChunk=True)
     
     def previewPV(self, checked):
-
-        cmds.undoInfo(openChunk = True)
+        cmds.undoInfo(openChunk=True)
         try:
             if not checked:
-                # delete the visualization if it exists
                 if cmds.objExists("*_PV_Visualization"):
                     cmds.delete(cmds.ls("*_PV_Visualization"))
                 return
@@ -1110,7 +1115,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             if len(sel) != 1:
                 self.pvVisualizer.setChecked(False)
                 return cmds.warning("Please select exactly one root joint.")
-            
+
             children = cmds.listRelatives(sel, ad=True, type='transform') or []
             children.reverse()
             chain = sel + children
@@ -1122,38 +1127,13 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 self.pvVisualizer.setChecked(False)
                 cmds.warning("Not enough joints to create a visualiser")
                 return
-            for guide in chain[:chainlength]:
-                local, world = config.getGuidePos(guide)
-                pos = config.addTuples(local, world)
 
-            self.unparentClicked()
-
-            for guide in chain[:chainlength]:
-                shape = cmds.listRelatives(guide, s=True, type="locator")[0]
-
-                translate = cmds.getAttr(f"{guide}.translate")[0]
-                localPos = cmds.getAttr(f"{shape}.localPosition")[0]
-
-                baked = tuple(t + l for t, l in zip(translate, localPos))
-
-                cmds.setAttr(f"{shape}.localPosition", *baked, type="double3")
-                cmds.setAttr(f"{guide}.translate", 0, 0, 0, type="double3")
-
-            for guide in chain[:chainlength]:
-                local, world = config.getGuidePos(guide)
-                pos = config.addTuples(local, world)
-
-
-                for guide in chain[:chainlength]:
-                    shape = cmds.listRelatives(guide, s=True, type="locator")[0]
-
-            locFunc.poleVectorVisualization(chain[:chainlength:], pvDistance=10)
+            locFunc.poleVectorVisualization(chain[:chainlength], pvDistance=10)
 
         finally:
-            self.reparentClicked()
-            cmds.select(clear = True)
-            cmds.undoInfo(closeChunk = True)
-
+            cmds.select(clear=True)
+            cmds.undoInfo(closeChunk=True)
+            
     # ─────────────────────────────────────────────────────────────────────────
     # Rig options
     # ─────────────────────────────────────────────────────────────────────────

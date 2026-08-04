@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>388</width>
-    <height>597</height>
+    <width>384</width>
+    <height>588</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -29,7 +29,7 @@
       </size>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -50,8 +50,8 @@
        <widget class="QCheckBox" name="LocatorSymmetry_Bipedal">
         <property name="geometry">
          <rect>
-          <x>10</x>
-          <y>30</y>
+          <x>20</x>
+          <y>60</y>
           <width>111</width>
           <height>18</height>
          </rect>
@@ -72,7 +72,7 @@
        <widget class="QCheckBox" name="pvViz_checkBox">
         <property name="geometry">
          <rect>
-          <x>200</x>
+          <x>20</x>
           <y>30</y>
           <width>111</width>
           <height>18</height>
@@ -94,8 +94,8 @@
        <widget class="QPushButton" name="MirrorSelLocators_Btn">
         <property name="geometry">
          <rect>
-          <x>10</x>
-          <y>90</y>
+          <x>170</x>
+          <y>60</y>
           <width>141</width>
           <height>23</height>
          </rect>
@@ -117,7 +117,7 @@
         <property name="geometry">
          <rect>
           <x>170</x>
-          <y>60</y>
+          <y>90</y>
           <width>141</width>
           <height>23</height>
          </rect>
@@ -139,7 +139,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>60</y>
+          <y>90</y>
           <width>141</width>
           <height>23</height>
          </rect>
@@ -157,28 +157,6 @@
          <string>Unparent Loc Hierarchy</string>
         </property>
        </widget>
-       <widget class="QPushButton" name="rediscoverGuides_Btn">
-        <property name="geometry">
-         <rect>
-          <x>170</x>
-          <y>90</y>
-          <width>141</width>
-          <height>23</height>
-         </rect>
-        </property>
-        <property name="toolTip">
-         <string>Allows the tool to work on scenebased guides</string>
-        </property>
-        <property name="toolTipDuration">
-         <number>5000</number>
-        </property>
-        <property name="statusTip">
-         <string>Allows the tool to work on scenebased guides</string>
-        </property>
-        <property name="text">
-         <string>Re-discover Guides</string>
-        </property>
-       </widget>
        <widget class="QPushButton" name="pushButton">
         <property name="geometry">
          <rect>
@@ -190,6 +168,25 @@
         </property>
         <property name="text">
          <string>?</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="DigiGradeLegs_btn">
+        <property name="geometry">
+         <rect>
+          <x>170</x>
+          <y>30</y>
+          <width>111</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Digitigrade Legs</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
         </property>
        </widget>
       </widget>
@@ -679,7 +676,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>390</y>
+         <y>440</y>
          <width>341</width>
          <height>71</height>
         </rect>
@@ -829,7 +826,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>290</y>
+         <y>340</y>
          <width>341</width>
          <height>91</height>
         </rect>
@@ -930,7 +927,7 @@
          <x>10</x>
          <y>220</y>
          <width>341</width>
-         <height>61</height>
+         <height>101</height>
         </rect>
        </property>
        <property name="title">
@@ -976,6 +973,28 @@
         </property>
         <property name="text">
          <string>show Local Rotation Axes</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="rediscoverGuides_Btn">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>60</y>
+          <width>141</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Allows the tool to work on scenebased guides</string>
+        </property>
+        <property name="toolTipDuration">
+         <number>5000</number>
+        </property>
+        <property name="statusTip">
+         <string>Allows the tool to work on scenebased guides</string>
+        </property>
+        <property name="text">
+         <string>Auto-orient Joints</string>
         </property>
        </widget>
       </widget>
@@ -1674,25 +1693,6 @@
        <property name="checkable">
         <bool>false</bool>
        </property>
-       <widget class="QCheckBox" name="DigiGradeLegs_btn">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>20</y>
-          <width>111</width>
-          <height>20</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Digitigrade Legs</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-        <property name="checked">
-         <bool>false</bool>
-        </property>
-       </widget>
       </widget>
      </widget>
     </widget>

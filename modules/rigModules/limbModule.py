@@ -95,9 +95,14 @@ class limbBuild:
         for joints in self.jointBaseName: 
             joint = f"{self.side}{joints}{config.suffix['joint']}"
             self.joints.append(joint)
+        print(self.joints)
 
         self.startJoints = [self.joints[0], self.joints[1]]
         self.endJoints = [self.joints[1], self.joints[2]]
+        
+        if self.digigradeLegs and self.limbType == "leg":
+            self.startJoints = [self.joints[0], self.joints[1], self.joints[2]]
+            self.endJoints = [self.joints[1], self.joints[2], self.joints[3]]
 
     def dupeJoints(self):
         '''
@@ -188,7 +193,7 @@ class limbBuild:
         The IK setup for selected limb, creates the solver + control
         '''
 
-        if self.digigradeLegs:
+        if self.digigradeLegs and self.limbType == "leg":
             solver = "ikSpringSolver"
         else:
             solver = "ikRPsolver"
@@ -325,9 +330,11 @@ class limbBuild:
         Calculates a pole vector position using the plane defined by
         the start, mid, and end joints. 
         '''
-        self.H = om.MVector(cmds.xform(f"{self.side}{self.jointBaseName[0]}{self.suffix['joint']}", q = True, ws = True, t = True))
-        self.K = om.MVector(cmds.xform(f"{self.side}{self.jointBaseName[1]}{self.suffix['joint']}", q = True, ws = True, t = True))
-        self.A = om.MVector(cmds.xform(f"{self.side}{self.jointBaseName[-1]}{self.suffix['joint']}", q = True, ws = True, t = True))
+        self.H = om.MVector(cmds.xform(self.joints[0], q=True, ws=True, t=True))
+        self.K = om.MVector(cmds.xform(self.joints[1], q=True, ws=True, t=True))
+        self.A = om.MVector(cmds.xform(self.joints[-1], q=True, ws=True, t=True))
+
+        print(f"{self.side}{self.jointBaseName[-1]}{self.suffix['joint']}")
 
         HK = self.K - self.H
         HA = self.A - self.H
@@ -389,12 +396,15 @@ class limbBuild:
         Enables a visualization of the polevector, creating a polygon 
         '''
 
-        self.findpoleVector()
         joint_positions = []
-        for joint in [self.H, 
-                      self.pv,
-                      self.A]: 
-            joint_positions.append(tuple(joint))
+
+        for point in [
+            self.H,
+            self.K,
+            self.A,
+            self.pv
+        ]:
+            joint_positions.append(tuple(point))
 
         self.pvVis = cmds.polyCreateFacet(p = joint_positions,
                                           n = f"{self.side}{self.limbType}_PV_VIS")[0]
@@ -476,7 +486,7 @@ class limbBuild:
 
         '''
         if self.limbType == 'leg':
-            reverseFoot.build(self.side, self.ikHandle, self.ikCtrl, self.switch, self.joints)
+            reverseFoot.build(self.side, self.ikHandle, self.ikCtrl, self.switch, self.joints, self.digigradeLegs)
         if self.limbType == 'arm':
             handModule.build(self.side, self.handOrder)
 
@@ -579,7 +589,7 @@ class limbBuild:
 
         poConPV = cmds.parentConstraint(pvSpaceLoc, self.pvLoc, mo = False, n = f"{self.side}pv_SpaceSwitch{self.suffix['parentCon']}")[0]
         
-        cmds.addAttr(self.switch, ln = f"{self.side}{self.limbType}Pole_Vector_Follow", at = "enum", en = "World : Leg", k = True)
+        cmds.addAttr(self.switch, ln = f"{self.side}{self.limbType}Pole_Vector_Follow", at = "enum", en = f"World : {self.limbType}", k = True)
 
         driverPV = f"{self.switch}.{self.side}{self.limbType}Pole_Vector_Follow"
 
@@ -639,6 +649,7 @@ class limbBuild:
         self.findpoleVector()
         self.createPoleVector()
         #self.poleVectorLine()
+        #self.poleVectorVisualization()
         self.hipSpace()
         
         self.endlimb()

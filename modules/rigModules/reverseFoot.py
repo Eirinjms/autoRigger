@@ -5,7 +5,7 @@ import importlib
 
 importlib.reload(shapes)
 
-def build(side, ikHandle, ikCtrl, switch, joints):
+def build(side, ikHandle, ikCtrl, switch, joints, digitigrade = False):
     '''
     Builds a reverse foot system based on existing locators.
         
@@ -112,20 +112,20 @@ def build(side, ikHandle, ikCtrl, switch, joints):
         cmds.setDrivenKeyframe(outerLoc, at = 'rotateZ', cd = driverX, dv = 0, v = 0)  
 
     #roll attr on the ik ctrl
+    if not digitigrade:
+        cmds.addAttr(ikCtrl, ln = 'FOOT_CTRLS', at = "enum", en = "____________", k = True)
 
-    cmds.addAttr(ikCtrl, ln = 'FOOT_CTRLS', at = "enum", en = "____________", k = True)
+        cmds.addAttr(ikCtrl, ln = "Heel_Lift", at = "float", min = 0, max = 1, dv = 0, k = True)
+        cmds.addAttr(ikCtrl, ln = "Toe_Lift", at = "float", min = 0, max = 1, dv = 0, k = True)
 
-    cmds.addAttr(ikCtrl, ln = "Heel_Lift", at = "float", min = 0, max = 1, dv = 0, k = True)
-    cmds.addAttr(ikCtrl, ln = "Toe_Lift", at = "float", min = 0, max = 1, dv = 0, k = True)
+        driverToe = f"{ikCtrl}.Toe_Lift"
+        driverHeel = f"{ikCtrl}.Heel_Lift"
 
-    driverToe = f"{ikCtrl}.Toe_Lift"
-    driverHeel = f"{ikCtrl}.Heel_Lift"
+        cmds.setDrivenKeyframe(ballLoc, at = 'rotateX', cd = driverHeel, dv = 0, v = 0)
+        cmds.setDrivenKeyframe(ballLoc, at = 'rotateX', cd = driverHeel, dv = 1, v = 60)
 
-    cmds.setDrivenKeyframe(ballLoc, at = 'rotateX', cd = driverHeel, dv = 0, v = 0)
-    cmds.setDrivenKeyframe(ballLoc, at = 'rotateX', cd = driverHeel, dv = 1, v = 60)
-
-    cmds.setDrivenKeyframe(toeLoc, at = 'rotateX', cd = driverToe, dv = 0, v = 0)
-    cmds.setDrivenKeyframe(toeLoc, at = 'rotateX', cd = driverToe, dv = 1, v = -60)
+        cmds.setDrivenKeyframe(toeLoc, at = 'rotateX', cd = driverToe, dv = 0, v = 0)
+        cmds.setDrivenKeyframe(toeLoc, at = 'rotateX', cd = driverToe, dv = 1, v = -60)
 
 
 #########################

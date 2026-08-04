@@ -113,9 +113,7 @@ def headBuild(neckOrder):
 ###############################
 
     headJoint = headCtrl.replace('CTRL', 'JNT')
-    print(headJoint)
     headLoc = headCtrl.replace('CTRL', 'LOC')
-    print(headLoc)
 
     eyesWS = cmds.spaceLocator(n = f"{eyes[0]}_worldSpace{suffix['locator']}")
     cmds.delete(cmds.parentConstraint(eyectrl, eyesWS, mo = False))
