@@ -961,12 +961,15 @@ class AutoRiggerUI(QtWidgets.QDialog):
             hipJoins = cmds.ls("*legJA", type = 'joint')
             
             feetJoints = cmds.ls("*legJC*", "*legJD*", type = 'joint')
+
             if self.digigradeCheck.isChecked():
                 feetJoints = cmds.ls("*legJD*", type = 'joint')
+                children = cmds.listRelatives(feetJoints, children = True, type = 'joint')
+                feetJoints.extend(children)
 
             self.jointHier.unparentHierarchy()
 
-            for joint in centerJoints + feetJoints:
+            for joint in centerJoints:
                 if "jaw" in joint:
                     continue
                 
@@ -976,6 +979,17 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 cmds.delete(cmds.aimConstraint(loc, joint, 
                                             offset = (90,0,0), 
                                             aimVector = (1,0,0), 
+                                            upVector = (0,0,-1), 
+                                            worldUpType = 'scene'))
+                cmds.delete(loc) 
+
+            for joint in feetJoints:
+                pos = cmds.xform(joint, q = True, t = True, ws = True)
+                loc = cmds.spaceLocator(n = f"{joint}_temp")[0]
+                cmds.xform(loc, ws=True, t=(pos[0], pos[1] + 10, pos[2]))
+                cmds.delete(cmds.aimConstraint(loc, joint, 
+                                            offset = (0,0,0), 
+                                            aimVector = (0,1,0), 
                                             upVector = (0,0,-1), 
                                             worldUpType = 'scene'))
                 cmds.delete(loc) 

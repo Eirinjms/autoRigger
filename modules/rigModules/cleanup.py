@@ -32,7 +32,7 @@ cleanupData = {
         }
 
 def cleanup():
-
+    print(cleanupData)
     #Automated color selection based on name
     shapes.ctrlColour()
 
@@ -90,7 +90,45 @@ def cleanup():
         cmds.setAttr(f"{loc}.visibility", 0) 
 
 
-"""    cleanup = {
+"""    
+ikGrps = cleanupData['ikGrps']
+spineEnd =  cleanupData['spineEnd']
+spineStart =  cleanupData['spineStart']
+spineFK = cleanupData['spine_FK_GRP']
+armFKs = cleanupData['spine_FK_GRP']
+legFKs = cleanupData['spine_FK_GRP']
+neck = cleanupData['neckLoc']
+handGrps = cmds.group(cleanupData['handCTRL_GRP'] + cleanupData['fist_CTRL_GRP'], n = "handGrp")   ## this seems wrong
+headGRP = cleanupData['headGRP']
+hipSpace = cleanupData['spine_FK_GRP']
+ribbonsGrp = cleanupData['spine_FK_GRP']
+rigHelperGrp = cleanupData['spine_FK_GRP']
+
+        "globalCtrl": [],
+
+        "arm_IK_GRP": [],
+        "leg_IK_GRP": [],
+        "FKIK_switches": [],
+
+        "headGRP": [],
+        "neckLoc": [],
+
+        "handCTRL_GRP": [],
+        "fist_CTRL_GRP": [],
+
+        "spine_FK_GRP": [],
+        "spineStart": [],
+        "spineEnd": [],
+        "hipSpace" : [],
+
+        "arm_FK_GRP": [],
+        "leg_FK_GRP": [],
+
+        "Ribbons_GRP": [],
+
+        "rig_helper_GRP": [],
+        }
+cleanup = {
         globalCtrl : [ikGrps,
                     spineEnd,
                     spineStart,
@@ -106,6 +144,6 @@ def cleanup():
         ikGrp : [fkikSwitch],
         }
 
-    for p, c in cleanup.items():
-        cmds.parent(c, p)
+    for parent, child in cleanup.items():
+        cmds.parent(child, parent)
 #headgrp under neck, """

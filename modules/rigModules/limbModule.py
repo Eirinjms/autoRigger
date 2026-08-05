@@ -51,7 +51,7 @@ class limbBuild:
         self.stretchyArms = armStretch
         self.stretchyLegs = legStretch
 
-        self.digigradeLegs = digigradeLegs
+        self.digitigradeLegs = digigradeLegs
 
         self.ribbonArm = ribbonArm
         self.ribbonLeg = ribbonLegs
@@ -97,12 +97,9 @@ class limbBuild:
             self.joints.append(joint)
         print(self.joints)
 
-        self.startJoints = [self.joints[0], self.joints[1]]
-        self.endJoints = [self.joints[1], self.joints[2]]
-        
-        if self.digigradeLegs and self.limbType == "leg":
-            self.startJoints = [self.joints[0], self.joints[1], self.joints[2]]
-            self.endJoints = [self.joints[1], self.joints[2], self.joints[3]]
+        self.startJoints = self.joints[:-1]
+        self.endJoints = self.joints[1:]
+        print(self.startJoints, self.endJoints)
 
     def dupeJoints(self):
         '''
@@ -193,7 +190,7 @@ class limbBuild:
         The IK setup for selected limb, creates the solver + control
         '''
 
-        if self.digigradeLegs and self.limbType == "leg":
+        if self.digitigradeLegs and self.limbType == "leg":
             solver = "ikSpringSolver"
         else:
             solver = "ikRPsolver"
@@ -468,7 +465,7 @@ class limbBuild:
 
         cmds.hide(self.fkJoints, self.ikJoints, self.ikHandle)
 
-        if self.digigradeLegs:
+        if self.digitigradeLegs:
             cmds.connectAttr("global_CTRL.rotateY", 
                              f"{self.ikHandle}.twist")  #Assumes world rotations for global, change if needed
 
@@ -486,7 +483,7 @@ class limbBuild:
 
         '''
         if self.limbType == 'leg':
-            reverseFoot.build(self.side, self.ikHandle, self.ikCtrl, self.switch, self.joints, self.digigradeLegs)
+            reverseFoot.build(self.side, self.ikHandle, self.ikCtrl, self.switch, self.joints, self.digitigradeLegs)
         if self.limbType == 'arm':
             handModule.build(self.side, self.handOrder)
 
@@ -635,7 +632,8 @@ class limbBuild:
                                              self.ikCtrl, 
                                              self.switch, 
                                              self.twistJoints,
-                                             self.ribbonJoints)
+                                             self.ribbonJoints,
+                                             self.digitigradeLegs)
         stretchLimb.create()
 
 

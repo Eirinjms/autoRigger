@@ -191,7 +191,9 @@ class RibbonMaker:
             cmds.makeIdentity(joint, a = True, r = True)
             self.driverJoints.append(joint)
 
-            cmds.parentConstraint(self.startJoint, joint, n = joint.replace(self.suffix['joint'], self.suffix['parentCon']), mo = True)
+            if index == 0 or index == count -1:
+                print("obj is not", index)
+                cmds.parentConstraint(self.startJoint, joint, n = joint.replace(self.suffix['joint'], self.suffix['parentCon']), mo = True)
     
     def createDriverJointsControls(self):
         self.startLoc = cmds.spaceLocator(n = f"{self.name}{config.suffix['control']}{config.suffix['locator']}")[0]
