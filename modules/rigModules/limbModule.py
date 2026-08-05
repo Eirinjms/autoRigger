@@ -327,11 +327,15 @@ class limbBuild:
         Calculates a pole vector position using the plane defined by
         the start, mid, and end joints. 
         '''
-        self.H = om.MVector(cmds.xform(self.joints[0], q=True, ws=True, t=True))
-        self.K = om.MVector(cmds.xform(self.joints[1], q=True, ws=True, t=True))
-        self.A = om.MVector(cmds.xform(self.joints[-1], q=True, ws=True, t=True))
+        self.H = om.MVector(cmds.xform(self.ikJoints[0], q=True, ws=True, t=True))
+        self.K = om.MVector(cmds.xform(self.ikJoints[1], q=True, ws=True, t=True))
+        self.A = om.MVector(cmds.xform(self.ikJoints[-1], q=True, ws=True, t=True))
 
-        print(f"{self.side}{self.jointBaseName[-1]}{self.suffix['joint']}")
+        print(self.ikJoints)
+        print(cmds.ikHandle(self.ikHandle, q=True, sj=True))
+        print(cmds.ikHandle(self.ikHandle, q=True, ee=True))
+
+        print(self.H, "\n", self.K, "\n", self.A)
 
         HK = self.K - self.H
         HA = self.A - self.H
@@ -343,6 +347,7 @@ class limbBuild:
         projK = HK - proj
 
         self.pv = (projK * self.pvDistance) + self.K
+        print(self.pv)
 
     def createPoleVector(self):
         '''
@@ -633,7 +638,7 @@ class limbBuild:
                                              self.switch, 
                                              self.twistJoints,
                                              self.ribbonJoints,
-                                             self.digitigradeLegs)
+                                             )
         stretchLimb.create()
 
 

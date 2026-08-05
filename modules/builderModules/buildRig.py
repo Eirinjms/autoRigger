@@ -41,9 +41,8 @@ def build(spineOrder,
 
     if not cmds.pluginInfo("ikSpringSolver", q=True,loaded=True):
         cmds.loadPlugin("ikSpringSolver")
-        mel.eval("ikSpringSolver;")
-        
         print("[Plugin Loaded]: ikSpringSolver")
+    mel.eval("ikSpringSolver;")    
 
     if not cmds.pluginInfo("quatNodes", q=True, loaded=True):
         cmds.loadPlugin("quatNodes")

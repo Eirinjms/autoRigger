@@ -252,6 +252,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.ribbonDriverLabel = self.ui.findChild(QtWidgets.QLabel, "ribbonDrivers_Number")
 
         self.digigradeCheck = self.ui.findChild(QtWidgets.QCheckBox, "DigiGradeLegs_btn")
+        self.digigradeCheck2 = self.ui.findChild(QtWidgets.QCheckBox, "DigiGradeLegs_btn_2")
+        self.digigradeCheck3 = self.ui.findChild(QtWidgets.QCheckBox, "DigiGradeLegs_btn_3")
 
         #-----------------------------------connections -----------------------------------------------#
 
@@ -269,6 +271,18 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         if self.ribbonDriversSlider: 
             self.ribbonDriversSlider.valueChanged.connect(self.updateRibbonDriveLabel)
+
+        if self.digigradeCheck:
+            self.digigradeCheck.toggled.connect(self.digigradeCheck2.setChecked)
+            self.digigradeCheck.toggled.connect(self.digigradeCheck3.setChecked)
+
+        if self.digigradeCheck2:
+            self.digigradeCheck2.toggled.connect(self.digigradeCheck.setChecked)
+            self.digigradeCheck2.toggled.connect(self.digigradeCheck3.setChecked)
+
+        if self.digigradeCheck3:
+            self.digigradeCheck3.toggled.connect(self.digigradeCheck.setChecked)
+            self.digigradeCheck3.toggled.connect(self.digigradeCheck2.setChecked)
 
         #-----------------------------------Rig Connections-----------------------------------------------#  
         
@@ -881,6 +895,13 @@ class AutoRiggerUI(QtWidgets.QDialog):
             cmds.undoInfo(closeChunk=True)
 
     def exportJointsjson(self):
+
+
+        selected = cmds.ls(sl = True, type = 'joint')
+
+        if len(selected) != 1:
+            cmds.warning("Please select only the root of the chain you want to export")
+            return
         folder = config.find_file_path("presets")
         filePath, _ = QFileDialog.getSaveFileName(
         self,

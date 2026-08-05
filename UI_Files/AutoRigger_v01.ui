@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>384</width>
+    <width>388</width>
     <height>588</height>
    </rect>
   </property>
@@ -39,7 +39,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>420</y>
+         <y>410</y>
          <width>341</width>
          <height>121</height>
         </rect>
@@ -51,7 +51,7 @@
         <property name="geometry">
          <rect>
           <x>20</x>
-          <y>60</y>
+          <y>50</y>
           <width>111</width>
           <height>18</height>
          </rect>
@@ -73,7 +73,7 @@
         <property name="geometry">
          <rect>
           <x>20</x>
-          <y>30</y>
+          <y>20</y>
           <width>111</width>
           <height>18</height>
          </rect>
@@ -95,7 +95,7 @@
         <property name="geometry">
          <rect>
           <x>170</x>
-          <y>60</y>
+          <y>50</y>
           <width>141</width>
           <height>23</height>
          </rect>
@@ -117,7 +117,7 @@
         <property name="geometry">
          <rect>
           <x>170</x>
-          <y>90</y>
+          <y>80</y>
           <width>141</width>
           <height>23</height>
          </rect>
@@ -139,7 +139,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>90</y>
+          <y>80</y>
           <width>141</width>
           <height>23</height>
          </rect>
@@ -174,7 +174,7 @@
         <property name="geometry">
          <rect>
           <x>170</x>
-          <y>30</y>
+          <y>20</y>
           <width>111</width>
           <height>20</height>
          </rect>
@@ -997,6 +997,25 @@
          <string>Auto-orient Joints</string>
         </property>
        </widget>
+       <widget class="QCheckBox" name="DigiGradeLegs_btn_3">
+        <property name="geometry">
+         <rect>
+          <x>170</x>
+          <y>60</y>
+          <width>111</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Digitigrade Legs</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+       </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_14">
        <property name="geometry">
@@ -1693,6 +1712,25 @@
        <property name="checkable">
         <bool>false</bool>
        </property>
+       <widget class="QCheckBox" name="DigiGradeLegs_btn_2">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>20</y>
+          <width>111</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Digitigrade Legs</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+       </widget>
       </widget>
      </widget>
     </widget>

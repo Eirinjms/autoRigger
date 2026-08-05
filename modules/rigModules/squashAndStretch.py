@@ -2,7 +2,7 @@ import maya.cmds as cmds
 import autoRigger.utils.config as config
 
 class squashNStretch:
-    def __init__(self, joints, side, limb, ikgrp, ikCtrl, switch, twistJoints, ribbonJoints, digitigrade):
+    def __init__(self, joints, side, limb, ikgrp, ikCtrl, switch, twistJoints, ribbonJoints):
             
             self.joints = joints
             self.side = side
@@ -12,12 +12,11 @@ class squashNStretch:
             self.ikCtrl = ikCtrl
             self.twistJoints = twistJoints
             self.ribbonJoints = ribbonJoints
-            self.digitigrade = digitigrade
 
             self.suffix = config.suffix
 
     def create(self):
-            print("checking:", self.digitigrade)
+
             startJnt = cmds.xform(self.joints[0], q = True, ws = True, t = True)
             midJnt = cmds.xform(self.joints[1], q = True, ws = True, t = True)
             endJnt = cmds.xform(self.joints[-1], q = True, ws = True, t = True)
@@ -57,12 +56,10 @@ class squashNStretch:
             cmds.connectAttr(f"{md}.outputX", f"{cnd}.firstTerm")
 
             
-            scaleJoints = self.joints[:-1]  # cant remember why, why do i do that
-
+            scaleJoints = self.joints[:-1]
             if self.twistJoints: 
                   scaleJoints.extend(self.twistJoints[:-1])
 
-            print("printing scale joints", scaleJoints)
             for joint in scaleJoints:
                 cmds.connectAttr(f"{cnd}.outColorR", f"{joint}.scaleX")
 
