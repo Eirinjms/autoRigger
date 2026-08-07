@@ -651,7 +651,7 @@ class limbBuild:
         self.ikfkGroups()
         self.findpoleVector()
         self.createPoleVector()
-        #self.poleVectorLine()
+        self.poleVectorLine()
         #self.poleVectorVisualization()
         self.hipSpace()
         

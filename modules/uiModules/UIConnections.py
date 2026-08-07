@@ -87,11 +87,11 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.revFeetLocList = []
         self.jointsList = []
         if not self.jointsList:
-            self.jointsList[:] = cmds.ls("*JNT", type = 'joint')
+            self.jointsList[:] = cmds.ls(type = 'joint')
         self.ui = None
         self.oldSpinelocators = []
         self.newSpinelocators = []
-
+        
         self.revFeetSymmetry = symmetry(self.revFeetLocList)
         self.guideSymmetry = symmetry(cmds.ls("*_GUIDE", type='transform'))
 

@@ -21,6 +21,9 @@ def headBuild(neckOrder):
 
     for joint in joints: 
         jnt = f"{prefix['center']}{joint}{suffix['joint']}"
+        if not cmds.objExists(jnt):
+            cmds.warning(f"{jnt} does not exist, check scene")
+            continue
         alljoints.append(jnt)
 
     config.setRotationOrder(alljoints, neckOrder)
