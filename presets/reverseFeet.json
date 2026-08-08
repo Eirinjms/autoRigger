@@ -1,5 +1,5 @@
 {
-    "L_backOfHeel_LOC": {
+    "L_backOfHeel_revLOC": {
         "pos": [
             9.792542771003557,
             0.0,
@@ -7,29 +7,29 @@
         ],
         "parent": null,
         "children": {
-            "L_frontFoot_LOC": {
+            "L_frontFoot_revLOC": {
                 "pos": [
                     13.036624616512945,
                     0.0,
                     13.642198147168008
                 ],
-                "parent": "L_backOfHeel_LOC",
+                "parent": "L_backOfHeel_revLOC",
                 "children": {
-                    "L_outerSideFoot_LOC": {
+                    "L_outerSideFoot_revLOC": {
                         "pos": [
                             15.191365260943291,
                             0.0,
                             -1.2359605465490358
                         ],
-                        "parent": "L_frontFoot_LOC",
+                        "parent": "L_frontFoot_revLOC",
                         "children": {
-                            "L_innerSideFoot_LOC": {
+                            "L_innerSideFoot_revLOC": {
                                 "pos": [
                                     7.697602469599746,
                                     0.0,
                                     1.2036586941777525
                                 ],
-                                "parent": "L_outerSideFoot_LOC",
+                                "parent": "L_outerSideFoot_revLOC",
                                 "children": {}
                             }
                         }

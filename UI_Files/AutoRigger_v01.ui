@@ -29,7 +29,7 @@
       </size>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -862,11 +862,14 @@
         <property name="maximumSize">
          <size>
           <width>131</width>
-          <height>23</height>
+          <height>40</height>
          </size>
         </property>
         <property name="text">
          <string>Import JSON</string>
+        </property>
+        <property name="checkable">
+         <bool>false</bool>
         </property>
        </widget>
        <widget class="QCheckBox" name="LocatorSymmetry_revFeet_Bipedal">

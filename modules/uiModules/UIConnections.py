@@ -85,6 +85,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
         if not self.locatorList:
             self.locatorList[:] = cmds.ls("*GUIDE", type="transform") or []
         self.revFeetLocList = []
+        if not self.revFeetLocList:
+            self.revFeetLocList = cmds.ls("*revLOC", type = "transform")
         self.jointsList = []
         if not self.jointsList:
             self.jointsList[:] = cmds.ls(type = 'joint')
@@ -95,7 +97,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.revFeetSymmetry = symmetry(self.revFeetLocList)
         self.guideSymmetry = symmetry(cmds.ls("*_GUIDE", type='transform'))
 
-        self.guideHier = hier.hierarchyManager(self.locatorList, False, 'transform')
+        self.locatorHier = hier.hierarchyManager(self.locatorList, False, 'transform')
         self.revFeetHier = hier.hierarchyManager(self.revFeetLocList, False, 'transform')
         self.jointHier = hier.hierarchyManager(self.jointsList, True, 'joint')
 
@@ -371,7 +373,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         #-----------------------------------rev feet connections -----------------------------------------------#
         if self.MirrorRevFeet: 
-            self.MirrorRevFeet.clicked.connect(lambda : mirror.mirrorLocators("L_backOfHeel_LOC"))
+            self.MirrorRevFeet.clicked.connect(lambda : mirror.mirrorLocators("L_backOfHeel_revLOC"))
 
         if importRevFeetLocsBtn:
             importRevFeetLocsBtn.clicked.connect(self.build_reverseFeetLocators) 
@@ -409,7 +411,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             cmds.scriptJob(kill=self.selectionJob, force=True)
         self.locatorSymmetry.setChecked(False)
         if not self.locsParentedState:
-            self.guideHier.reparentHierarchy()
+            self.locatorHier.reparentHierarchy()
         super().closeEvent(event)
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -417,7 +419,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
     # ─────────────────────────────────────────────────────────────────────────
 
     def buildRigButton(self):
-        """ Builds the rig :D """
+        """
+        Validates the scene state and fires the full rig build.
+        Checks reverse feet locators exist on both sides before proceeding.
+        """
 
         cmds.undoInfo(openChunk=True)
         try:
@@ -491,6 +496,14 @@ class AutoRiggerUI(QtWidgets.QDialog):
     
     def spineUpdate(self, checked):
 
+        """
+        Runs the procedural spine when the customization group is toggled.
+        Blocks if guides are unparented or the spine guides don't exist yet.
+
+            Parameters:
+                checked (bool): State of the CustomizableSpine group box.
+        """
+
         required = ["C_spineJA_GUIDE", 
                     "C_spineJEnd_GUIDE"]
 
@@ -526,6 +539,14 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.ribbonBindsLabel.setText(str(value))
 
     def createInstanceLocChain(self): 
+        """
+        Reads the prefix, base name and slider value from the UI
+        and creates a procLocatorGenerator instance from them.
+
+            Returns:
+                procLocatorGenerator: Configured instance ready to generate.
+        """
+
         prefix = self.prefixLocChain.text()
         baseName = self.baseNameLocChain.text()
         sliderValue = self.locatorValue()
@@ -535,12 +556,22 @@ class AutoRiggerUI(QtWidgets.QDialog):
         return instance
     
     def guideGenerator(self):
+        """
+        Creates a new procedural locator chain from the current UI values.
+        Sets self.locGuidesCreated so the slider update knows its safe to run.
+        """
+
         self.generator = self.createInstanceLocChain()
         self.generator.generateLocs()
 
         self.locGuidesCreated = True
     
     def generateLocs(self):
+        """
+        Updates the procedural locator chain when the slider changes.
+        Only runs if a chain has already been generated this session.
+        """
+
         cmds.undoInfo(openChunk = True)
         try:
             self.locatorValue()
@@ -565,6 +596,11 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.twistLabel.setText(str(value))
 
     def defineRotOrder(self):
+        """
+        Reads all rotation order dropdowns from the UI and stores
+        them on self for use during the rig build.
+        """     
+
         self.armOrder = self.armRotOrdMenu.currentIndex()
         self.legOrder = self.legRotOrdMenu.currentIndex()
         self.spineOrder = self.spineRotOrdMenu.currentIndex()
@@ -577,19 +613,18 @@ class AutoRiggerUI(QtWidgets.QDialog):
     # ─────────────────────────────────────────────────────────────────────────
     def importPreset(self, textBox, storeLocators : bool, locatorList, filePath=None, allowReverseDispatch=True):
         """
-        Imports a JSON preset and recreates the locator hierarchy.
+        Opens a file dialog, loads a JSON preset and recreates the locator hierarchy.
+        If the selected file contains 'reverseFeet' in the path, dispatches to
+        build_reverseFeetLocators instead unless allowReverseDispatch is False.
 
-        Parameters:
-            textBox:
-                UI text box containing the preset file path.
-
-            storeLocators (bool):
-                If True, append the imported locators to ``locatorList``.
-
-            locatorList (list):
-                List used to store the imported locator objects.
-        
+            Parameters:
+                textBox: UI line edit to update with the chosen file path.
+                storeLocators (bool): Whether to append created locators to locatorList.
+                locatorList (list): Target list to store imported locators.
+                filePath (str): Skip the dialog and use this path directly.
+                allowReverseDispatch (bool): Whether reverse feet detection is active.
         """
+
         folder = config.find_file_path("presets")
         if not filePath:
             filePath, _ = QFileDialog.getOpenFileName(
@@ -618,10 +653,14 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.applyPreset(presetData, storeLocators, locatorList)
     
     def applyPreset(self, presetData, storeLocators, locatorList):
-        """Recreates the locator hierarchy from the loaded JSON dict.
-        
-            Parameters: 
-                presetData : JSON file
+        """
+        Recreates a locator hierarchy from a loaded JSON dict.
+        Creates a root_GUIDE if none exists and parents the first locator under it.
+
+            Parameters:
+                presetData (dict): The loaded JSON hierarchy data.
+                storeLocators (bool): Whether to append locators to locatorList.
+                locatorList (list): Target list to store created locators.
         """
         
         cmds.undoInfo(openChunk = True)
@@ -650,15 +689,18 @@ class AutoRiggerUI(QtWidgets.QDialog):
             cmds.undoInfo(closeChunk = True)
 
     def build_locator(self, locator_name: str, joint_data: dict, locatorList, storeLocators, parent=None):
-        '''
+        """
         Recursively creates locators from a joint hierarchy dict.
+        Colour codes by joint type — JA is green, JEnd is red, everything else white.
 
-        Parameters:
-            locator_name (str): Name to give the locator (JNT replaced with GUIDE )
-            joint_data (dict): Dictionary of joint data including children
-            parent (str): Parent locator name, if any
-            storeLocators (bool) : if you want to save to the lovator list. 
-        '''
+            Parameters:
+                locator_name (str): Name for the locator, JNT is replaced with GUIDE.
+                joint_data (dict): Dict containing pos and children.
+                locatorList (list): List to append created locators to.
+                storeLocators (bool): Whether to actually append.
+                parent (str): Parent locator name, if any.
+        """
+
         cmds.select(clear=True)
 
         loc = cmds.spaceLocator(
@@ -689,18 +731,24 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.build_locator(child_name, child_data, locatorList, storeLocators, loc)
 
     def build_reverseFeetLocators(self, filePath=None):
-        """Recreates the locator hierarchy from the loaded JSON dict."""
+        """
+        Imports the reverse feet preset and mirrors it to the right side.
+        Blocks if locators already exist in the scene.
+
+            Parameters:
+                filePath (str): Path to the preset. Opens a dialog if None.
+        """
 
         cmds.undoInfo(openChunk = True)
         try:
             self.revFeetLocList.clear()
-            if cmds.objExists("L_backOfHeel_LOC"):
+            if cmds.objExists("L_backOfHeel_revLOC"):
                 return cmds.warning("Reverse Feet locators already in scene,"
                                     "delete them before importing new ones.")
             
             self.importPreset(self.revFeetTextBox, storeLocators = False, locatorList = self.revFeetLocList, filePath = filePath, allowReverseDispatch=False)
 
-            mirroredRevFeet = mirror.mirrorLocators("L_backOfHeel_LOC")
+            mirroredRevFeet = mirror.mirrorLocators("L_backOfHeel_revLOC")
 
             self.revFeetLocList.extend(mirroredRevFeet)
 
@@ -730,7 +778,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.sizeLabel.setText(str(value))
 
     def syncSliderToSelection(self):
-        """When a locator is selected, set the slider/label to its current scale."""
+        """
+        When a locator is selected, set the slider/label to its current scale.
+        """
+
         if not self.isVisible():
             return
         
@@ -748,14 +799,30 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 return  # just sync to the first locator found
 
     def mirrorLocs(self):
+        """
+        Mirrors selected locators and deduplicates the locator list afterwards.
+        """
+
         mirror.mirrorLocators()
         self.locatorList[:] = list(dict.fromkeys(self.locatorList))
                 
     def symmetryToggle(self, checked, symmetry, checkBox):
+        """
+        Connects or disconnects live symmetry for the given locator set.
+        Freezes transforms before connecting so offsets don't contaminate the connection.
+        Unchecks and warns if no locators are found.
+
+            Parameters:
+                checked (bool): Whether symmetry is being enabled or disabled.
+                symmetry: The symmetry instance to toggle.
+                checkBox: The checkbox that triggered the toggle, used for blockSignals.
+        """
+
         if checked:
             locs = cmds.ls("*_GUIDE", type='transform')
             cmds.makeIdentity(locs, a = True, t = True, r = True)
 
+        if not self.locatorList:
             if not symmetry.locatorList:
                 checkBox.blockSignals(True)
                 try:
@@ -772,6 +839,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
             symmetry.disconnectSymmetry()
     
     def unparentClicked(self): 
+        """
+        Unparents the full locator hierarchy for individual editing.
+        Disables symmetry and spine customization while guides are separated.
+        Tracks parented state so closeEvent can restore if needed.
+        """
+
         self.locsParentedState = False
         if self.locatorSymmetry.isChecked():
             self.locatorSymmetry.setChecked(False)
@@ -782,16 +855,26 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         self.spineCustomizationState = self.spineCustomization.isChecked()
         self.spineCustomization.setChecked(False)
-        self.guideHier.unparentHierarchy()
+        self.locatorHier.unparentHierarchy()
 
     def reparentClicked(self):
+        """
+        Restores the locator hierarchy and re-enables spine customization
+        to whatever state it was in before unparenting.
+        """
+
         self.locsParentedState = True
-        self.guideHier.reparentHierarchy()
+        self.locatorHier.reparentHierarchy()
         self.spineCustomization.setChecked(self.spineCustomizationState)
 
 
 
     def discoverGuides(self):
+        """
+        Scans the scene for anything ending in _GUIDE and repopulates
+        self.locatorList. Resets override colours to white.
+        """
+
         self.locatorList.clear()
 
         locators = cmds.ls("*_GUIDE", type='transform') or []
@@ -854,16 +937,20 @@ class AutoRiggerUI(QtWidgets.QDialog):
         cmds.undoInfo(openChunk=True)
         try:
             self.jointsList.clear()
+
             if self.locatorSymmetry.isChecked():
                 self.locatorSymmetry.setChecked(False)
-            
 
+            if not self.locsParentedState: 
+                self.locatorHier.reparentHierarchy()  
+
+        
             self.locatorList[:] = cmds.ls("*GUIDE", type="transform") or []
                 
             if len(self.locatorList)== 0:
                 return cmds.warning("No guide Locators found, please generate these before generating joints!")
 
-            for loc in self.locatorList:
+            for loc in self.locatorList:   
                 cmds.makeIdentity(loc, 
                             apply = True, 
                             t = True, 
@@ -895,7 +982,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
             cmds.undoInfo(closeChunk=True)
 
     def exportJointsjson(self):
-
 
         selected = cmds.ls(sl = True, type = 'joint')
 
@@ -940,7 +1026,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
     def jointOrientation(self):
         """
-        Sets a basis for joint orientation across the skeleton (FOR BIPEDAL ONLY SO FAR)
+        Sets a basis for joint orientation across the skeleton for standing creatures (so far)
 
         """
         cmds.undoInfo(openChunk=True)
@@ -966,7 +1052,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             
             missing = [j for j in required if not cmds.objExists(j)]
             if missing:
-                return
+                return cmds.warning("Automatic orientation not done due to missing", missing)
             
             cmds.joint("C_spineJA_JNT", 
                     e = True, 
@@ -1139,6 +1225,15 @@ class AutoRiggerUI(QtWidgets.QDialog):
             cmds.undoInfo(closeChunk=True)
     
     def previewPV(self, checked):
+        """
+        Creates a polygon face showing where the pole vector
+        will land for the selected limb chain.
+        Supports digigrade legs with a longer chain length.
+
+            Parameters:
+                checked (bool): Whether the visualizer is being turned on or off.
+        """
+
         cmds.undoInfo(openChunk=True)
         try:
             if not checked:
@@ -1175,15 +1270,17 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
     def toggleRigOptions(self, checked):
         """
-            Enables or disables UI elements based on the state of the button.
+        Enforces mutual exclusivity between rig option groups.
+        Twist and ribbons/stretchy can't be active at the same time.
+        Clears the relevant checkboxes when a conflicting group is enabled.
 
             Parameters:
-                checked (bool): Whether the button is checked.
+                checked (bool): Whether the sending group box was just enabled.
         """
 
         sender = self.sender() #returns the widget that sent the signal to run the function
 
-        if sender in (self.ribbonCheckGrp, self.stretchyLimbsCheckGrp) and checked:
+        if sender == self.ribbonCheckGrp and checked:
             self.twistCheckGrp.setChecked(False)
             self.twistArmCheck.setChecked(False)
             self.twistLegCheck.setChecked(False)
