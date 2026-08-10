@@ -13,7 +13,8 @@ def build(side, handOrder):
     attrs = config.attrs
     fingers = ['indexFng', 'middleFng', 'pinkyFng', 'thumb']
 
-
+    if cmds.ls("*FngMC*", type = 'joint'):
+        metacarpals = True
     
     wristJoint = f"{side}armJD_JNT"
     wrist = cmds.spaceLocator(n = f"{side}hand{suffix['locator']}")
@@ -22,6 +23,9 @@ def build(side, handOrder):
     for fng in fingers:
         index = string.ascii_uppercase[:3]
         fingerjoints = [f"{side}{fng}J{i}{suffix['joint']}" for i in index]
+        if metacarpals:
+            mcJoint =  cmds.listRelatives(fingerjoints[0], parent = True)[0]
+            fingerjoints.insert(0, mcJoint)
 
 
         fkLocs = []

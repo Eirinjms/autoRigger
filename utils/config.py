@@ -2,6 +2,7 @@ import enum
 from dataclasses import dataclass
 import maya.cmds as cmds # pyright: ignore[reportMissingImports]
 import os
+from contextlib import contextmanager
 
 
 suffix = {
@@ -17,12 +18,14 @@ suffix = {
     "pointCon"     : "_poCON",
     "orientCon"    : "_oCON",
     "aimCon"       : "_aimCON",
+    "scaleCon"     : "_scaleCON"
     "poleVectorCon": "_pvCON",
     "offsetGrp"    : "_OFFSET_GRP",
     "skinCluster"  : "_SKN",
     "switch"       : "_SWITCH",
     "curve"        : "_CURVE",
-    "ikspline"     : "_IKSpline"
+    "ikspline"     : "_IKSpline",
+    "cluster"      : "_CLS",
 }
 
 prefix = {
@@ -61,8 +64,8 @@ bipedal = {
     "IKlegs"       : 7,
     "IKswitchLegs" : 6,
     "PVlegs"       : -3,
-    "pvLegDistance": 10,
-    "pvArmDistance": 10,
+    "pvLegDistance": 0.75,
+    "pvArmDistance": 0.75,
     "FKarms"       : 10,
     "IKarms"       : 5,
     "IKswitchArm"  : 5,
@@ -154,7 +157,7 @@ def findRoots(nodes):
         if not cmds.listRelatives(node, parent=True):
             roots.append(node)
 
-    return roots
+    return roots[0]
 
 
 def setConstraintWeights(constraintType : str, con, values=None, query = False) -> list:
@@ -194,3 +197,11 @@ def setConstraintWeights(constraintType : str, con, values=None, query = False) 
 
 
     return weights
+
+@contextmanager
+def mayaUndo():
+    cmds.undoInfo(openChunk=True)
+    try:
+        yield
+    finally:
+        cmds.undoInfo(closeChunk=True)

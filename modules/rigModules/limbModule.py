@@ -95,11 +95,10 @@ class limbBuild:
         for joints in self.jointBaseName: 
             joint = f"{self.side}{joints}{config.suffix['joint']}"
             self.joints.append(joint)
-        print(self.joints)
 
         self.startJoints = self.joints[:-1]
         self.endJoints = self.joints[1:]
-        print(self.startJoints, self.endJoints)
+
 
     def dupeJoints(self):
         '''
@@ -331,14 +330,9 @@ class limbBuild:
         self.K = om.MVector(cmds.xform(self.ikJoints[1], q=True, ws=True, t=True))
         self.A = om.MVector(cmds.xform(self.ikJoints[-1], q=True, ws=True, t=True))
 
-        print(self.ikJoints)
-        print(cmds.ikHandle(self.ikHandle, q=True, sj=True))
-        print(cmds.ikHandle(self.ikHandle, q=True, ee=True))
-
-        print(self.H, "\n", self.K, "\n", self.A)
-
         HK = self.K - self.H
         HA = self.A - self.H
+        KA = self.K - self.A
 
         dot = HK * HA
 
@@ -346,8 +340,10 @@ class limbBuild:
 
         projK = HK - proj
 
-        self.pv = (projK * self.pvDistance) + self.K
-        print(self.pv)
+        limbLength = HK.length() + KA.length()
+        pvDistance = limbLength * self.pvDistance
+
+        self.pv = (projK.normal() * pvDistance) + self.K
 
     def createPoleVector(self):
         '''
@@ -374,7 +370,7 @@ class limbBuild:
         cmds.parent(self.pvLoc, self.ikGrp)
 
     def poleVectorLine(self):
-        points = [cmds.xform(self.joints[1], q = True, t = True), config.getGuidePos(self.pvLoc)[0]]
+        points = [cmds.xform(self.joints[0], q = True, t = True), cmds.xform(self.joints[-1], q = True, t = True), cmds.xform(f"{self.pvCtrl}.cv[6]", q=True, t=True, ws =True)]
         pvVizCurve = cmds.curve(n = f"{self.side}{self.limbType}_PV_VIZ", p = points,  d = 1)
 
         cmds.addAttr(self.switch, ln = "PV_VIZ_Line", at = "bool", dv = 1, k = True)
@@ -383,15 +379,27 @@ class limbBuild:
             f"{pvVizCurve}.visibility",
             force=True)
 
-        cluster0 = cmds.cluster(f"{pvVizCurve}.cv[0]", n=f"{pvVizCurve}_0_CLS")[1]
-        cluster1 = cmds.cluster(f"{pvVizCurve}.cv[1]", n=f"{pvVizCurve}_1_CLS")[1]
+        cluster0 = cmds.cluster(f"{pvVizCurve}.cv[0]", n=f"{pvVizCurve}_0_{config.suffix['cluster']}")[1]
+        cluster1 = cmds.cluster(f"{pvVizCurve}.cv[1]", n=f"{pvVizCurve}_1_{config.suffix['cluster']}")[1]
+        cluster2 = cmds.cluster(f"{pvVizCurve}.cv[2]", n=f"{pvVizCurve}_2_{config.suffix['cluster']}")[1]
 
-        cmds.pointConstraint(self.joints[1], cluster0, mo=False)
-        cmds.pointConstraint(self.pvLoc, cluster1, mo=False)
+        cmds.parentConstraint(self.joints[0], cluster0,  
+                              mo=False, 
+                              n = f"{cluster0}{config.suffix['parentCon']}")
+        
+        cmds.parentConstraint(self.pvCtrl, cluster1, 
+                              mo=True, 
+                              n = f"{cluster1}{config.suffix['parentCon']}")
+
+        cmds.parentConstraint(self.joints[-1], cluster2, 
+                              mo=True, 
+                              n = f"{cluster1}{config.suffix['parentCon']}")        
 
         cmds.setAttr(f"{cluster0}.visibility", 0)
         cmds.setAttr(f"{cluster1}.visibility", 0)
+        cmds.setAttr(f"{pvVizCurve}.template", 1)
 
+        self.pvVizGRP = cmds.group(pvVizCurve, cluster0, cluster1, n= "PV_VIZ_GRP")
 
     def poleVectorVisualization(self):
         '''
@@ -473,6 +481,9 @@ class limbBuild:
         if self.digitigradeLegs:
             cmds.connectAttr("global_CTRL.rotateY", 
                              f"{self.ikHandle}.twist")  #Assumes world rotations for global, change if needed
+
+        if self.poleVectorLine:
+            cmds.parent(self.pvVizGRP, self.ikGrp)
 
         cleanup.cleanupData['FKIK_switches'].append(IkswitchCtrl)
         cleanup.cleanupData[f"{self.limbType}_IK_GRP"].append(self.ikGrp)
@@ -627,6 +638,7 @@ class limbBuild:
             self.ribbonjoints = ribbonData['driverJoints']
 
             cleanup.cleanupData["Ribbons_GRP"].append(ribbonData['ribbonGrp'])
+            cleanup.cleanupData["ribbonCtrlGrp"].append(ribbonData['ribbonCtrls'])
 
     def squashNstretch(self):
 

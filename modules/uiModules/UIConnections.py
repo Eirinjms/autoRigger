@@ -24,7 +24,7 @@ import maya.mel as mel
 from autoRigger.modules.builderModules import buildRig, locatorBasedFunctions as locFunc, jointGeneration as jointGen
 from autoRigger.modules.rigModules.symmetrySetup import symmetry
 from autoRigger.modules.builderModules import ProceduralSpineCreation
-from autoRigger.utils import config, mirror, hierarchyModule as hier, proceduralLocatorChain as procLoc, rigSettings
+from autoRigger.utils import config, mirror, hierarchyModule as hier, proceduralLocatorChain as procLoc, jointOrientation as jointOrient
 import autoRigger.modules.rigModules.twistSetup as twistSetup
 
 
@@ -33,6 +33,7 @@ import autoRigger.modules.rigModules.twistSetup as twistSetup
 
 import importlib
 importlib.reload(jointGen)
+importlib.reload(jointOrient)
 importlib.reload(locFunc)
 importlib.reload(buildRig)
 importlib.reload(twistSetup)
@@ -100,6 +101,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.locatorHier = hier.hierarchyManager(self.locatorList, False, 'transform')
         self.revFeetHier = hier.hierarchyManager(self.revFeetLocList, False, 'transform')
         self.jointHier = hier.hierarchyManager(self.jointsList, True, 'joint')
+        self.jointOrient = jointOrient
 
         self.procSpine = ProceduralSpineCreation.ProceduralSpine()
         self.spineJoints = []
@@ -172,7 +174,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.spineAmntText = self.ui.findChild(QtWidgets.QLabel, "SpineAmnt_Number")
         self.spineCurveText = self.ui.findChild(QtWidgets.QLabel, "SpineCurve_text")
 
-        self.updateLocatorList = self.ui.findChild(QtWidgets.QPushButton, "rediscoverGuides_Btn")
+        self.orientJointsBtn = self.ui.findChild(QtWidgets.QPushButton, "autoOrientJoints_btn")
 
 
         #generative locator
@@ -203,6 +205,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.localRotationAxesToggle = self.ui.findChild(QtWidgets.QCheckBox, "LRA_checkBox")
         self.allLRA = self.ui.findChild(QtWidgets.QRadioButton, "LRA_all_radio")
         self.selectedLRA = self.ui.findChild(QtWidgets.QRadioButton, "LRA_selected_radio")
+
+        self.allOrientJoints = self.ui.findChild(QtWidgets.QRadioButton, "orientJoint_all_radio")
+        self.selectedOrientJoints = self.ui.findChild(QtWidgets.QRadioButton, "orientJoint_selected_radio")
+        self.endJntOrientsJoints = self.ui.findChild(QtWidgets.QRadioButton, "OnlyEndJoints_radio")
 
         defineNewJointList = self.ui.findChild(QtWidgets.QPushButton, "UseSelectedRoot_btn")
         self.newJointListText = self.ui.findChild(QtWidgets.QLineEdit, "selectedrootchain_text")
@@ -330,10 +336,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         if self.spineCustomization:
             self.spineCustomization.toggled.connect(self.spineUpdate)
-
-
-        if self.updateLocatorList:
-            self.updateLocatorList.clicked.connect(self.jointOrientation)
                 
             
         if self.locatorSymmetry:
@@ -404,6 +406,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         if self.localRotationAxesToggle:
             self.localRotationAxesToggle.toggled.connect(self.showLocalRotationAxes)
+
+        if self.orientJointsBtn:
+            self.orientJointsBtn.clicked.connect(self.jointOrientRadio)
 
 
     def closeEvent(self, event):
@@ -572,8 +577,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
         Only runs if a chain has already been generated this session.
         """
 
-        cmds.undoInfo(openChunk = True)
-        try:
+        with config.mayaUndo():
             self.locatorValue()
             if not self.locGuidesCreated:
                 return
@@ -587,9 +591,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
             for loc in self.generator.Locs:
                 if loc not in self.locatorList:
                     self.locatorList.append(loc)
-            
-        finally: 
-            cmds.undoInfo(closeChunk = True)
 
     def updateSizeLabelTwist(self, value):
         if self.twistLabel:
@@ -663,8 +664,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 locatorList (list): Target list to store created locators.
         """
         
-        cmds.undoInfo(openChunk = True)
-        try:
+        with config.mayaUndo():
             for root_name, root_data in presetData.items():
                 if cmds.objExists(root_name.replace('JNT', 'GUIDE')):
                     return cmds.warning("This preset has already been loaded")
@@ -685,8 +685,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
             cmds.select(clear = True)
             cmds.makeIdentity(locatorList, apply = True, t = True)
-        finally: 
-            cmds.undoInfo(closeChunk = True)
 
     def build_locator(self, locator_name: str, joint_data: dict, locatorList, storeLocators, parent=None):
         """
@@ -739,8 +737,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 filePath (str): Path to the preset. Opens a dialog if None.
         """
 
-        cmds.undoInfo(openChunk = True)
-        try:
+        with config.mayaUndo():
             self.revFeetLocList.clear()
             if cmds.objExists("L_backOfHeel_revLOC"):
                 return cmds.warning("Reverse Feet locators already in scene,"
@@ -753,8 +750,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.revFeetLocList.extend(mirroredRevFeet)
 
             cmds.select(clear = True)
-        finally: 
-            cmds.undoInfo(closeChunk = True)
 
     def locatorSize(self, value):
         if self.allLocatorsRadio and self.allLocatorsRadio.isChecked():
@@ -817,26 +812,26 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 symmetry: The symmetry instance to toggle.
                 checkBox: The checkbox that triggered the toggle, used for blockSignals.
         """
+        with config.mayaUndo():
+            if checked:
+                locs = cmds.ls("*_GUIDE", type='transform')
+                cmds.makeIdentity(locs, a = True, t = True, r = True)
 
-        if checked:
-            locs = cmds.ls("*_GUIDE", type='transform')
-            cmds.makeIdentity(locs, a = True, t = True, r = True)
-
-        if not self.locatorList:
-            if not symmetry.locatorList:
-                checkBox.blockSignals(True)
-                try:
-                    checkBox.setChecked(False)
-                finally: 
-                    checkBox.blockSignals(False)
+            if not self.locatorList:
+                if not symmetry.locatorList:
+                    checkBox.blockSignals(True)
+                    try:
+                        checkBox.setChecked(False)
+                    finally: 
+                        checkBox.blockSignals(False)
+                    
+                    return cmds.warning("No locators found, please generate these first")
                 
-                return cmds.warning("No locators found, please generate these first")
-            
-            else:
-                symmetry.locator_symmetry()
+                else:
+                    symmetry.locator_symmetry()
 
-        else:
-            symmetry.disconnectSymmetry()
+            else:
+                symmetry.disconnectSymmetry()
     
     def unparentClicked(self): 
         """
@@ -934,8 +929,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
         It is intended to be called once for each root locator. Child hierarchies
         are processed automatically through recursion.
         '''
-        cmds.undoInfo(openChunk=True)
-        try:
+        with config.mayaUndo():
             self.jointsList.clear()
 
             if self.locatorSymmetry.isChecked():
@@ -977,9 +971,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
             cmds.hide(roots)
 
             cmds.select(clear = True)   
-            
-        finally:
-            cmds.undoInfo(closeChunk=True)
 
     def exportJointsjson(self):
 
@@ -1003,135 +994,23 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
         self.exportJointsFilename.setText(filePath)
 
-    def defineJointListSel(self):
-        if not self.jointsList:
-            selected = cmds.ls(sl = True)
-            if len(selected) != 1:
-                cmds.warning("More than one root joint chosen, select ONE and try again")
-                return
-            
-            rootJoint = selected[0]
-            print(f"{rootJoint}selected")
+    def jointOrientRadio(self):
+        with config.mayaUndo():
+            if self.allOrientJoints.isChecked():
+                self.jointOrient.jointOrientation(self.digigradeCheck.isChecked())
+            elif self.selectedOrientJoints.isChecked():
+                self.jointOrient.orientSelectedJoints(self.digigradeCheck.isChecked())
+            elif self.endJntOrientsJoints.isChecked():
+                self.jointOrient.orientOnlyEndJoints()
 
-            self.jointsList.append(rootJoint)
-            jointChain = cmds.listRelatives(rootJoint, ad = True)
-            self.jointsList.extend(jointChain)
-
-            self.newJointListText.setText(rootJoint)
-            print(f"{rootJoint} chain set as new Joint List")
-            return self.jointsList
-        else: 
-            cmds.warning("Joint chain already generated")
-
-
-    def jointOrientation(self):
-        """
-        Sets a basis for joint orientation across the skeleton for standing creatures (so far)
-
-        """
-        cmds.undoInfo(openChunk=True)
-        try:
-            joints = cmds.ls(type='joint')
-            cmds.makeIdentity(joints, a = True, r = True)
-            roots = config.findRoots(cmds.ls("*JNT", type='joint'))
-            for jnt in roots: 
-                cmds.joint(jnt,                 
-                        e = True, 
-                    oj = "xyz", 
-                    sao = "yup", 
-                    ch = True, 
-                    zso = True)
-
-            required = [
-                "C_spineJA_JNT",
-                "L_armJD_JNT",
-                "R_armJD_JNT",
-                "L_middleFngJEnd_JNT",
-                "R_middleFngJEnd_JNT",
-            ]
-            
-            missing = [j for j in required if not cmds.objExists(j)]
-            if missing:
-                return cmds.warning("Automatic orientation not done due to missing", missing)
-            
-            cmds.joint("C_spineJA_JNT", 
-                    e = True, 
-                    oj = "xyz", 
-                    sao = "yup", 
-                    ch = True, 
-                    zso = True)
-            
-            #spinejoints
-            centerJoints = cmds.ls("C_*",
-                                type='joint')
-            
-            hipJoins = cmds.ls("*legJA", type = 'joint')
-            
-            feetJoints = cmds.ls("*legJC*", "*legJD*", type = 'joint')
-
-            if self.digigradeCheck.isChecked():
-                feetJoints = cmds.ls("*legJD*", type = 'joint')
-                children = cmds.listRelatives(feetJoints, children = True, type = 'joint')
-                feetJoints.extend(children)
-
-            self.jointHier.unparentHierarchy()
-
-            for joint in centerJoints:
-                if "jaw" in joint:
-                    continue
-                
-                pos = cmds.xform(joint, q = True, t = True, ws = True)
-                loc = cmds.spaceLocator(n = f"{joint}_temp")[0]
-                cmds.xform(loc, ws=True, t=(pos[0], pos[1] + 10, pos[2]))
-                cmds.delete(cmds.aimConstraint(loc, joint, 
-                                            offset = (90,0,0), 
-                                            aimVector = (1,0,0), 
-                                            upVector = (0,0,-1), 
-                                            worldUpType = 'scene'))
-                cmds.delete(loc) 
-
-            for joint in feetJoints:
-                pos = cmds.xform(joint, q = True, t = True, ws = True)
-                loc = cmds.spaceLocator(n = f"{joint}_temp")[0]
-                cmds.xform(loc, ws=True, t=(pos[0], pos[1] + 10, pos[2]))
-                cmds.delete(cmds.aimConstraint(loc, joint, 
-                                            offset = (0,0,0), 
-                                            aimVector = (0,1,0), 
-                                            upVector = (0,0,-1), 
-                                            worldUpType = 'scene'))
-                cmds.delete(loc) 
-
-            wristPairs = [
-                ("L_armJD_JNT", "L_middleFngJEnd_JNT"),
-                ("R_armJD_JNT", "R_middleFngJEnd_JNT")] 
-                
-            
-            for joint, aim in wristPairs:
-                cmds.delete(cmds.aimConstraint(aim, joint, 
-                                aimVector = (1,0,0),
-                                worldUpType = 'scene'))
-            
-            self.jointHier.reparentHierarchy()
-
-            #endjoints
-            for joint in self.jointsList:
-                if not cmds.objExists(joint):
-                    cmds.warning(f"{joint} does not exist, check your scene")
-                    continue
-                if not cmds.listRelatives(joint, c=True, type="joint"):
-                    cmds.joint(joint, e=True, zso=True, oj="none")
-            
             self.mirrorJoints()
-        finally:
-            cmds.undoInfo(closeChunk=True)
 
     def mirrorJoints(self):
         """
         Mirrors joints based on input from UI
         """
 
-        cmds.undoInfo(openChunk = True)
-        try: 
+        with config.mayaUndo(): 
             self.jointsList[:] = cmds.ls("*_JNT", type="joint") or []
 
             if len(self.jointsList) == 0:
@@ -1189,15 +1068,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
             
             cmds.select(cl = True)
             print(f"Joints mirrored {side}")
-        finally: 
-            cmds.undoInfo(closeChunk = True)
 
     def showLocalRotationAxes(self):
         """
             Toggles the visibility of local rotation axes on joints.
         """
-        cmds.undoInfo(openChunk = True)
-        try:
+        with config.mayaUndo():
             if len(self.jointsList) == 0:
                 try:
                     self.localRotationAxesToggle.blockSignals(True)
@@ -1221,8 +1097,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             if not self.localRotationAxesToggle.isChecked():
                 for joint in self.jointsList:
                     cmds.setAttr(f"{joint}.displayLocalAxis", 0)
-        finally:
-            cmds.undoInfo(closeChunk=True)
+
     
     def previewPV(self, checked):
         """
@@ -1234,8 +1109,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 checked (bool): Whether the visualizer is being turned on or off.
         """
 
-        cmds.undoInfo(openChunk=True)
-        try:
+        with config.mayaUndo():
             if not checked:
                 if cmds.objExists("*_PV_Visualization"):
                     cmds.delete(cmds.ls("*_PV_Visualization"))
@@ -1259,10 +1133,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 return
 
             locFunc.poleVectorVisualization(chain[:chainlength], pvDistance=10)
+        cmds.select(clear=True)
 
-        finally:
-            cmds.select(clear=True)
-            cmds.undoInfo(closeChunk=True)
             
     # ─────────────────────────────────────────────────────────────────────────
     # Rig options

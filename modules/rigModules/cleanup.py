@@ -36,7 +36,13 @@ def cleanup():
     #Automated color selection based on name
     shapes.ctrlColour()
 
-    skeleton = cmds.ls('root_JNT')
+    skeleton = 'root_JNT'
+    skeletonGrp = cmds.group(skeleton, n = "skeleton_GRP")
+    deformersGrp = cmds.group(em = True, n = "deformers")
+    dntGrp = cmds.group(em = True, n = "DO_NOT_TOUCH")
+
+
+
     ikGrps = cmds.ls('*_IK_GRP')
     spineStart = cmds.ls("*spineJA_BND_LOC")[0]
     spineEnd = cmds.ls("*spineJEnd_BND_LOC")[0]
@@ -50,9 +56,9 @@ def cleanup():
 
     ribbonGrps = cmds.ls("*RIBBONS*GRP", type='transform') or []
     if ribbonGrps: 
-       ribbongrp = cmds.group(ribbonGrps, n = "Ribbons_GRP")
+       ribbongGrp = cmds.group(ribbonGrps, n = "Ribbons_GRP")
     else:
-        ribbongrp = []
+        ribbonGrp = []
 
     righelpergrp = "rig_helpers_GRP"
     if cmds.objExists(righelpergrp):
@@ -60,7 +66,7 @@ def cleanup():
         if not children:
             cmds.delete(righelpergrp)
         if children: 
-            cmds.parent(righelpergrp, globalCtrl)
+            cmds.parent(righelpergrp, deformersGrp)
 
     legFKs = cmds.ls('*_leg_FK_GRP')
     armFKs = cmds.ls('*_armJA_LOC')
@@ -79,11 +85,14 @@ def cleanup():
         else: 
             continue 
 
+
+    cmds.parent(skeletonGrp, dntGrp, deformersGrp)
+    cmds.parent(ribbonGrp, dntGrp)
     cmds.parent(fistCtrl, handGrps)
     cmds.parent(fkikSwitch, ikGrp)
     cmds.parent(armFKs, neck, spineEnd)
     cmds.parent(legFKs, spineStart)
-    cmds.parent(ribbongrp, spineFK, spineStart, spineEnd, ikGrp, handGrps, headGRP, hipSpace, skeleton, globalCtrl)
+    cmds.parent(spineFK, spineStart, spineEnd, ikGrp, handGrps, headGRP, hipSpace, skeleton, globalCtrl)
 
     locs = cmds.ls("*LOC*", s = True)
     for loc in locs:
@@ -143,6 +152,9 @@ cleanup = {
 
         ikGrp : [fkikSwitch],
         }
+
+        deformers : skeletonGrp,
+                    dntGrp,
 
     for parent, child in cleanup.items():
         cmds.parent(child, parent)

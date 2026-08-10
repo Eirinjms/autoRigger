@@ -59,7 +59,7 @@ class hierarchyManager:
             if not self.nodeList:
                 return cmds.warning("No Hierarchy found")
             if len(self.hierarchy) != 0: 
-                return cmds.warning("Hierarchy already saved, please reparent first!")            
+                return cmds.warning("Hierarchy already unoarented, please reparent first!")            
 
             self.saveHierarchy()
             for node in self.hierarchy:
@@ -79,9 +79,18 @@ class hierarchyManager:
         try:
             if self.freezeTrans:
                 for node in self.hierarchy:
-                    cmds.makeIdentity(node, apply = True, r = True)
+                    if cmds.objExists(node):
+                        cmds.makeIdentity(node, apply = True, r = True)
+                    else: 
+                        continue
             for child, parent in self.hierarchy.items():
                 if parent:
+                    if not cmds.objExists(parent):
+                        cmds.warning(f"{parent} not found, moving to next joint")
+                        continue
+                    if not cmds.objExists(child):
+                        cmds.warning(f"{child} not found, moving to next joint")
+                        continue
                     cmds.parent(child,parent)
             
             self.hierarchy.clear()

@@ -2,6 +2,7 @@ import maya.cmds as cmds  # pyright: ignore[reportMissingImports]
 import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports]
 import maya.mel as mel
 import autoRigger.utils.config as config  # pyright: ignore[reportMissingImports]
+import cleanup 
 
 class RibbonMaker:
     def __init__(self, limb, side, numDrivers, numFollicles, startJoint, endJoint, switch):
@@ -244,15 +245,15 @@ class RibbonMaker:
         """
 
         self.ribbonGrp = cmds.group(em=True, name=f"{self.name}_RIBBONS_GRP")
-        ctrlGrp = cmds.group(em = True, n = f"{self.name}_CTRL_GRP", parent = self.ribbonGrp)
+        self.ctrlGrp = cmds.group(em = True, n = f"{self.name}_CTRL_GRP", parent = self.ribbonGrp)
         self.geoGrp = cmds.group(em=True, name=f"{self.name}_geo_GRP", parent=self.ribbonGrp)
         self.folliclesGrp = cmds.group(em=True, name=f"{self.name}_follicles_GRP", parent=self.ribbonGrp)
         self.driversGrp = cmds.group(em=True, name=f"{self.name}_drivers_GRP", parent=self.ribbonGrp)
 
-        cmds.parentConstraint(self.startJoint, ctrlGrp, 
+        cmds.parentConstraint(self.startJoint, self.ctrlGrp, 
                               n= f"{self.name}{config.suffix['parentCon']}",  #ensures the controlers follow the limb (i) realize after fixing stretch that the same could be applied but go away
                               mo = False)
-        cmds.parent(self.startLoc, ctrlGrp)
+        cmds.parent(self.startLoc, self.ctrlGrp)
 
         cmds.parent(self.RibbonPlane, self.geoGrp)
         cmds.parent(self.ribbonFollicles,self.folliclesGrp)
@@ -271,15 +272,10 @@ class RibbonMaker:
                 f"{self.switch}.Ribbon_Ctrls",
                 f"{self.startLoc}.visibility")
 
-        """for loc in self.locs:
-            parentcon = cmds.parentConstraint(self.endJoint, self.startJoint,                       # maya quirk: 
-                                              loc,                                                  # A two-target parentConstraint (with one target weight set to 0)
-                                              n = f"{loc}{self.suffix['pointCon']}",                # produces correct ribbon spacing. A single-target parentConstraint does not
-                                              mo = True)[0]                                         # Could be more negatives, to be tested. 
+        globalCtrl = cleanup.cleanupData['globalCtrl']
+        print(globalCtrl)
 
-            weights = cmds.parentConstraint(parentcon, q=True, wal=True)
-
-            cmds.setAttr(f"{parentcon}.{weights[0]}", 0)"""
+        cmds.scaleConstraint(globalCtrl, self.ctrlGrp, n = f"{self.ctrlGrp}{config.suffix['scaleCon']}")
 
     def addSineBlendshape(self):
 
@@ -299,8 +295,7 @@ class RibbonMaker:
         return self.twistBSplane, twistHandle
 
     def addBlendshapeControls(self):
-        sineBs = cmds.blendShape(self.sineBSplane, self.RibbonPlane, n = f"{self.name}_sine_BS" )
-        twistBs = cmds.blendShape(self.twistBSplane, self.RibbonPlane, n = f"{self.name}_twist_BS" )
+        deformerBS = cmds.blendShape(self.sineBSplane, self.twistBSplane, self.RibbonPlane, n = f"{self.name}_deformer_BS" )
 
         if not cmds.attributeQuery("Ribbon_Deformers", node=self.switch, exists=True):  
             cmds.addAttr(self.switch, ln = "Ribbon_Deformers", at = "enum", en = "____________", k = True)
@@ -376,4 +371,5 @@ class RibbonMaker:
             "bindJoints":   self.BindJoints,
             "driverJoints": self.driverJoints,
             "follicles":    self.ribbonFollicles,
+            "ribbonCtrls":  self.ctrlGrp,
         }

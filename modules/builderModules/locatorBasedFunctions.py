@@ -35,7 +35,7 @@ def mirrorLocators(self, sel):
 
 
 def locator_symmetry(self): 
-    cmds.undoInfo(openChunk = True)
+
     self.leftAttrs = []
     self.rightAttrs = []
     self.reverseNodes = []
@@ -65,10 +65,9 @@ def locator_symmetry(self):
                         self.rightAttrs.append(rightAttr)
                     
             print(f"successfully connected {left} with {right}")
-    cmds.undoInfo(closeChunk = True)
 
 def disconnectSymmetry(self):
-    cmds.undoInfo(openChunk = True)
+
     if self.leftAttrs and cmds.isConnected(self.leftAttrs[0], self.rightAttrs[0]):
         for leftNode, RightNode in zip(self.leftAttrs, self.rightAttrs):
             cmds.disconnectAttr(leftNode, RightNode)
@@ -76,7 +75,6 @@ def disconnectSymmetry(self):
         print("Successfully disconnected symmetry from all nodes")
     else:
         print("no connections found")
-    cmds.undoInfo(closeChunk = True)
 
 def symmetryToggle(self, checked):
 
@@ -85,10 +83,6 @@ def symmetryToggle(self, checked):
 
     else:
         self.disconnectSymmetry()
-
-import maya.cmds as cmds  # pyright: ignore[reportMissingImports]
-import maya.api.OpenMaya as om  # pyright: ignore[reportMissingImports]
-
 
 def getGuidePos(locator):
     '''

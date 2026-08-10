@@ -13,6 +13,9 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QTabWidget" name="RiggingStages_Tab">
@@ -27,6 +30,33 @@
        <width>370</width>
        <height>570</height>
       </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    border-radius: 5px;
+	background-color: #6a6a6a;
+    border: 1px solid #707070;
+    padding: 4px 10px;
+}
+
+QPushButton:hover {
+    background-color: #7e7e7e;
+}
+
+QPushButton:pressed {
+    background-color: #d00068;
+}
+
+
+QSlider::handle:horizontal {
+    background: #ff3183;	
+	border-radius: 5px;
+}
+
+QSlider::handle:horizontal:disabled {
+    background: #a66c83;
+}
+</string>
      </property>
      <property name="currentIndex">
       <number>0</number>
@@ -160,11 +190,16 @@
        <widget class="QPushButton" name="pushButton">
         <property name="geometry">
          <rect>
-          <x>320</x>
+          <x>300</x>
           <y>10</y>
-          <width>16</width>
-          <height>16</height>
+          <width>31</width>
+          <height>20</height>
          </rect>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton {
+    border-radius: 2px;
+}</string>
         </property>
         <property name="text">
          <string>?</string>
@@ -676,7 +711,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>440</y>
+         <y>330</y>
          <width>341</width>
          <height>71</height>
         </rect>
@@ -698,6 +733,9 @@
         </property>
         <property name="toolTipDuration">
          <number>5000</number>
+        </property>
+        <property name="styleSheet">
+         <string notr="true"/>
         </property>
         <property name="text">
          <string>Export JSON</string>
@@ -724,9 +762,9 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>110</y>
+         <y>80</y>
          <width>341</width>
-         <height>101</height>
+         <height>241</height>
         </rect>
        </property>
        <property name="title">
@@ -776,8 +814,8 @@
        <widget class="QPushButton" name="mirrorJointOrientation_Btn">
         <property name="geometry">
          <rect>
-          <x>10</x>
-          <y>60</y>
+          <x>20</x>
+          <y>70</y>
           <width>121</width>
           <height>23</height>
          </rect>
@@ -796,7 +834,7 @@
         <property name="geometry">
          <rect>
           <x>160</x>
-          <y>60</y>
+          <y>70</y>
           <width>77</width>
           <height>18</height>
          </rect>
@@ -807,12 +845,15 @@
         <property name="checked">
          <bool>true</bool>
         </property>
+        <attribute name="buttonGroup">
+         <string notr="true">buttonGroup_3</string>
+        </attribute>
        </widget>
        <widget class="QRadioButton" name="jointMirror_rightToLeft_radio">
         <property name="geometry">
          <rect>
-          <x>250</x>
-          <y>60</y>
+          <x>240</x>
+          <y>70</y>
           <width>77</width>
           <height>18</height>
          </rect>
@@ -820,13 +861,201 @@
         <property name="text">
          <string>R -&gt; L</string>
         </property>
+        <attribute name="buttonGroup">
+         <string notr="true">buttonGroup_3</string>
+        </attribute>
+       </widget>
+       <widget class="Line" name="line_2">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>50</y>
+          <width>321</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+       <widget class="QRadioButton" name="LRA_selected_radio">
+        <property name="geometry">
+         <rect>
+          <x>260</x>
+          <y>120</y>
+          <width>77</width>
+          <height>18</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Selected</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">buttonGroup</string>
+        </attribute>
+       </widget>
+       <widget class="QCheckBox" name="LRA_checkBox">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>120</y>
+          <width>161</width>
+          <height>18</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>show Local Rotation Axes</string>
+        </property>
+       </widget>
+       <widget class="QRadioButton" name="LRA_all_radio">
+        <property name="geometry">
+         <rect>
+          <x>180</x>
+          <y>120</y>
+          <width>71</width>
+          <height>18</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>All</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">buttonGroup</string>
+        </attribute>
+       </widget>
+       <widget class="Line" name="line">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>140</y>
+          <width>321</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+       <widget class="QRadioButton" name="OnlyEndJoints_radio">
+        <property name="geometry">
+         <rect>
+          <x>160</x>
+          <y>170</y>
+          <width>151</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Only End Joints</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">buttonGroup_2</string>
+        </attribute>
+       </widget>
+       <widget class="QPushButton" name="autoOrientJoints_btn">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>200</y>
+          <width>151</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Allows the tool to work on scenebased guides</string>
+        </property>
+        <property name="toolTipDuration">
+         <number>5000</number>
+        </property>
+        <property name="statusTip">
+         <string>Allows the tool to work on scenebased guides</string>
+        </property>
+        <property name="text">
+         <string>Auto-orient Joints</string>
+        </property>
+       </widget>
+       <widget class="Line" name="line_3">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>100</y>
+          <width>321</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+       <widget class="QRadioButton" name="orientJoint_all_radio">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>170</y>
+          <width>71</width>
+          <height>18</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>All</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">buttonGroup_2</string>
+        </attribute>
+       </widget>
+       <widget class="QRadioButton" name="orientJoint_selected_radio">
+        <property name="geometry">
+         <rect>
+          <x>80</x>
+          <y>170</y>
+          <width>77</width>
+          <height>18</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Selected</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">buttonGroup_2</string>
+        </attribute>
+       </widget>
+       <widget class="QCheckBox" name="DigiGradeLegs_btn_3">
+        <property name="geometry">
+         <rect>
+          <x>190</x>
+          <y>200</y>
+          <width>111</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Digitigrade Legs</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
        </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_5">
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>340</y>
+         <y>410</y>
          <width>341</width>
          <height>91</height>
         </rect>
@@ -924,165 +1153,50 @@
         </property>
        </widget>
       </widget>
-      <widget class="QGroupBox" name="groupBox_10">
+      <widget class="QPushButton" name="GenerateJoints_Bipedal">
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>220</y>
+         <y>20</y>
          <width>341</width>
-         <height>101</height>
+         <height>41</height>
         </rect>
        </property>
-       <property name="title">
-        <string>Local Rotation Axes</string>
+       <property name="toolTip">
+        <string>Generates joints based on the guides</string>
        </property>
-       <widget class="QRadioButton" name="LRA_selected_radio">
-        <property name="geometry">
-         <rect>
-          <x>260</x>
-          <y>30</y>
-          <width>77</width>
-          <height>18</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Selected</string>
-        </property>
-       </widget>
-       <widget class="QRadioButton" name="LRA_all_radio">
-        <property name="geometry">
-         <rect>
-          <x>180</x>
-          <y>30</y>
-          <width>71</width>
-          <height>18</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>All</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-       <widget class="QCheckBox" name="LRA_checkBox">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>30</y>
-          <width>161</width>
-          <height>18</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>show Local Rotation Axes</string>
-        </property>
-       </widget>
-       <widget class="QPushButton" name="rediscoverGuides_Btn">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>60</y>
-          <width>141</width>
-          <height>23</height>
-         </rect>
-        </property>
-        <property name="toolTip">
-         <string>Allows the tool to work on scenebased guides</string>
-        </property>
-        <property name="toolTipDuration">
-         <number>5000</number>
-        </property>
-        <property name="statusTip">
-         <string>Allows the tool to work on scenebased guides</string>
-        </property>
-        <property name="text">
-         <string>Auto-orient Joints</string>
-        </property>
-       </widget>
-       <widget class="QCheckBox" name="DigiGradeLegs_btn_3">
-        <property name="geometry">
-         <rect>
-          <x>170</x>
-          <y>60</y>
-          <width>111</width>
-          <height>20</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Digitigrade Legs</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-        <property name="checked">
-         <bool>false</bool>
-        </property>
-       </widget>
+       <property name="toolTipDuration">
+        <number>5000</number>
+       </property>
+       <property name="text">
+        <string>Generate Joints</string>
+       </property>
       </widget>
-      <widget class="QGroupBox" name="groupBox_14">
+      <widget class="Line" name="line_4">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>10</y>
-         <width>341</width>
-         <height>91</height>
+         <x>-20</x>
+         <y>0</y>
+         <width>441</width>
+         <height>20</height>
         </rect>
        </property>
-       <property name="title">
-        <string>Define Joints</string>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
        </property>
-       <widget class="QPushButton" name="UseSelectedRoot_btn">
-        <property name="geometry">
-         <rect>
-          <x>210</x>
-          <y>60</y>
-          <width>121</width>
-          <height>23</height>
-         </rect>
-        </property>
-        <property name="toolTip">
-         <string>Set the filename in the textBox, and export the selected chain</string>
-        </property>
-        <property name="toolTipDuration">
-         <number>5000</number>
-        </property>
-        <property name="text">
-         <string>Use selected Root</string>
-        </property>
-       </widget>
-       <widget class="QLineEdit" name="selectedrootchain_text">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>60</y>
-          <width>191</width>
-          <height>20</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>rootJoint</string>
-        </property>
-       </widget>
-       <widget class="QPushButton" name="GenerateJoints_Bipedal">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>20</y>
-          <width>321</width>
-          <height>23</height>
-         </rect>
-        </property>
-        <property name="toolTip">
-         <string>Generates joints based on the guides</string>
-        </property>
-        <property name="toolTipDuration">
-         <number>5000</number>
-        </property>
-        <property name="text">
-         <string>Generate Joints</string>
-        </property>
-       </widget>
+      </widget>
+      <widget class="Line" name="line_5">
+       <property name="geometry">
+        <rect>
+         <x>-50</x>
+         <y>60</y>
+         <width>441</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
       </widget>
      </widget>
      <widget class="QWidget" name="tab_2">
@@ -1108,9 +1222,9 @@
       <widget class="QGroupBox" name="StretchyLimbs_Grpbox">
        <property name="geometry">
         <rect>
-         <x>0</x>
+         <x>10</x>
          <y>220</y>
-         <width>351</width>
+         <width>341</width>
          <height>51</height>
         </rect>
        </property>
@@ -1165,9 +1279,9 @@
        </property>
        <property name="geometry">
         <rect>
-         <x>0</x>
+         <x>10</x>
          <y>280</y>
-         <width>351</width>
+         <width>341</width>
          <height>131</height>
         </rect>
        </property>
@@ -1336,9 +1450,9 @@
       <widget class="QGroupBox" name="groupBox_11">
        <property name="geometry">
         <rect>
-         <x>0</x>
+         <x>10</x>
          <y>10</y>
-         <width>351</width>
+         <width>341</width>
          <height>101</height>
         </rect>
        </property>
@@ -1614,9 +1728,9 @@
       <widget class="QGroupBox" name="TwistJoints_Grpbox">
        <property name="geometry">
         <rect>
-         <x>0</x>
+         <x>10</x>
          <y>120</y>
-         <width>351</width>
+         <width>341</width>
          <height>92</height>
         </rect>
        </property>
@@ -1703,9 +1817,9 @@
       <widget class="QGroupBox" name="StretchyLimbs_Grpbox_2">
        <property name="geometry">
         <rect>
-         <x>0</x>
+         <x>10</x>
          <y>420</y>
-         <width>351</width>
+         <width>341</width>
          <height>51</height>
         </rect>
        </property>
@@ -1742,4 +1856,9 @@
  </widget>
  <resources/>
  <connections/>
+ <buttongroups>
+  <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup_3"/>
+  <buttongroup name="buttonGroup"/>
+ </buttongroups>
 </ui>

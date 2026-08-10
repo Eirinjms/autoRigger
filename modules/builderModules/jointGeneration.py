@@ -106,30 +106,3 @@ class jointGeneration():
 
         return {}
 
-    
-
-
-'''
-DEVELOPER NOTE — Export/Import call chains
-==========================================
-
-EXPORT (joints → JSON):
-    jointExportJSON(file_name)
-        └── skeleton_dict_result(rootJoint)
-                └── get_joint_hierarchy(joint)   ← recurses through children
-        └── build_json(file_name)                ← writes self.result to disk
-
-    skeleton_dict_result builds and stores the dict on self.result.
-    build_json just writes whatever is on self.result.
-    You only need these two calls because get_joint_hierarchy and
-    build_skeleton_dict are internal steps — jointExportJSON is the
-    only public entry point you should call from outside the class.
-
-IMPORT (JSON → locators):
-    import_json_locators()
-        └── build_locator(joint_name, joint_data, parent)  ← recurses through children
-
-    import_json_locators reads the file and kicks off the recursion.
-    build_locator handles both creation and parenting in one pass.
-    Again, one public entry point — import_json_locators — is all you need.
-'''
