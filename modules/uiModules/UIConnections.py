@@ -1,5 +1,5 @@
 #QT IMPORTS 
-from PySide6 import QtWidgets, QtGui # pyright: ignore[reportMissingImports]
+from PySide6 import QtWidgets, QtGui, QtCore # pyright: ignore[reportMissingImports]
 from PySide6.QtCore import QFile # pyright: ignore[reportMissingImports]
 from PySide6.QtUiTools import QUiLoader # pyright: ignore[reportMissingImports]
 from PySide6.QtWidgets import QFileDialog # pyright: ignore[reportMissingImports]
@@ -32,6 +32,7 @@ import autoRigger.modules.rigModules.twistSetup as twistSetup
 
 
 import importlib
+import importlib.util
 importlib.reload(jointGen)
 importlib.reload(jointOrient)
 importlib.reload(locFunc)
@@ -114,11 +115,13 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.prefix = [config.prefix['left'], config.prefix['right']]
 
         self.setWindowIcon(QtGui.QIcon(config.find_file_path("logo.png")))
-        self.setWindowTitle("AutoRigger V01")
+        self.setWindowTitle("AutoRigger V.1.0")
         self.setObjectName("AutoRiggerV01")
 
         self._loadUi(ui_file_path)
         self._connectWidgets()
+
+        self.infoWindow = None
 
     # ─────────────────────────────────────────────────────────────────────────
     # UI SETUP
@@ -262,6 +265,16 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.digigradeCheck = self.ui.findChild(QtWidgets.QCheckBox, "DigiGradeLegs_btn")
         self.digigradeCheck2 = self.ui.findChild(QtWidgets.QCheckBox, "DigiGradeLegs_btn_2")
         self.digigradeCheck3 = self.ui.findChild(QtWidgets.QCheckBox, "DigiGradeLegs_btn_3")
+
+
+        #-----------------------------------advancec -----------------------------------------------
+        self.scriptsList = self.ui.findChild(QtWidgets.QListWidget, "scriptLists_list")
+        self.advancedBuild = self.ui.findChild(QtWidgets.QPushButton, "advancedRig_btn")
+        self.addScript = self.ui.findChild(QtWidgets.QPushButton, "AddScript_btn")
+        self.removeScript = self.ui.findChild(QtWidgets.QPushButton, "removeScript_btn")
+        self.overrideBase = self.ui.findChild(QtWidgets.QCheckBox, "overrideRig_btn")
+
+        self.infobutton = self.ui.findChild(QtWidgets.QPushButton, "aboutMe_btn")
 
         #-----------------------------------connections -----------------------------------------------#
 
@@ -411,12 +424,49 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.orientJointsBtn.clicked.connect(self.jointOrientRadio)
 
 
+        #-----------------------------------Advanced -----------------------------------------------
+
+        if self.advancedBuild:
+            self.advancedBuild.clicked.connect(self.advancedBuildRig)
+        if self.addScript:
+            self.addScript.clicked.connect(self.addScriptFunc)
+        if self.removeScript:
+            self.removeScript.clicked.connect(self.removeScriptFunc)    
+
+        if self.infobutton:
+            self.infobutton.clicked.connect(self.openInfoWindow)
+
+
+    def openInfoWindow(self):
+        if self.infoWindow:
+            self.infoWindow.close()
+            self.infoWindow.deleteLater()
+
+        UI_File = "customScripts_info.ui"
+        infoPath = config.find_file_path("UI_Files", UI_File)
+
+        file = QFile(infoPath)
+        file.open(QFile.ReadOnly)
+
+        loader = QUiLoader()
+        self.infoWindow = loader.load(file, self)
+        self.infoWindow.setWindowIcon(QtGui.QIcon(config.find_file_path("logo.png")))
+
+        file.close()
+
+        self.infoWindow.adjustSize()
+        self.infoWindow.show()
+
+
+
     def closeEvent(self, event):
         if getattr(self, "selectionJob", None):
             cmds.scriptJob(kill=self.selectionJob, force=True)
         self.locatorSymmetry.setChecked(False)
         if not self.locsParentedState:
             self.locatorHier.reparentHierarchy()
+        if self.localRotationAxesToggle.isChecked():
+            self.localRotationAxesToggle.setChecked(False)
         super().closeEvent(event)
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -429,13 +479,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
         Checks reverse feet locators exist on both sides before proceeding.
         """
 
-        cmds.undoInfo(openChunk=True)
-        try:
+        with config.mayaUndo():
             expected = {
-                "outerSideFoot_LOC",
-                "innerSideFoot_LOC",
-                "frontFoot_LOC",
-                "backOfHeel_LOC"}
+                "outerSideFoot_revLOC",
+                "innerSideFoot_revLOC",
+                "frontFoot_revLOC",
+                "backOfHeel_revLOC"}
             sides = [
                 "L_",
                 "R_"
@@ -484,9 +533,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 self.digigradeLeg
             )
             print("\n ^^^^^^^^^^^^^^^^^^^^^^^^ \n ..Rig built!") 
-
-        finally:
-            cmds.undoInfo(closeChunk=True)
 
     def spineValue(self):
         value = self.spineSlider.value()
@@ -961,8 +1007,9 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
             for root in roots:
                 self.build_joint(root)
-            
-            self.jointOrientation()
+
+            self.allOrientJoints.setChecked(True)
+            self.jointOrientRadio()
 
             cmds.select(clear = True)   
             #locGrp = cmds.group(roots, n = "Guide_Locator_GRP")
@@ -1003,7 +1050,6 @@ class AutoRiggerUI(QtWidgets.QDialog):
             elif self.endJntOrientsJoints.isChecked():
                 self.jointOrient.orientOnlyEndJoints()
 
-            self.mirrorJoints()
 
     def mirrorJoints(self):
         """
@@ -1085,7 +1131,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             
             selectedJoints = cmds.ls(sl = True, 
                                     type = 'joint')
-
+            self.jointsList[:] = cmds.ls(type='joint')
             if self.allLRA.isChecked():
                 for joint in self.jointsList:
                     cmds.setAttr(f"{joint}.displayLocalAxis", 1)
@@ -1161,3 +1207,49 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.ribbonCheckGrp.setChecked(False)
             self.ribbonArmCheck.setChecked(False)
             self.ribbonLegCheck.setChecked(False)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # script import
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def addScriptFunc(self):
+        folder = config.find_file_path("Custom_Scripts")
+        filePath, _ = QtWidgets.QFileDialog.getOpenFileName(self.ui,
+                                                            "Load Script",
+                                                            folder,
+                                                            "Python Files (*.py)"
+                                                            )
+        if filePath:
+            fileName = os.path.basename(filePath)
+
+        """if fileName in self.scriptsList:
+            self.scriptsList.removeItem(fileName)"""
+
+        if not filePath:
+            return
+            
+        item = QtWidgets.QListWidgetItem(fileName)
+        item.setData(QtCore.Qt.UserRole, filePath)
+        self.scriptsList.addItem(item)
+
+
+    def removeScriptFunc(self):
+        selection = self.scriptsList.currentRow()
+
+        if selection >= 0:
+            self.scriptsList.takeItem(selection)
+
+    def advancedBuildRig(self):
+        with config.mayaUndo():
+            if not self.overrideBase.isChecked():
+                self.buildRigButton()
+
+            for i in range(self.scriptsList.count()):
+                item = self.scriptsList.item(i)
+                filePath = item.data(QtCore.Qt.UserRole)
+
+                spec = importlib.util.spec_from_file_location("customScript", filePath)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+
+                module.build()

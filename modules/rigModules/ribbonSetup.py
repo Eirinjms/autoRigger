@@ -2,7 +2,7 @@ import maya.cmds as cmds  # pyright: ignore[reportMissingImports]
 import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports]
 import maya.mel as mel
 import autoRigger.utils.config as config  # pyright: ignore[reportMissingImports]
-import cleanup 
+import autoRigger.modules.rigModules.cleanup as cleanup
 
 class RibbonMaker:
     def __init__(self, limb, side, numDrivers, numFollicles, startJoint, endJoint, switch):
@@ -60,6 +60,7 @@ class RibbonMaker:
 
         sinePlane, sineHandle = self.addSineBlendshape()
         twistPlane, twistHandle = self.addTwistDeformer()
+        ##curvePlane, curveHandle = self.addCurveDeformer()
 
         handles = [twistHandle, sineHandle]
 
@@ -193,7 +194,6 @@ class RibbonMaker:
             self.driverJoints.append(joint)
 
             if index == 0 or index == count -1:
-                print("obj is not", index)
                 cmds.parentConstraint(self.startJoint, joint, n = joint.replace(self.suffix['joint'], self.suffix['parentCon']), mo = True)
     
     def createDriverJointsControls(self):
@@ -276,6 +276,7 @@ class RibbonMaker:
         print(globalCtrl)
 
         cmds.scaleConstraint(globalCtrl, self.ctrlGrp, n = f"{self.ctrlGrp}{config.suffix['scaleCon']}")
+        cmds.scaleConstraint(globalCtrl, self.driversGrp, n = f"{self.driversGrp}{config.suffix['scaleCon']}")
 
     def addSineBlendshape(self):
 
@@ -288,11 +289,26 @@ class RibbonMaker:
     
     def addTwistDeformer(self):
         self.twistBSplane = cmds.duplicate(self.RibbonPlane, n = f"{self.name}_twist_blendshape")
-        cmds.xform(self.twistBSplane, t = [0, 0, -10], r = True, ws = True)
+        cmds.xform(self.twistBSplane, t = [0, 0, -15], r = True, ws = True)
         self.twistDef, twistHandle = cmds.nonLinear(self.twistBSplane, type='twist', n = f"{self.name}_twist")
         cmds.matchTransform(twistHandle, self.twistBSplane, pos=True, rot=True)
 
         return self.twistBSplane, twistHandle
+
+    def addCurveDeformer(self):
+        self.curveBSplane = cmds.duplicate(self.RibbonPlane, n = f"{self.name}_curve_blendshape")
+        cmds.xform(self.curveBSplane, t = [0, 0, -20], r = True, ws = True)
+        wireCurve = cmds.curve()
+        ##make a cluster pr start mid and end follicle. and rebuild the curve but keep start and end position. 
+        self.wireDef = cmds.wire(
+                        self.curveBSplane,
+                        w=wireCurve,
+                        n=f"{self.name}_wireDef")[0]
+        
+        cmds.matchTransform(self.curveBSplane, pos=True, rot=True)
+
+        return self.curveBSplane, self.wireDef
+
 
     def addBlendshapeControls(self):
         deformerBS = cmds.blendShape(self.sineBSplane, self.twistBSplane, self.RibbonPlane, n = f"{self.name}_deformer_BS" )

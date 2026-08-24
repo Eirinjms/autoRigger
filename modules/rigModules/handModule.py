@@ -15,6 +15,8 @@ def build(side, handOrder):
 
     if cmds.ls("*FngMC*", type = 'joint'):
         metacarpals = True
+    else:
+        metacarpals = False
     
     wristJoint = f"{side}armJD_JNT"
     wrist = cmds.spaceLocator(n = f"{side}hand{suffix['locator']}")
@@ -24,8 +26,9 @@ def build(side, handOrder):
         index = string.ascii_uppercase[:3]
         fingerjoints = [f"{side}{fng}J{i}{suffix['joint']}" for i in index]
         if metacarpals:
-            mcJoint =  cmds.listRelatives(fingerjoints[0], parent = True)[0]
-            fingerjoints.insert(0, mcJoint)
+            mcJoint =  cmds.listRelatives(fingerjoints[0], parent = True, type='joint')[0]
+            if not mcJoint == wristJoint:
+                fingerjoints.insert(0, mcJoint)
 
 
         fkLocs = []
@@ -60,8 +63,10 @@ def build(side, handOrder):
             if count >0:
                 cmds.parent(fkLocs[count], fkCtrls[count-1])
 
-            if 'JA' in fkLoc: 
+            if count == 0:
                 cmds.parent(fkLoc, wrist)
+
+
             else: 
                 continue
 

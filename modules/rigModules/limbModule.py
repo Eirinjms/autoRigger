@@ -4,6 +4,7 @@ import maya.mel as mel
 import autoRigger.utils.shapes as shapes
 from autoRigger.modules.rigModules import handModule, reverseFoot, twistSetup as twist, squashAndStretch as stretch, ribbonSetup as ribbon, cleanup
 import autoRigger.utils.config as config
+import autoRigger.utils.rigUtils as rigUtils
 import importlib
 
 importlib.reload(config)
@@ -137,51 +138,7 @@ class limbBuild:
         '''
         The FK setup for selected limb, creates a parented chain
         '''
-
-        self.fkLocs = []
-        self.fkCtrls = []
-
-        for fkCount, joint in enumerate(self.fkJoints): 
-            fkLoc = cmds.spaceLocator(n = joint.replace(self.suffix['joint'], self.suffix['locator']))[0]
-            self.fkLocs.append(fkLoc)
-
-            if 'legJA' in joint:
-                radius = self.size['FKlegs'] * 1.2 
-                normal=(1, 0, 0)
-
-            elif 'legJB' in joint:
-                radius = self.size['FKlegs']
-                normal=(1, 0, 0 )
-
-            elif 'legJC' in joint:
-                normal=(0, 1, 0 )
-                radius = self.size['FKlegs'] * 0.8
-            
-            elif 'armJB' in joint: 
-                normal = (1,0,0)
-                radius = self.size['FKarms'] * 1.2
-            
-            else: 
-                normal = (1,0,0)
-                radius = self.size['FKarms']
-
-            fkCtrl = cmds.circle(n = joint.replace(self.suffix['joint'], self.suffix['control']), 
-                                 r = radius, 
-                                 nr = normal)[0]
-
-            config.setRotationOrder([fkLoc, fkCtrl], self.rotOrder)
-            self.fkCtrls.append(fkCtrl)
-            
-            cmds.parent(fkCtrl, fkLoc)
- 
-            cmds.matchTransform(fkLoc, joint, pos = True, rot = True)
-
-            cmds.orientConstraint(fkCtrl, joint, 
-                                  n = joint.replace(self.suffix['joint'], self.suffix['orientCon']), 
-                                  mo = False)
-            
-            if fkCount > 0:
-                cmds.parent(self.fkLocs[fkCount], self.fkCtrls[fkCount-1])
+        self.fkLocs, self.fkCtrls = rigUtils.fkCreator(self.fkJoints)
 
 
     def ikSetup(self):
@@ -370,36 +327,58 @@ class limbBuild:
         cmds.parent(self.pvLoc, self.ikGrp)
 
     def poleVectorLine(self):
-        points = [cmds.xform(self.joints[0], q = True, t = True), cmds.xform(self.joints[-1], q = True, t = True), cmds.xform(f"{self.pvCtrl}.cv[6]", q=True, t=True, ws =True)]
-        pvVizCurve = cmds.curve(n = f"{self.side}{self.limbType}_PV_VIZ", p = points,  d = 1)
+        points = [cmds.xform(self.joints[0], q = True, t = True, ws = True), 
+                  cmds.xform(self.joints[-1], q = True, t = True, ws = True), 
+                  cmds.xform(f"{self.pvCtrl}.cv[6]", q=True, t=True, ws =True)]
 
-        cmds.addAttr(self.switch, ln = "PV_VIZ_Line", at = "bool", dv = 1, k = True)
-        cmds.connectAttr(
-            f"{self.switch}.PV_VIZ_Line",
-            f"{pvVizCurve}.visibility",
-            force=True)
-
-        cluster0 = cmds.cluster(f"{pvVizCurve}.cv[0]", n=f"{pvVizCurve}_0_{config.suffix['cluster']}")[1]
-        cluster1 = cmds.cluster(f"{pvVizCurve}.cv[1]", n=f"{pvVizCurve}_1_{config.suffix['cluster']}")[1]
-        cluster2 = cmds.cluster(f"{pvVizCurve}.cv[2]", n=f"{pvVizCurve}_2_{config.suffix['cluster']}")[1]
-
-        cmds.parentConstraint(self.joints[0], cluster0,  
-                              mo=False, 
-                              n = f"{cluster0}{config.suffix['parentCon']}")
+        pointsStraightLine = [cmds.xform(self.joints[1], q = True, t = True, ws = True), cmds.xform(f"{self.pvCtrl}.cv[6]", q=True, t=True, ws =True)]
         
-        cmds.parentConstraint(self.pvCtrl, cluster1, 
-                              mo=True, 
-                              n = f"{cluster1}{config.suffix['parentCon']}")
+        pvVizCurve = cmds.curve(n = f"{self.side}{self.limbType}_PV_VIZ", p = points,  d = 1)
+        pvVizStraightCurve = cmds.curve(n = f"{self.side}{self.limbType}_PV_straight_VIZ", p = pointsStraightLine,  d = 1)
+        curves = [pvVizCurve, pvVizStraightCurve]
 
-        cmds.parentConstraint(self.joints[-1], cluster2, 
-                              mo=True, 
-                              n = f"{cluster1}{config.suffix['parentCon']}")        
+        cmds.addAttr(self.switch, ln = "PV_VIZ_Line", at = "enum", en = "None : Line : Triangle", dv = 1, k = True)
 
-        cmds.setAttr(f"{cluster0}.visibility", 0)
-        cmds.setAttr(f"{cluster1}.visibility", 0)
-        cmds.setAttr(f"{pvVizCurve}.template", 1)
+        for index, curve in enumerate([pvVizStraightCurve, pvVizCurve]):
+            if index == 0:
+                name =f"{self.side}{self.limbType}_PV_straight_VIS_COND"
+            else: 
+                name = f"{self.side}{self.limbType}_PV_VIS_COND"
+            condition = cmds.shadingNode(
+                "condition",
+                asUtility=True,
+                n=name)
 
-        self.pvVizGRP = cmds.group(pvVizCurve, cluster0, cluster1, n= "PV_VIZ_GRP")
+            cmds.setAttr(f"{condition}.operation", 0)
+            cmds.setAttr(f"{condition}.secondTerm", index +1)
+
+            cmds.setAttr(f"{condition}.colorIfTrueR", 1)
+            cmds.setAttr(f"{condition}.colorIfFalseR", 0)
+
+            cmds.connectAttr(
+                f"{self.switch}.PV_VIZ_Line",
+                f"{condition}.firstTerm")
+
+            cmds.connectAttr(
+                f"{condition}.outColorR",
+                f"{curve}.visibility")
+
+        parents= [self.joints[0], self.pvCtrl, self.joints[-1]]
+        parentsSL = [self.joints[1], self.pvCtrl]
+
+        self.pvVizGRP = cmds.group(em = True, n= "PV_VIZ_GRP")
+        cmds.parent(pvVizCurve, self.pvVizGRP)
+        cmds.parent(pvVizStraightCurve, self.pvVizGRP)
+        for curve in (curves):
+            cmds.setAttr(f"{curve}.template", 1)
+            cmds.setAttr(f"{curve}.inheritsTransform", 0)
+
+        for parent, curve in zip([parents, parentsSL], [pvVizCurve, pvVizStraightCurve]):
+            for i, p in enumerate(parent):
+                cluster = cmds.cluster(f"{curve}.cv[{i}]", n=f"{curve}_{i}{config.suffix['cluster']}")[1]
+                cmds.parentConstraint(p, cluster, mo=False, n= f"{cluster}{config.suffix['parentCon']}")
+                cmds.setAttr(f"{cluster}.visibility", 0)
+                cmds.parent(cluster, self.pvVizGRP)
 
     def poleVectorVisualization(self):
         '''
@@ -482,8 +461,7 @@ class limbBuild:
             cmds.connectAttr("global_CTRL.rotateY", 
                              f"{self.ikHandle}.twist")  #Assumes world rotations for global, change if needed
 
-        if self.poleVectorLine:
-            cmds.parent(self.pvVizGRP, self.ikGrp)
+        cmds.parent(self.pvVizGRP, self.ikGrp)
 
         cleanup.cleanupData['FKIK_switches'].append(IkswitchCtrl)
         cleanup.cleanupData[f"{self.limbType}_IK_GRP"].append(self.ikGrp)
@@ -557,34 +535,60 @@ class limbBuild:
         worldLoc = cmds.spaceLocator(n =f"{self.side}arm_worldSpace{self.suffix['locator']}" )[0]
         clavSpaceLoc = cmds.spaceLocator(n = f"{self.side}arm_clavSpace{self.suffix['locator']}")[0]
         localSpaceLoc = cmds.spaceLocator(n = f"{self.side}arm_localSpace{self.suffix['locator']}")[0]
+        worldHandLoc = cmds.spaceLocator(n=f"{self.side}arm_worldSpaceHand{self.suffix['locator']}" )[0]
+        rotationLayer = cmds.spaceLocator(n=f"{self.side}{self.limbType}handRotation{self.suffix['locator']}" )[0]
 
         cmds.parent(self.ikLoc, localSpaceLoc)
-        cmds.parent(localSpaceLoc, self.ikGrp)
-
+        cmds.parent(localSpaceLoc, worldHandLoc, self.ikGrp)
+    
+        cmds.matchTransform(worldHandLoc, self.joints[-1])
+        cmds.matchTransform(rotationLayer, self.joints[-1])
         cmds.matchTransform(clavSpaceLoc, self.clavJnt, pos = True, rot = True)
-        cmds.matchTransform(worldLoc, f"{self.side}{self.jointBaseName[2]}{self.suffix['joint']}", pos = True, rot = True)
+        cmds.matchTransform(worldLoc, self.joints[-1], pos = True, rot = True)
+
+        cmds.parent(rotationLayer, self.ikLoc)
+        cmds.parent(self.ikCtrl, rotationLayer)
 
         #cmds.parent(hipLoc, spineLoc)
         cmds.parent(clavSpaceLoc, self.clavCtrl)
 
-        paCon = cmds.parentConstraint(worldLoc, clavSpaceLoc, self.hipLoc, self.ikLoc, mo = True, n = f"{self.side}spaceSwitch{self.suffix['parentCon']}")[0]
+        oCon = cmds.orientConstraint(worldHandLoc, rotationLayer, mo = True, n = f"{self.side}handRotation{self.suffix['orientCon']}")[0]
+        for axis in "XYZ":
+            if axis == "X" and self.side == "R_":
+                cmds.setAttr(f"{worldHandLoc}.rotate{axis}", 180)
+                print("tis worked")
+            else: 
+                cmds.setAttr(f"{worldHandLoc}.rotate{axis}", 0)
 
+        #seperate into position and orientation so we can drive rotation depending on if you want world or local. local must be driven by the parent constraint from the pos ones. but the pos ones go into ik with point
+        paCon = cmds.parentConstraint(worldLoc, clavSpaceLoc, self.hipLoc, self.ikLoc, mo = True, n = f"{self.side}spaceSwitch{self.suffix['parentCon']}")[0]
         cmds.parent(worldLoc, self.ikGrp)
+
 
         #make the switch
 
         cmds.addAttr(self.switch, ln = 'SPACES', at = "enum", en = "____________", k = True)
-    
-        cmds.addAttr(self.switch, ln = "Hand_Follow", at = "enum", en = " World : Clavicle : Hip ", k = True)
+
+        handFollow = "Hand_Follow"
+        cmds.addAttr(self.switch, ln = handFollow, at = "enum", en = " Arm : Clavicle : Hip ", k = True)
 
         weights  = config.setConstraintWeights("parent", paCon, query = True)
 
-        driver = f"{self.switch}.Hand_Follow"
+        driver = f"{self.switch}.{handFollow}"
 
-        for i, name in enumerate(weights ):
-            for dv in range(len(weights )):
+        for i, name in enumerate(weights):
+            for dv in range(len(weights)):
                 v = 1 if dv == i else 0
                 cmds.setDrivenKeyframe(name, cd=driver, dv=dv, v=v)
+
+
+        weights  = config.setConstraintWeights("orient", oCon, query = True)
+        orient = "Orient_hand_to_Global"
+        cmds.addAttr(self.switch, ln = orient, at = "bool", dv = 0, k = True)
+        driver = f"{self.switch}.{orient}"
+
+        for num in [0,1]:
+            cmds.setDrivenKeyframe(weights, cd=driver, dv=num, v=num)
 
     def poleVectorSpaceSwitch(self):
         '''
@@ -638,7 +642,6 @@ class limbBuild:
             self.ribbonjoints = ribbonData['driverJoints']
 
             cleanup.cleanupData["Ribbons_GRP"].append(ribbonData['ribbonGrp'])
-            cleanup.cleanupData["ribbonCtrlGrp"].append(ribbonData['ribbonCtrls'])
 
     def squashNstretch(self):
 

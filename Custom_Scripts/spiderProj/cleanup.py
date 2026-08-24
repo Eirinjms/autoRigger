@@ -5,7 +5,7 @@ import importlib
 importlib.reload(shapes)
 
 ##refactor this so that the modules fill in this dict instead of finding everything w maya cmds
-cleanupData = {
+cleanupData_spider = {
         "globalCtrl": [],
 
         "arm_IK_GRP": [],
@@ -32,7 +32,7 @@ cleanupData = {
         }
 
 def cleanup():
-    print(cleanupData)
+    print(cleanupData_spider)
     #Automated color selection based on name
     shapes.ctrlColour()
 

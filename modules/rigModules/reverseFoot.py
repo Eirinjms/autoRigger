@@ -20,10 +20,10 @@ def build(side, ikHandle, ikCtrl, switch, joints, digitigrade = False):
     locs = ['frontFoot', 'backOfHeel', 'innerSideFoot', 'outerSideFoot']
     
     #pivot LOCS (alr existign in scene)
-    frontLoc = f"{side}{locs[0]}{suffix['locator']}"
-    backLoc = f"{side}{locs[1]}{suffix['locator']}"
-    innerLoc = f"{side}{locs[2]}{suffix['locator']}"
-    outerLoc = f"{side}{locs[3]}{suffix['locator']}"
+    frontLoc = f"{side}{locs[0]}{suffix['rvlocator']}"
+    backLoc = f"{side}{locs[1]}{suffix['rvlocator']}"
+    innerLoc = f"{side}{locs[2]}{suffix['rvlocator']}"
+    outerLoc = f"{side}{locs[3]}{suffix['rvlocator']}"
 
     ankleJnt = joints[-1]
     ballJnt = cmds.listRelatives(ankleJnt, children = True)[0]

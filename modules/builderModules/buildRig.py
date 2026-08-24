@@ -63,8 +63,6 @@ def build(spineOrder,
         spineBuild.buildSpine()
     else: 
         return cmds.warning("Spine does not exist.")
-
-    #mel.eval('ikSpringSolver;')
     
     limbs=[]
     if len(cmds.ls("*arm*", type='joint')) != 0:

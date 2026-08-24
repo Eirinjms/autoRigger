@@ -35,7 +35,7 @@ def jointOrientation(digigrade):    ##to do; move out of UI.
     
     missing = [j for j in required if not cmds.objExists(j)]
     if missing:
-        return cmds.warning("Automatic orientation not done due to missing", missing)
+        return print("Automatic orientation fixes not done due to missing", missing)
     
     cmds.joint("C_spineJA_JNT", 
             e = True, 
@@ -85,7 +85,9 @@ def orientOnlyEndJoints():
     Zeroes orientation on all joints with no joint children.
     """
 
-    jointList = cmds.ls(type='joint')
+    jointList = cmds.ls(sl=True)
+    if not jointList:
+        jointList = cmds.ls(type='joint')
 
     for joint in jointList:
         if not cmds.objExists(joint):
@@ -143,6 +145,9 @@ def orientSelectedJoints(digigrade):
     for jnt in joints: 
         if "legJD" in jnt or "legJE" in jnt or "legJC" in jnt: 
             orientFeetJoints(digigrade)
+        elif "JEnd" in jnt: 
+            orientOnlyEndJoints()
+
         else: 
             cmds.joint(jnt,                 
                     e = True, 

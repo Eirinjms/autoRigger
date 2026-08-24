@@ -59,7 +59,7 @@ class hierarchyManager:
             if not self.nodeList:
                 return cmds.warning("No Hierarchy found")
             if len(self.hierarchy) != 0: 
-                return cmds.warning("Hierarchy already unoarented, please reparent first!")            
+                return cmds.warning("Hierarchy already unparented, please reparent first!")            
 
             self.saveHierarchy()
             for node in self.hierarchy:

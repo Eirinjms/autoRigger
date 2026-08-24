@@ -1,5 +1,5 @@
 {
-    "root_JA_JNT": {
+    "root_JNT": {
         "pos": [
             0.0,
             0.0,
@@ -18,7 +18,7 @@
                     113.12030394199321,
                     -0.4886500472284182
                 ],
-                "parent": "root_JA_JNT",
+                "parent": "root_JNT",
                 "jointOrientation": [
                     90.00000000000003,
                     -0.0,

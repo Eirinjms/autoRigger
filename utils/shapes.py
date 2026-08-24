@@ -1,6 +1,7 @@
 from unicodedata import name
 import maya.cmds as cmds # pyright: ignore[reportMissingImports]
 import maya.mel as mel # pyright: ignore[reportMissingImports]
+import autoRigger.utils.config as config
 
 # ------------------------------
 # ARROW
@@ -299,20 +300,11 @@ def gearCtrl(name, size, side, limb):
     (-0.923879, 0,  0.22961),]
     , n = name)
 
-    if side == "L_":
-        if limb == "leg":
-            innerCircle = cmds.circle(r = 0.7, n = "L_legInnerCircle", nr = (0,1,0))[0]
-        elif limb == "arm":
-            innerCircle = cmds.circle(r = 0.7, n = "L_armInnerCircle", nr = (0,1,0))[0]
-            
-    elif side == "R_":
-        if limb == "leg":
-            innerCircle = cmds.circle(r = 0.7, n = "R_legInnerCircle", nr = (0,1,0))[0]
-        elif limb == "arm":
-            innerCircle = cmds.circle(r = 0.7, n = "R_armInnerCircle", nr = (0,1,0))[0]
-
-    else: 
-     innerCircle = cmds.circle(r = 0.7, n = f"{side}_{limb}_InnerCircle", nr = (0,1,0))[0]   
+    innerCircle = cmds.circle(
+        r=0.7,
+        n=name.replace(config.suffix['control'], "InnerCircle"),
+        nr=(0,1,0)
+    )[0]
        
     innerShape = cmds.listRelatives(innerCircle, s=True)[0]
 

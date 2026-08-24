@@ -8,6 +8,7 @@ from contextlib import contextmanager
 suffix = {
     "joint"        : "_JNT",
     "locator"      : "_LOC",
+    "rvlocator"    : "_revLOC",
     "control"      : "_CTRL",
     "ikHandle"     : "_IKH",
     "fkik"         : "_FKIK",
@@ -18,7 +19,7 @@ suffix = {
     "pointCon"     : "_poCON",
     "orientCon"    : "_oCON",
     "aimCon"       : "_aimCON",
-    "scaleCon"     : "_scaleCON"
+    "scaleCon"     : "_scaleCON",
     "poleVectorCon": "_pvCON",
     "offsetGrp"    : "_OFFSET_GRP",
     "skinCluster"  : "_SKN",

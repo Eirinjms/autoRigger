@@ -12,7 +12,7 @@ def run_autorigger():
             widget.close()
             widget.deleteLater()
 
-    UI_File = "AutoRigger_v01.ui"
+    UI_File = "AutoRigger_v02.ui"
     autoRiggerWindow = con.AutoRiggerUI(config.find_file_path("UI_Files", UI_File))
     autoRiggerWindow.adjustSize()
     autoRiggerWindow.show()

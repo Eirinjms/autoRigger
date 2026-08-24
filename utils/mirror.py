@@ -41,8 +41,11 @@ def mirrorLocators(sel: str | list | None = None) -> list:
         for obj in sel: 
             if obj.startswith("L_"):
                 mirror = obj.replace("L_", "R_")
-            if obj.startswith("R_"):
-                mirror = obj.replace("R_", "L_")    
+            elif obj.startswith("R_"):
+                mirror = obj.replace("R_", "L_")  
+
+            else: 
+                mirror = f"{obj}_mirror"
 
             if cmds.objExists(mirror):
                 cmds.delete(mirror)
