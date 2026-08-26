@@ -3,10 +3,14 @@ import maya.cmds as cmds # pyright: ignore[reportMissingImports]
 import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports] 
 import maya.mel as mel
 import autoRigger.utils.shapes as shapes
-from autoRigger.utils import config, rigUtils
+from autoRigger.utils import config, rigUtils, jointOrientation
+import autoRigger.Custom_Scripts.spiderProj.cleanup as cleanup
 import importlib
 
 importlib.reload(config)
+importlib.reload(cleanup)
+importlib.reload(rigUtils)
+importlib.reload(jointOrientation)
 
 class spiderLegs: 
     def __init__(self, side, legIndex): 
@@ -23,9 +27,11 @@ class spiderLegs:
 
         self.fkIK = config.fkik
         self.attrs = config.attrs
-        self.prefix = config.prefix
+        self.prefix = side
 
         self.side = f"{side}_"
+
+        self.coxaJnt = f"{self.side}leg{self.legIndex}_JA{self.suffix['joint']}"
 
         self.pvDistance = self.size['pvLegDistance']
         index = 'BCDE' 
@@ -77,7 +83,8 @@ class spiderLegs:
         '''
         The FK setup for selected limb, creates a parented chain
         '''
-        rigUtils.fkCreator
+        self.fkLocs, self.fkCtrls = rigUtils.fkCreator(self.fkJoints, "orient")
+        cmds.delete(self.fkLocs[-1])
 
     def driverIK(self):
         self.driverJoints = []
@@ -93,30 +100,66 @@ class spiderLegs:
 
         for pos, name in zip(self.driverpositions, names):
             joint = cmds.joint(p = pos)
-            joint = cmds.rename(joint, f"{self.side}{self.limbType}{self.legIndex}driver_IK_{name}")
+            joint = cmds.rename(joint, f"{self.side}{self.limbType}{self.legIndex}_driver_IK_{name}")
             self.driverJoints.append(joint)
+
+        cmds.select(self.driverJoints, replace = True)
+        jointOrientation.orientSelectedJoints(False)
 
     def ikSetup(self):
         '''
         The IK setup for selected limb, creates the solver + control
         '''
+        baseName = f"{self.side}{self.limbType}{self.legIndex}"
+        solver = "ikRPsolver"
         self.ikHandle = cmds.ikHandle(n = self.ikJoints[0].replace(self.fkIK['ik'], self.suffix ['ikHandle']), 
                                  sj = self.ikJoints[0], 
                                  ee = self.ikJoints[-2],
-                                 sol = "ikRPsolver")[0]
+                                 sol = solver)[0]
         
-        self.driverIKHandle = cmds.ikHandle(n = f"{self.driverJoints[0]}{config.suffix['ikHandle']}", 
+        self.driverIKHandle = cmds.ikHandle(n = f"{self.side}{self.limbType}{self.legIndex}_driver{config.suffix['ikHandle']}", 
                                  sj = self.driverJoints[0], 
                                  ee = self.driverJoints[-1],
-                                 sol = "ikRPsolver")[0]
+                                 sol = solver)[0]
 
-        self.ikLoc = cmds.spaceLocator(n = "Foot_IK_LOC")[0]
+        self.clawIK = cmds.ikHandle(n = f"{baseName}_claw{config.suffix['ikHandle']}",
+                                    sj = self.ikJoints[-2],
+                                    ee = self.ikJoints[-1],
+                                    sol = solver)[0]
+
+        self.ikLoc = cmds.spaceLocator(n = f"{baseName}_Foot_IK_LOC")[0]
         self.ikCtrl = shapes.cubeCtrl(name = self.ikLoc.replace(config.suffix['locator'],
                                                       config.suffix['control']), 
-                                                      X = 4, Y =2, Z = 4)
+                                                      X = 6, Y = 6, Z = 6)
+
+
         cmds.parent(self.ikCtrl, self.ikLoc)
         cmds.matchTransform(self.ikLoc, self.joints[-1])
-        
+        cmds.matchTransform(self.ikLoc, self.coxaJnt, rot = True)
+
+        cmds.parent(self.driverIKHandle, self.ikCtrl)
+
+
+        #claw stuff
+        self.clawLoc = cmds.spaceLocator(n = f"{baseName}_claw{config.suffix['locator']}")[0]
+        self.clawCtrl = cmds.circle(n = f"{baseName}_claw{config.suffix['control']}")
+
+        cmds.parent(self.clawCtrl, self.clawLoc)
+        cmds.matchTransform(self.clawLoc, self.ikJoints[-2], pos = True, rot = True)
+
+        cmds.parent(self.clawLoc, self.ikCtrl)
+
+        cmds.parent(self.clawIK, self.clawCtrl)
+
+        rollLoc = cmds.spaceLocator(n = f"{baseName}_roll{config.suffix['locator']}")[0]
+        cmds.matchTransform(rollLoc, self.ikJoints[-2])
+        cmds.parent(rollLoc, self.clawCtrl)
+
+        cmds.parent(self.ikHandle, rollLoc)
+
+        oCon = cmds.orientConstraint(self.driverJoints[1], rollLoc, 
+                                     mo = True, 
+                                     n = f"{baseName}_{config.suffix['orientCon']}")
 
     def ikFkSwitch(self):
         '''
@@ -129,7 +172,7 @@ class spiderLegs:
             size = self.size['IKswitchArm']
 
         self.ikBNDLoc = cmds.spaceLocator(n = self.ikJoints[0].replace(self.suffix['joint'], '_BND' + self.suffix['locator'] )) [0]
-        self.switch = shapes.gearCtrl(name = f"{self.side}{self.limbType}_FKIK_switch{self.suffix['control']}", 
+        self.switch = shapes.gearCtrl(name = f"{self.side}{self.limbType}{self.legIndex}_FKIK_switch{self.suffix['control']}", 
                                  size = size, 
                                  side = self.side, 
                                  limb = self.limbType)
@@ -147,7 +190,20 @@ class spiderLegs:
         cmds.xform(self.switch, t = Transform, ro = (90, 0, 0))
         cmds.makeIdentity(self.switch, apply = True, t = True, r = True, s = True)
 
-        cmds.pointConstraint(self.ikBNDLoc, self.switch, n = self.switch + config.suffix['pointCon'], mo = True) 
+        textShape = cmds.textCurves(f = "Lucida Sans Unicode", o = True, t = self.legIndex)[0]
+        
+        cmds.xform(textShape, cp = True)
+        cmds.xform(textShape, s = (5,5,5), r = True, ws = True)
+        cmds.matchTransform(textShape, self.switch, pos = True, rot = True)
+        cmds.makeIdentity(textShape, apply = True, s = True, t = True, r = True)
+
+        textshapes = cmds.listRelatives(textShape, ad = True, type="nurbsCurve") or []
+        
+        cmds.parent(textshapes, self.switch, r = True, s = True)
+        cmds.delete(textShape)
+        
+
+        cmds.pointConstraint(self.ikCtrl, self.switch, n = self.switch + config.suffix['pointCon'], mo = True) 
 
         cmds.parentConstraint(f"{self.side}{self.jointBaseName[2]}{self.suffix['joint']}", self.ikBNDLoc, 
                               n = f"{self.side}{self.jointBaseName[0]}_BND{self.suffix['parentCon']}", 
@@ -195,11 +251,11 @@ class spiderLegs:
         '''
 
         #########################################################################
-        self.fkGrp = cmds.group(n = f"{self.side}{self.limbType}{self.fkIK['fk']}{self.suffix['group']}", em = True)
-        self.ikGrp = cmds.group(n = f"{self.side}{self.limbType}{self.fkIK['ik']}{self.suffix['group']}", em = True)
+        self.fkGrp = cmds.group(n = f"{self.side}{self.limbType}{self.legIndex}{self.fkIK['fk']}{self.suffix['group']}", em = True)
+        self.ikGrp = cmds.group(n = f"{self.side}{self.limbType}{self.legIndex}{self.fkIK['ik']}{self.suffix['group']}", em = True)
 
         cmds.parent(self.fkLocs[0], self.fkGrp)
-        cmds.parent(self.ikHandle, self.ikLoc, self.ikGrp)
+        cmds.parent(self.ikLoc, self.ikGrp)
 
         #########################################################################
 
@@ -242,7 +298,7 @@ class spiderLegs:
         Creates the poleVector control and parents it  
         '''
 
-        self.pvLoc = cmds.spaceLocator( n = f"{self.side}{self.limbType}_PV_LOC")[0]
+        self.pvLoc = cmds.spaceLocator(n = f"{self.side}{self.limbType}{self.legIndex}_PV{self.suffix['locator']}")[0]
 
         cmds.xform(self.pvLoc, t = self.pv)
         cmds.matchTransform(self.pvLoc, self.coxaJnt, rot = True)
@@ -252,14 +308,18 @@ class spiderLegs:
         else:
             size = self.size['PVlegs']
 
-        self.pvCtrl = shapes.pyramidCtrl(name = f"{self.side}{self.limbType}_PV{self.suffix['control']}", size = size)
+        self.pvCtrl = shapes.pyramidCtrl(name = f"{self.side}{self.limbType}{self.legIndex}_PV{self.suffix['control']}", size = size)
         cmds.parent(self.pvCtrl, self.pvLoc)
 
-        #cmds.matchTransform(self.pvCtrl, self.pvLoc, pos = True, rot = True)
+        cmds.matchTransform(self.pvCtrl, self.pvLoc, pos = True, rot = True)
+
+        if self.side == "L_":
+            cmds.xform(self.pvCtrl, ro = (-90,0,0))
+        else: 
+            cmds.xform(self.pvCtrl, ro = (90,0,0))
+        cmds.makeIdentity(self.pvCtrl, apply = True, t = True)
 
         pvCon = cmds.poleVectorConstraint(self.pvCtrl, self.ikHandle, n = self.ikJoints[0].replace(self.suffix['joint'], self.suffix['poleVectorCon']))
-
-        cmds.makeIdentity(self.pvCtrl, apply = True, t = True)
 
         cmds.parent(self.pvLoc, self.ikGrp)
 
@@ -270,17 +330,17 @@ class spiderLegs:
 
         pointsStraightLine = [cmds.xform(self.joints[1], q = True, t = True, ws = True), cmds.xform(f"{self.pvCtrl}.cv[6]", q=True, t=True, ws =True)]
         
-        pvVizCurve = cmds.curve(n = f"{self.side}{self.limbType}_PV_VIZ", p = points,  d = 1)
-        pvVizStraightCurve = cmds.curve(n = f"{self.side}{self.limbType}_PV_straight_VIZ", p = pointsStraightLine,  d = 1)
+        pvVizCurve = cmds.curve(n = f"{self.side}{self.limbType}{self.legIndex}_PV_VIZ", p = points,  d = 1)
+        pvVizStraightCurve = cmds.curve(n = f"{self.side}{self.limbType}{self.legIndex}_PV_straight_VIZ", p = pointsStraightLine,  d = 1)
         curves = [pvVizCurve, pvVizStraightCurve]
 
         cmds.addAttr(self.switch, ln = "PV_VIZ_Line", at = "enum", en = "None : Line : Triangle", dv = 1, k = True)
 
         for index, curve in enumerate([pvVizStraightCurve, pvVizCurve]):
             if index == 0:
-                name =f"{self.side}{self.limbType}_PV_straight_VIS_COND"
+                name =f"{self.side}{self.limbType}{self.legIndex}_PV_straight_VIS_COND"
             else: 
-                name = f"{self.side}{self.limbType}_PV_VIS_COND"
+                name = f"{self.side}{self.limbType}{self.legIndex}_PV_VIS_COND"
             condition = cmds.shadingNode(
                 "condition",
                 asUtility=True,
@@ -322,21 +382,22 @@ class spiderLegs:
     def coxa(self):
         '''
         cLAVICEL
-        '''            
-
-        self.coxaJnt = f"{self.side}leg{self.legIndex}_JA{self.suffix['joint']}"
-
+        ''' 
         self.coxaCtrl = cmds.circle(
-            n = self.coxaJnt.replace(config.suffix['joint'], config.suffix['control']),
+            n = f"{self.side}{self.limbType}{self.legIndex}_Coxa{config.suffix['control']}",
             r = self.size['clavs'],
             nr = (0,1,0))[0]
 
         self.coxaLoc = cmds.spaceLocator(
-            n=self.coxaJnt.replace(config.suffix['joint'], config.suffix['locator']))[0]
+            n = f"{self.side}{self.limbType}{self.legIndex}_Coxa{config.suffix['locator']}")[0]
 
         cmds.parent(self.coxaCtrl, self.coxaLoc)
 
         cmds.matchTransform(self.coxaLoc, self.coxaJnt, pos = True, rot = True)
+    
+        self.coxaSpace = cmds.spaceLocator(n = f"{self.side}{self.limbType}{self.legIndex}Coxa_Space{config.suffix['locator']}")
+        cmds.matchTransform(self.coxaSpace, self.coxaLoc)
+        cmds.parent(self.coxaSpace, self.coxaCtrl)
 
         cmds.orientConstraint(
             self.coxaCtrl,
@@ -351,21 +412,6 @@ class spiderLegs:
         # parent into FK chain
         cmds.parent(self.fkGrp, self.coxaCtrl)
 
-    def cleanup(self):
-        '''
-        Minor cleanup:
-            - hides fk/ik joints + ik handle
-            - creates a group for the ik switch to parent the bindlocator
-        
-        '''
-        IkswitchCtrl = cmds.group(em = True, w = True,n = f"{self.side}{self.limbType}_FKIK_switch{self.suffix['group']}") 
-
-        cmds.parent(self.ikBNDLoc,self.switch, IkswitchCtrl)
-
-        cmds.hide(self.fkJoints, self.ikJoints, self.ikHandle)
-
-        cmds.parent(self.pvVizGRP, self.ikGrp)
-
     def legSpaceSwitch(self):
         '''
         Creates the spaceswitches for legs
@@ -374,14 +420,22 @@ class spiderLegs:
             spineJnt: passed on from the spine module
         returns: alot of things im gnna guess. 
         '''
-        if self.limbType == 'leg':
+        localSpace = cmds.spaceLocator(n = f"{self.side}{self.limbType}{self.legIndex}_localSpace{config.suffix['locator']}")
+        cmds.parent(localSpace, self.ikGrp)
 
-            cmds.addAttr(self.switch, ln = 'SPACES', at = "enum", en = "____________", k = True)
-            #cmds.matchTransform(hipLoc, spineJnt, pos = True, rot = True
-            
-            cmds.addAttr(self.switch, ln = "Foot_Follow", at = "enum", en = "World : Hip", k = True)
+        cmds.addAttr(self.switch, ln = 'SPACES', at = "enum", en = "____________", k = True)
+        
+        cmds.addAttr(self.switch, ln = "Foot_Follow", at = "enum", en = "Local : Coxa : Prosoma", k = True)
 
+        prosomaSpace = cleanup.cleanupData_spider['prosomaSpace']
 
+        paCon = cmds.parentConstraint(localSpace, self.coxaSpace, prosomaSpace, self.ikLoc, mo = True, n = f"{self.side}spaces{config.suffix['parentCon']}")
+
+        weights = config.setConstraintWeights("parent", paCon, query = True)
+
+        driver = f"{self.switch}.Foot_Follow"
+
+        rigUtils.spaceSwitchConstraint(weights, driver)
 
     def poleVectorSpaceSwitch(self):
         '''
@@ -391,22 +445,49 @@ class spiderLegs:
             spineJnt: passed on from the spine module
         returns: alot of things im gnna guess. 
         '''
-        pvSpaceLoc = cmds.spaceLocator(n = f"{self.side}{self.limbType}_pv_Space{self.suffix['locator']}")[0]
+        pvSpaceLoc = cmds.spaceLocator(n = f"{self.side}{self.limbType}{self.legIndex}_pv_Space{self.suffix['locator']}")[0]
         
         cmds.delete(cmds.parentConstraint(self.pvLoc, pvSpaceLoc, mo = 0))
         
         cmds.parent(pvSpaceLoc, self.ikCtrl)
 
-        poConPV = cmds.parentConstraint(pvSpaceLoc, self.pvLoc, mo = False, n = f"{self.side}pv_SpaceSwitch{self.suffix['parentCon']}")[0]
+        poConPV = cmds.parentConstraint(pvSpaceLoc, self.pvLoc, mo = False, n = f"{self.side}{self.limbType}{self.legIndex}_pv_SpaceSwitch{self.suffix['parentCon']}")[0]
         
-        cmds.addAttr(self.switch, ln = f"{self.side}{self.limbType}Pole_Vector_Follow", at = "enum", en = f"World : {self.limbType}", k = True)
+        cmds.addAttr(self.switch, ln = f"{self.side}{self.limbType}{self.legIndex}_Pole_Vector_Follow", at = "enum", en = f"World : {self.limbType}", k = True)
 
-        driverPV = f"{self.switch}.{self.side}{self.limbType}Pole_Vector_Follow"
+        driverPV = f"{self.switch}.{self.side}{self.limbType}{self.legIndex}_Pole_Vector_Follow"
 
-        drivenPV = f"{poConPV}.{self.side}{self.limbType}_pv_Space_LOCW0"
+        drivenPV = f"{poConPV}.{self.side}{self.limbType}{self.legIndex}_pv_Space_LOCW0"
 
         cmds.setDrivenKeyframe(drivenPV, at = 'switchAttr', cd = driverPV, dv = 0, v = 0)
         cmds.setDrivenKeyframe(drivenPV, at = 'switchAttr', cd = driverPV, dv = 1, v = 1)
+
+
+    def cleanup(self):
+        '''
+        Minor cleanup:
+            - hides fk/ik joints + ik handle
+            - creates a group for the ik switch to parent the bindlocator
+        
+        '''
+        IkswitchCtrl = cmds.group(em = True, 
+                                  w = True,
+                                  n = f"{self.side}{self.limbType}{self.legIndex}_FKIK_switch{self.suffix['group']}") 
+
+        cmds.parent(self.ikBNDLoc,self.switch, IkswitchCtrl)
+
+        cmds.hide(self.fkJoints, 
+                  self.ikJoints, 
+                  self.ikHandle, 
+                  self.driverIKHandle, 
+                  self.clawIK)
+
+        cmds.parent(self.pvVizGRP, self.ikGrp)
+
+        cleanup.cleanupData_spider['leg_IK_GRP'][self.prefix].append(self.ikGrp)
+        cleanup.cleanupData_spider['leg_FK_GRP'][self.prefix].append(self.coxaLoc)
+        cleanup.cleanupData_spider['leg_Driver_JNT'][self.prefix].append(self.driverJoints[0])
+        cleanup.cleanupData_spider['FKIK_switches'][self.prefix].append(IkswitchCtrl)
     
     def buildLimb(self):
         self.dupeJoints()
@@ -434,8 +515,8 @@ def build():
     Builds the requested limb types for the specified sides.
     """
 
-    legIndex= "A"
-    sides = "L"
+    legIndex= "ABCD"
+    sides = "LR"
     for side in sides:
         for index in legIndex:
             spiderLegs(side,

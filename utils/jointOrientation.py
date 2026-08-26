@@ -147,6 +147,8 @@ def orientSelectedJoints(digigrade):
             orientFeetJoints(digigrade)
         elif "JEnd" in jnt: 
             orientOnlyEndJoints()
+        elif not cmds.listRelatives(jnt, children = True):
+            orientOnlyEndJoints()
 
         else: 
             cmds.joint(jnt,                 

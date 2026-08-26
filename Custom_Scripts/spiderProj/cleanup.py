@@ -6,29 +6,41 @@ importlib.reload(shapes)
 
 ##refactor this so that the modules fill in this dict instead of finding everything w maya cmds
 cleanupData_spider = {
-        "globalCtrl": [],
+        "globalCtrl"        : [],
 
-        "arm_IK_GRP": [],
-        "leg_IK_GRP": [],
-        "FKIK_switches": [],
+        "leg_IK_GRP"        :  {
+                "L" : [],
+                "R" : [] 
+                }, 
 
-        "headGRP": [],
-        "neckLoc": [],
+        "leg_FK_GRP"       : {
+                "L" : [],
+                "R" : []
+                },
 
-        "handCTRL_GRP": [],
-        "fist_CTRL_GRP": [],
+        "leg_Driver_JNT"    : {
+                "L" : [],
+                "R" : []
+                },
+        
+        "FKIK_switches"     : {
+                "L" : [],
+                "R" : []
+                },
 
-        "spine_FK_GRP": [],
-        "spineStart": [],
-        "spineEnd": [],
-        "hipSpace" : [],
+        "prosoma_FKs"       : [],
+        "coxa"              : [],
+        "chelicerae_FKs"    : {
+                "L" : [],
+                "R" : []
+                },
 
-        "arm_FK_GRP": [],
-        "leg_FK_GRP": [],
+        "abdomen_FKs"       : [],
 
-        "Ribbons_GRP": [],
+        "prosomaSpace"      : None,
 
-        "rig_helper_GRP": [],
+        "rig_helper_GRP"    : [],
+        "textShapes"        : [],
         }
 
 def cleanup():
@@ -40,123 +52,59 @@ def cleanup():
     skeletonGrp = cmds.group(skeleton, n = "skeleton_GRP")
     deformersGrp = cmds.group(em = True, n = "deformers")
     cmds.select(clear=True)
-    dntGrp = cmds.group(em = True, n = "DO_NOT_TOUCH")
+    #dntGrp = cmds.group(em = True, n = "DO_NOT_TOUCH")
 
-    ikGrps = cmds.ls('*_IK_GRP')
-    spineStart = cmds.ls("*spineJA_BND_LOC")[0]
-    spineEnd = cmds.ls("*spineJEnd_BND_LOC")[0]
-    spineFK = cmds.ls("spine_FK_GRP")[0]
-    fistCtrl = cmds.group(cleanupData['fist_CTRL_GRP'], n = "fist_CTRL_GRP")
-    handGrps = cmds.group(cmds.ls("*hand_LOC"), n = "handCTRL_GRP")
-    neck = cmds.ls('C_neckJA_LOC')[0]
-    headGRP = cmds.ls('head_GRP')[0]
+    prosomaFKs = cleanupData_spider['prosoma_FKs']
+    prosomaConnection = cleanupData_spider['prosoma_FKs'][0]
+    abdomenFks = cleanupData_spider['abdomen_FKs'][0]
+
+    l_chel = cmds.group(cleanupData_spider['chelicerae_FKs']['L'], n = "L_Chelicerae_GRP")
+    r_chel = cmds.group(cleanupData_spider['chelicerae_FKs']['R'], n = "R_Chelicerae_GRP")
+    cheliceraeFK_Grp = cmds.group(r_chel, l_chel, n = "Chelicerae_GRP")
+
+    l_drivers = cmds.group(cleanupData_spider['leg_Driver_JNT']['L'], n = "L_drivers_GRP")
+    r_drivers = cmds.group(cleanupData_spider['leg_Driver_JNT']['R'], n = "R_drivers_GRP")
+    driver_Grp = cmds.group(r_drivers, l_drivers, n = "Driver_JNTs_GRP")
+
+    L_leg_GRP = cmds.group(cleanupData_spider['leg_FK_GRP']['L'], n = "L_leg_FK_GRP")
+    R_leg_GRP = cmds.group(cleanupData_spider['leg_FK_GRP']['R'], n = "R_leg_FK_GRP")
+    fkGrp = cmds.group(L_leg_GRP, R_leg_GRP, n = "Leg_FK_GRP")
+
+    L_leg_switches_GRP = cmds.group(cleanupData_spider['FKIK_switches']['L'], n = "L_leg_FKIK_switch_GRP")
+    R_leg_switches_GRP = cmds.group(cleanupData_spider['FKIK_switches']['R'], n = "R_leg_FKIK_switch_GRP")
+
+    L_legIK_GRP = cmds.group(cleanupData_spider['leg_IK_GRP']['L'], n = "L_leg_IK_GRP")
+    R_legIK_GRP = cmds.group(cleanupData_spider['leg_IK_GRP']['R'], n = "R_leg_IK_GRP")
+    ikGrp = cmds.group(L_legIK_GRP, R_legIK_GRP, n = "Legs_IK_GRP")
+
+
     globalCtrl = "global_CTRL"
-    hipSpace = "hipSpace_LOC"
 
-    ribbonGrps = cmds.ls("*RIBBONS*GRP", type='transform') or []
-    if ribbonGrps: 
-       ribbonGrp = cmds.group(ribbonGrps, n = "Ribbons_GRP")
-    else:
-        ribbonGrp = []
+    fkikSwitch = cmds.group(R_leg_switches_GRP, L_leg_switches_GRP, n = "FKIK_Switches")
 
-    righelpergrp = config.RIG_HELPER_GRP
-    if cmds.objExists(righelpergrp):
-        children = cmds.listRelatives(righelpergrp, children = True)
-        if not children:
-            cmds.delete(righelpergrp)
-        if children: 
-            cmds.parent(righelpergrp, deformersGrp)
 
-    legFKs = cmds.ls('*_leg_FK_GRP')
-    armFKs = cmds.ls('*_armJA_LOC')
-    fkikSwitch = cmds.group(cmds.ls('*_switch_GRP'), n = "FKIK_switches")
-
-    ikGrp = cmds.group(ikGrps,  n = "IK_GRP")
-    armIKs = cmds.group(em = True, n = "arm_IK_GRP")
-    legIKs = cmds.group(em = True, n = "leg_IK_GRP")
-    cmds.parent(armIKs, legIKs, ikGrp)
-
-    for grp in ikGrps:
-        if "arm" in grp: 
-            cmds.parent(grp, armIKs)
-        if "leg" in grp:
-            cmds.parent(grp, legIKs)
-        else: 
-            continue 
-
-    cmds.select(clear=True)
-    cmds.parent(skeletonGrp, dntGrp, deformersGrp)
-    cmds.parent(ribbonGrp, dntGrp)
-    cmds.parent(fistCtrl, handGrps)
-    cmds.parent(fkikSwitch, ikGrp)
-    cmds.parent(armFKs, neck, spineEnd)
-    cmds.parent(legFKs, spineStart)
-    cmds.parent(spineFK, spineStart, spineEnd, ikGrp, handGrps, headGRP, hipSpace, globalCtrl)
-
-    cmds.scaleConstraint(cleanupData["globalCtrl"], skeletonGrp, n = f"{skeletonGrp}{config.suffix['scaleCon']}")
+    cmds.scaleConstraint(cleanupData_spider["globalCtrl"], skeletonGrp, n = f"{skeletonGrp}{config.suffix['scaleCon']}")
 
     locs = cmds.ls("*LOC*", s = True)
     for loc in locs:
         cmds.setAttr(f"{loc}.visibility", 0) 
 
+    cmds.hide(driver_Grp)
+ 
+    cleanup = {
+            prosomaConnection : [fkGrp,
+                                 abdomenFks,
+                                 cheliceraeFK_Grp],
 
-"""    
-ikGrps = cleanupData['ikGrps']
-spineEnd =  cleanupData['spineEnd']
-spineStart =  cleanupData['spineStart']
-spineFK = cleanupData['spine_FK_GRP']
-armFKs = cleanupData['arm_FK_GRP']
-legFKs = cleanupData['leg_FK_GRP']
-neck = cleanupData['neckLoc']
-handGrps = cmds.group(cleanupData['handCTRL_GRP'] + cleanupData['fist_CTRL_GRP'], n = "handGrp")   ## this seems wrong
-headGRP = cleanupData['headGRP']
-hipSpace = cleanupData['spine_FK_GRP']
-ribbonsGrp = cleanupData['spine_FK_GRP']
-rigHelperGrp = cleanupData['spine_FK_GRP']
-
-        "globalCtrl": [],
-
-        "arm_IK_GRP": [],
-        "leg_IK_GRP": [],
-        "FKIK_switches": [],
-
-        "headGRP": [],
-        "neckLoc": [],
-
-        "handCTRL_GRP": [],
-        "fist_CTRL_GRP": [],
-
-        "spine_FK_GRP": [],
-        "spineStart": [],
-        "spineEnd": [],
-        "hipSpace" : [],
-
-        "arm_FK_GRP": [],
-        "leg_FK_GRP": [],
-
-        "Ribbons_GRP": [],
-
-        "rig_helper_GRP": [],
-        }
-cleanup = {
-        globalCtrl : [ikGrps,
-                    spineEnd,
-                    spineStart,
-                    spineFK,
-                    handGrps,
-                    headGRP],
-
-        spineEnd : [armFKs,
-                    neck],
-
-        spineStart : [legFKs],
-
-        ikGrp : [fkikSwitch],
-        }
-
-        deformers : skeletonGrp,
-                    dntGrp,
+            ikGrp : [fkikSwitch],
+            
+            deformersGrp : [skeletonGrp, 
+                            driver_Grp],
+            globalCtrl : [ikGrp,
+                          deformersGrp,
+                          prosomaConnection],
+            }
 
     for parent, child in cleanup.items():
+        print(f"{child} parented to {parent}")
         cmds.parent(child, parent)
-#headgrp under neck, """

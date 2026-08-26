@@ -138,7 +138,7 @@ class limbBuild:
         '''
         The FK setup for selected limb, creates a parented chain
         '''
-        self.fkLocs, self.fkCtrls = rigUtils.fkCreator(self.fkJoints)
+        self.fkLocs, self.fkCtrls = rigUtils.fkCreator(self.fkJoints, "orient")
 
 
     def ikSetup(self):
@@ -576,10 +576,7 @@ class limbBuild:
 
         driver = f"{self.switch}.{handFollow}"
 
-        for i, name in enumerate(weights):
-            for dv in range(len(weights)):
-                v = 1 if dv == i else 0
-                cmds.setDrivenKeyframe(name, cd=driver, dv=dv, v=v)
+        rigUtils.spaceSwitchConstraint(weights, driver)
 
 
         weights  = config.setConstraintWeights("orient", oCon, query = True)
