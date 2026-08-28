@@ -14,6 +14,9 @@ importlib.reload(limbModule)
 importlib.reload(spineModule)
 importlib.reload(cleanup)
 
+outPutData = {
+    "Prints"       : []}
+
 def build(spineOrder, 
           spineJoints,
            armOrder, 

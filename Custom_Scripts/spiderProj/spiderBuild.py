@@ -17,7 +17,8 @@ def build():
     spiderBody.abdomenBuild()
     spiderBody.prosomaBuild()
     spiderBody.cheliceraeBuild()
+    spiderBody.cog()
     spiderLeg.build()
-    cleanup.cleanup()
     shapes.ctrlColour()
+    cleanup.cleanup()
     

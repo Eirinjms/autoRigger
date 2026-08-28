@@ -206,3 +206,9 @@ def mayaUndo():
         yield
     finally:
         cmds.undoInfo(closeChunk=True)
+
+
+def shapeSwap(shape, newshape):
+    newshapeShape = cmds.listRelatives(newshape, shapes=True, noIntermediate=True)[0]
+    cmds.parent(newshapeShape, shape, r=True, s=True)
+    cmds.delete(newshape)

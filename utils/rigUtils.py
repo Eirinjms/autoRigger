@@ -2,7 +2,7 @@ import maya.cmds as cmds
 import autoRigger.utils.config as config
 
 
-def fkCreator(joints, constraint):
+def fkCreator(joints, constraint, size):
     fkLocs = []
     fkCtrls = []
     for count, joint in enumerate(joints): 
@@ -10,7 +10,7 @@ def fkCreator(joints, constraint):
             fkLocs.append(fkLoc)
 
             fkCtrl = cmds.circle(n = joint.replace(config.suffix['joint'], config.suffix['control']), 
-                                r = 5, 
+                                r = size, 
                                 nr = (1,0,0))[0]
             fkCtrls.append(fkCtrl)
 

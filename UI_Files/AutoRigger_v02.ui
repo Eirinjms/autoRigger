@@ -2116,7 +2116,7 @@ QSlider::handle:horizontal:disabled {
          <rect>
           <x>10</x>
           <y>80</y>
-          <width>161</width>
+          <width>101</width>
           <height>23</height>
          </rect>
         </property>
@@ -2127,9 +2127,9 @@ QSlider::handle:horizontal:disabled {
        <widget class="QPushButton" name="removeScript_btn">
         <property name="geometry">
          <rect>
-          <x>180</x>
+          <x>130</x>
           <y>80</y>
-          <width>151</width>
+          <width>91</width>
           <height>23</height>
          </rect>
         </property>
@@ -2218,6 +2218,19 @@ QSlider::handle:horizontal:disabled {
         </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="removeScriptAll_btn">
+        <property name="geometry">
+         <rect>
+          <x>240</x>
+          <y>80</y>
+          <width>91</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Remove All</string>
         </property>
        </widget>
       </widget>

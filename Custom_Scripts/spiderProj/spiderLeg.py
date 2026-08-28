@@ -1,4 +1,3 @@
-import maya.cmds as cmds
 import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
 import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports] 
 import maya.mel as mel
@@ -52,7 +51,7 @@ class spiderLegs:
 
         '''
 
-        print(self.joints)
+
         self.fkJoints = []
         self.ikJoints = []
 
@@ -60,14 +59,15 @@ class spiderLegs:
 
         for i in self.fkIK.values():
             for joint in self.joints:
+                newName = joint.replace(config.suffix['joint'], i)
                 dup = cmds.duplicate(joint, 
                                      po = True, 
-                                     n = f"{joint}{i}")[0]
+                                     n = f"{newName}{config.suffix['joint']}")[0]
                 
                 if count == len(self.joints):
                     count = 0 
 
-                if dup.endswith(f"{self.fkIK['fk']}"):
+                if (f"{self.fkIK['fk']}") in dup:
                     self.fkJoints.append(dup)
                     if count > 0:
                         cmds.parent(self.fkJoints[count], self.fkJoints[count-1])
@@ -83,7 +83,7 @@ class spiderLegs:
         '''
         The FK setup for selected limb, creates a parented chain
         '''
-        self.fkLocs, self.fkCtrls = rigUtils.fkCreator(self.fkJoints, "orient")
+        self.fkLocs, self.fkCtrls = rigUtils.fkCreator(self.fkJoints, "orient", 7)
         cmds.delete(self.fkLocs[-1])
 
     def driverIK(self):
@@ -128,21 +128,27 @@ class spiderLegs:
                                     sol = solver)[0]
 
         self.ikLoc = cmds.spaceLocator(n = f"{baseName}_Foot_IK_LOC")[0]
+
+        size = 6
+        sizeY = 4
         self.ikCtrl = shapes.cubeCtrl(name = self.ikLoc.replace(config.suffix['locator'],
                                                       config.suffix['control']), 
-                                                      X = 6, Y = 6, Z = 6)
+                                                      X = size, Y = sizeY, Z = size)
 
 
         cmds.parent(self.ikCtrl, self.ikLoc)
         cmds.matchTransform(self.ikLoc, self.joints[-1])
         cmds.matchTransform(self.ikLoc, self.coxaJnt, rot = True)
 
+        cmds.xform(self.ikCtrl, t = (0, sizeY / 2, 0), ws = True, r=True)
+        cmds.makeIdentity(self.ikCtrl, a = True, r = True, t = True)
+
         cmds.parent(self.driverIKHandle, self.ikCtrl)
 
 
         #claw stuff
         self.clawLoc = cmds.spaceLocator(n = f"{baseName}_claw{config.suffix['locator']}")[0]
-        self.clawCtrl = cmds.circle(n = f"{baseName}_claw{config.suffix['control']}")
+        self.clawCtrl = cmds.circle(n = f"{baseName}_claw{config.suffix['control']}", nr = (1,0,0), r = 5)
 
         cmds.parent(self.clawCtrl, self.clawLoc)
         cmds.matchTransform(self.clawLoc, self.ikJoints[-2], pos = True, rot = True)
@@ -190,18 +196,25 @@ class spiderLegs:
         cmds.xform(self.switch, t = Transform, ro = (90, 0, 0))
         cmds.makeIdentity(self.switch, apply = True, t = True, r = True, s = True)
 
+        #Text letters_______________________________________________________
         textShape = cmds.textCurves(f = "Lucida Sans Unicode", o = True, t = self.legIndex)[0]
-        
         cmds.xform(textShape, cp = True)
-        cmds.xform(textShape, s = (5,5,5), r = True, ws = True)
+
+        textScale = 6
+        cmds.xform(textShape, s = (textScale, textScale, textScale), r = True, ws = True)
         cmds.matchTransform(textShape, self.switch, pos = True, rot = True)
         cmds.makeIdentity(textShape, apply = True, s = True, t = True, r = True)
 
-        textshapes = cmds.listRelatives(textShape, ad = True, type="nurbsCurve") or []
+        allTextShapes = cmds.listRelatives(textShape, ad = True, type="nurbsCurve") or []
+        textShapes = []
+        for shape in allTextShapes: 
+            new = cmds.rename(shape, f"{self.side}{self.legIndex}_shape_#")
+            textShapes.append(new)
+        cleanup.cleanupData_spider['textShapes'].extend(textShapes)
         
-        cmds.parent(textshapes, self.switch, r = True, s = True)
+        cmds.parent(*textShapes, self.switch, r = True, s = True)
         cmds.delete(textShape)
-        
+        #_____________________________________________________________________
 
         cmds.pointConstraint(self.ikCtrl, self.switch, n = self.switch + config.suffix['pointCon'], mo = True) 
 
@@ -317,7 +330,7 @@ class spiderLegs:
             cmds.xform(self.pvCtrl, ro = (-90,0,0))
         else: 
             cmds.xform(self.pvCtrl, ro = (90,0,0))
-        cmds.makeIdentity(self.pvCtrl, apply = True, t = True)
+        cmds.makeIdentity(self.pvCtrl, apply = True, t = True, r = True)
 
         pvCon = cmds.poleVectorConstraint(self.pvCtrl, self.ikHandle, n = self.ikJoints[0].replace(self.suffix['joint'], self.suffix['poleVectorCon']))
 
@@ -386,10 +399,11 @@ class spiderLegs:
         self.coxaCtrl = cmds.circle(
             n = f"{self.side}{self.limbType}{self.legIndex}_Coxa{config.suffix['control']}",
             r = self.size['clavs'],
-            nr = (0,1,0))[0]
+            nr = (1,0,0))[0]
 
         self.coxaLoc = cmds.spaceLocator(
             n = f"{self.side}{self.limbType}{self.legIndex}_Coxa{config.suffix['locator']}")[0]
+            
 
         cmds.parent(self.coxaCtrl, self.coxaLoc)
 
@@ -397,6 +411,12 @@ class spiderLegs:
     
         self.coxaSpace = cmds.spaceLocator(n = f"{self.side}{self.limbType}{self.legIndex}Coxa_Space{config.suffix['locator']}")
         cmds.matchTransform(self.coxaSpace, self.coxaLoc)
+
+        coxaFollow = cmds.duplicate(self.coxaLoc, n = f"{self.side}{self.limbType}{self.legIndex}_CoxaFollow{config.suffix['locator']}",
+                                     parentOnly=True)[0]
+
+        cleanup.cleanupData_spider['coxaFollows'].append(coxaFollow)
+
         cmds.parent(self.coxaSpace, self.coxaCtrl)
 
         cmds.orientConstraint(
@@ -407,10 +427,15 @@ class spiderLegs:
 
         cmds.makeIdentity(self.coxaCtrl, apply=True, t=True, r=True)
 
+        #cmds.parent(coxaFollow, cleanup.cleanupData_spider['prosoma_FKs'][0])
+        paCon = cmds.pointConstraint(coxaFollow, self.coxaCtrl, mo = True)
+
         shape = cmds.listRelatives(self.coxaCtrl, shapes=True, type="nurbsCurve")[0]
 
         # parent into FK chain
         cmds.parent(self.fkGrp, self.coxaCtrl)
+
+        
 
     def legSpaceSwitch(self):
         '''
@@ -453,9 +478,9 @@ class spiderLegs:
 
         poConPV = cmds.parentConstraint(pvSpaceLoc, self.pvLoc, mo = False, n = f"{self.side}{self.limbType}{self.legIndex}_pv_SpaceSwitch{self.suffix['parentCon']}")[0]
         
-        cmds.addAttr(self.switch, ln = f"{self.side}{self.limbType}{self.legIndex}_Pole_Vector_Follow", at = "enum", en = f"World : {self.limbType}", k = True)
+        cmds.addAttr(self.switch, ln = f"Pole_Vector_Follow", at = "enum", en = f"World : {self.limbType}", k = True)
 
-        driverPV = f"{self.switch}.{self.side}{self.limbType}{self.legIndex}_Pole_Vector_Follow"
+        driverPV = f"{self.switch}.Pole_Vector_Follow"
 
         drivenPV = f"{poConPV}.{self.side}{self.limbType}{self.legIndex}_pv_Space_LOCW0"
 

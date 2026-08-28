@@ -272,6 +272,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.advancedBuild = self.ui.findChild(QtWidgets.QPushButton, "advancedRig_btn")
         self.addScript = self.ui.findChild(QtWidgets.QPushButton, "AddScript_btn")
         self.removeScript = self.ui.findChild(QtWidgets.QPushButton, "removeScript_btn")
+        self.removeScriptAll = self.ui.findChild(QtWidgets.QPushButton, "removeScriptAll_btn")
+
         self.overrideBase = self.ui.findChild(QtWidgets.QCheckBox, "overrideRig_btn")
 
         self.infobutton = self.ui.findChild(QtWidgets.QPushButton, "aboutMe_btn")
@@ -432,6 +434,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
             self.addScript.clicked.connect(self.addScriptFunc)
         if self.removeScript:
             self.removeScript.clicked.connect(self.removeScriptFunc)    
+        if self.removeScriptAll:
+            self.removeScriptAll.clicked.connect(self.removeScriptFuncAll)
 
         if self.infobutton:
             self.infobutton.clicked.connect(self.openInfoWindow)
@@ -1214,30 +1218,34 @@ class AutoRiggerUI(QtWidgets.QDialog):
 
     def addScriptFunc(self):
         folder = config.find_file_path("Custom_Scripts")
-        filePath, _ = QtWidgets.QFileDialog.getOpenFileName(self.ui,
+        filePaths, _ = QtWidgets.QFileDialog.getOpenFileNames(self.ui,
                                                             "Load Script",
                                                             folder,
                                                             "Python Files (*.py)"
-                                                            )
-        if filePath:
+                                                             )
+        if not filePaths:
+            return
+        
+        for filePath in filePaths:
             fileName = os.path.basename(filePath)
 
-        """if fileName in self.scriptsList:
-            self.scriptsList.removeItem(fileName)"""
+            if self.scriptsList.findItems(fileName, QtCore.Qt.MatchExactly):
+                print("File already imported")
+                continue
 
-        if not filePath:
-            return
-            
-        item = QtWidgets.QListWidgetItem(fileName)
-        item.setData(QtCore.Qt.UserRole, filePath)
-        self.scriptsList.addItem(item)
+            item = QtWidgets.QListWidgetItem(fileName)
+            item.setData(QtCore.Qt.UserRole, filePath)
 
+            self.scriptsList.addItem(item)
 
     def removeScriptFunc(self):
         selection = self.scriptsList.currentRow()
 
         if selection >= 0:
             self.scriptsList.takeItem(selection)
+
+    def removeScriptFuncAll(self):
+        self.scriptsList.clear()
 
     def advancedBuildRig(self):
         with config.mayaUndo():

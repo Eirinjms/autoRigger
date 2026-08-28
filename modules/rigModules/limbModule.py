@@ -734,22 +734,25 @@ def build_limb_set(legOrder,
 
     for side in sides:
         for limb in limbs:
-            limbBuild(side, 
-                      limb, 
-                      legOrder, 
-                      armOrder, 
-                      handOrder, 
-                      stretchyArms, 
-                      stretchyLegs, 
-                      twistArms, 
-                      twistLegs, 
-                      twistAmount, 
-                      ribbonArm, 
-                      ribbonLegs, 
-                      digigradeLegs,
-                      ribbonDrivers, 
-                      ribbonBinds).buildLimb()
+            if cmds.ls(f"{side}_{limb}*", type = 'joint'):
+                limbBuild(side, 
+                        limb, 
+                        legOrder, 
+                        armOrder, 
+                        handOrder, 
+                        stretchyArms, 
+                        stretchyLegs, 
+                        twistArms, 
+                        twistLegs, 
+                        twistAmount, 
+                        ribbonArm, 
+                        ribbonLegs, 
+                        digigradeLegs,
+                        ribbonDrivers, 
+                        ribbonBinds).buildLimb()
+            else: 
+                print(f"[limbBuilder] : limb {side}_{limb} does not exist")
     
-    print("\n All Limbs built \n ")
+    print("\n All existing limbs built \n ")
 
         

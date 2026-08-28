@@ -435,3 +435,18 @@ def ctrlColour():
             cmds.setAttr(f"{shape}.overrideEnabled", 1)
             cmds.setAttr(f"{shape}.overrideColor", 16)
 
+def shapeColour(shapes):
+        print(shapes)
+        for shape in shapes:
+            cmds.setAttr(shape + ".overrideEnabled", 1)
+
+            if shape.startswith("C_"):
+                cmds.setAttr(shape + ".overrideColor", 17)
+
+            elif shape.startswith("L_"):
+                cmds.setAttr(shape + ".overrideColor", 18)
+
+            elif shape.startswith("R_"):
+                cmds.setAttr(shape + ".overrideColor", 20)
+            cmds.setAttr(f"{shape}.lineWidth", 2)
+
