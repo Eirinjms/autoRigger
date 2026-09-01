@@ -137,8 +137,8 @@ class spiderLegs:
 
 
         cmds.parent(self.ikCtrl, self.ikLoc)
-        cmds.matchTransform(self.ikLoc, self.joints[-1])
-        cmds.matchTransform(self.ikLoc, self.coxaJnt, rot = True)
+        cmds.matchTransform(self.ikLoc, self.joints[-1], pos = True)
+        #cmds.matchTransform(self.ikLoc, self.coxaJnt, rot = True)
 
         cmds.xform(self.ikCtrl, t = (0, sizeY / 2, 0), ws = True, r=True)
         cmds.makeIdentity(self.ikCtrl, a = True, r = True, t = True)

@@ -6,14 +6,12 @@ from PySide6.QtWidgets import QFileDialog # pyright: ignore[reportMissingImports
 from shiboken6 import wrapInstance # pyright: ignore[reportMissingImports]
 
 #system
-import string
 import os
 import json
-import math
-import cProfile
-import pstats
+from io import StringIO
+import sys
 
-#maya improts 
+#maya imports
 import maya.cmds as cmds # pyright: ignore[reportMissingImports]
 import maya.OpenMayaUI as omui # pyright: ignore[reportMissingImports]
 #from maya.app.general.mayaMixin import MayaQWidgetDockableMixin as MQwidgetMixin # pyright: ignore[reportMissingImports]
@@ -482,61 +480,86 @@ class AutoRiggerUI(QtWidgets.QDialog):
         Validates the scene state and fires the full rig build.
         Checks reverse feet locators exist on both sides before proceeding.
         """
+        output = StringIO()
+        old_stdout = sys.stdout
 
-        with config.mayaUndo():
-            expected = {
-                "outerSideFoot_revLOC",
-                "innerSideFoot_revLOC",
-                "frontFoot_revLOC",
-                "backOfHeel_revLOC"}
-            sides = [
-                "L_",
-                "R_"
-            ]
-            for side in sides: 
-                for e in expected: 
-                    if cmds.objExists(f"{side}{e}"):
-                        continue
-                    else:
-                        return cmds.warning("Error retrieving the reverse feet generators, delete remainding locators and re-generate")
+        try:
+            sys.stdout = output
+            with config.mayaUndo():
+                expected = {
+                    "outerSideFoot_revLOC",
+                    "innerSideFoot_revLOC",
+                    "frontFoot_revLOC",
+                    "backOfHeel_revLOC"}
+                sides = [
+                    "L_",
+                    "R_"
+                ]
+                for side in sides: 
+                    for e in expected: 
+                        if cmds.objExists(f"{side}{e}"):
+                            continue
+                        else:
+                            return cmds.warning("Error retrieving the reverse feet generators, delete remainding locators and re-generate")
 
-            if not self.jointsList:
-                cmds.warning("No joints found, please generate joints first")
-                return
+                if not self.jointsList:
+                    cmds.warning("No joints found, please generate joints first")
+                    return
 
-            self.defineRotOrder()   
-            self.stretchyArms = self.stretchyArmsCheck.isChecked()
-            self.stretchyLegs = self.stretchyLegsCheck.isChecked()
+                self.defineRotOrder()   
+                self.stretchyArms = self.stretchyArmsCheck.isChecked()
+                self.stretchyLegs = self.stretchyLegsCheck.isChecked()
 
-            self.ribbonArms = self.ribbonArmCheck.isChecked()
-            self.ribbonLegs = self.ribbonLegCheck.isChecked()
-            self.ribbonDrivers =self.ribbonDriversSlider.value()
-            self.ribbonBinds = self.ribbonBindsSlider.value()
+                self.ribbonArms = self.ribbonArmCheck.isChecked()
+                self.ribbonLegs = self.ribbonLegCheck.isChecked()
+                self.ribbonDrivers =self.ribbonDriversSlider.value()
+                self.ribbonBinds = self.ribbonBindsSlider.value()
 
-            twistArms = self.twistArmCheck.isChecked()
-            twistLegs = self.twistLegCheck.isChecked()
-            twistAmount = self.twistSlider.value()
-            self.digigradeLeg = self.digigradeCheck.isChecked()
+                twistArms = self.twistArmCheck.isChecked()
+                twistLegs = self.twistLegCheck.isChecked()
+                twistAmount = self.twistSlider.value()
+                self.digigradeLeg = self.digigradeCheck.isChecked()
 
-            buildRig.build(
-                self.spineOrder,
-                self.spineJoints,     
-                self.armOrder,
-                self.legOrder,
-                self.handOrder,
-                self.neckOrder,
-                self.stretchyArms,
-                self.stretchyLegs,
-                twistAmount,
-                twistArms,
-                twistLegs,
-                self.ribbonArms,
-                self.ribbonLegs,
-                self.ribbonDrivers,
-                self.ribbonBinds,
-                self.digigradeLeg
-            )
-            print("\n ^^^^^^^^^^^^^^^^^^^^^^^^ \n ..Rig built!") 
+                buildRig.build(
+                    self.spineOrder,
+                    self.spineJoints,     
+                    self.armOrder,
+                    self.legOrder,
+                    self.handOrder,
+                    self.neckOrder,
+                    self.stretchyArms,
+                    self.stretchyLegs,
+                    twistAmount,
+                    twistArms,
+                    twistLegs,
+                    self.ribbonArms,
+                    self.ribbonLegs,
+                    self.ribbonDrivers,
+                    self.ribbonBinds,
+                    self.digigradeLeg
+                )
+                print(" ^^^^^^^^^^^^^^^^^^^^^^^^ \n Rig built successfully!") 
+        finally:
+            sys.stdout = old_stdout
+            
+
+        log = output.getvalue()
+        self.showLog(log)
+
+    def showLog(self, log):
+        dialog = QtWidgets.QDialog()
+        dialog.setWindowTitle("Rig Build Output")
+        layout = QtWidgets.QVBoxLayout(dialog)
+        dialog.resize(300, 400)
+
+        text = QtWidgets.QPlainTextEdit()
+        text.setReadOnly(True)
+        text.setPlainText(log)
+        
+
+        layout.addWidget(text)
+
+        dialog.exec()
 
     def spineValue(self):
         value = self.spineSlider.value()

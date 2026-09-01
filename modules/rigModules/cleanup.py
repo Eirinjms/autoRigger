@@ -29,10 +29,15 @@ cleanupData = {
         "Ribbons_GRP": [],
 
         "rig_helper_GRP": [],
+        "driverJointsLegs" : {
+            "L" : [],
+            "R" : [], 
+        },
+        "hipLocs" : [], 
         }
 
 def cleanup():
-    print(cleanupData)
+
     #Automated color selection based on name
     shapes.ctrlColour()
 
@@ -52,6 +57,7 @@ def cleanup():
     headGRP = cmds.ls('head_GRP')[0]
     globalCtrl = "global_CTRL"
     hipSpace = "hipSpace_LOC"
+
 
     ribbonGrps = cmds.ls("*RIBBONS*GRP", type='transform') or []
     if ribbonGrps: 
@@ -76,6 +82,14 @@ def cleanup():
     legIKs = cmds.group(em = True, n = "leg_IK_GRP")
     cmds.parent(armIKs, legIKs, ikGrp)
 
+    leftDrivers = cleanupData['driverJointsLegs']['L'][0] if cleanupData['driverJointsLegs']['L'] else []
+    rightDrivers = cleanupData['driverJointsLegs']['R'][0] if cleanupData['driverJointsLegs']['R'] else []
+    hipLocs = cleanupData['hipLocs']
+
+    ikHandles = cmds.ls("*_IKH")
+    for ik in ikHandles: 
+        cmds.setAttr(f"{ik}.visibility", 0)
+
     for grp in ikGrps:
         if "arm" in grp: 
             cmds.parent(grp, armIKs)
@@ -85,12 +99,14 @@ def cleanup():
             continue 
 
     cmds.select(clear=True)
+    if leftDrivers and rightDrivers:
+        cmds.parent(leftDrivers, rightDrivers, dntGrp)
     cmds.parent(skeletonGrp, dntGrp, deformersGrp)
     cmds.parent(ribbonGrp, dntGrp)
     cmds.parent(fistCtrl, handGrps)
     cmds.parent(fkikSwitch, ikGrp)
     cmds.parent(armFKs, neck, spineEnd)
-    cmds.parent(legFKs, spineStart)
+    cmds.parent(legFKs, hipLocs, spineStart)
     cmds.parent(spineFK, spineStart, spineEnd, ikGrp, handGrps, headGRP, hipSpace, globalCtrl)
 
     cmds.scaleConstraint(cleanupData["globalCtrl"], skeletonGrp, n = f"{skeletonGrp}{config.suffix['scaleCon']}")
@@ -158,5 +174,4 @@ cleanup = {
                     dntGrp,
 
     for parent, child in cleanup.items():
-        cmds.parent(child, parent)
-#headgrp under neck, """
+        cmds.parent(child, parent)"""

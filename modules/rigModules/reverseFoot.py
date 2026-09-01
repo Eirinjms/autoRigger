@@ -150,4 +150,4 @@ def build(side, ikHandle, ikCtrl, switch, joints, digitigrade = False):
     revFootGrp = cmds.group(backLoc, n = f"{side}revFoot{suffix['group']}")
     cmds.parent(revFootGrp, footCtrlGrp, ikCtrl)
 
-    print(f"\n [ReverseFeet Builder] : built for {side} side \n ")
+    print(f"[ReverseFeet Builder] : built for {side} side")

@@ -273,7 +273,7 @@ class RibbonMaker:
                 f"{self.startLoc}.visibility")
 
         globalCtrl = cleanup.cleanupData['globalCtrl']
-        print(globalCtrl)
+
 
         cmds.scaleConstraint(globalCtrl, self.ctrlGrp, n = f"{self.ctrlGrp}{config.suffix['scaleCon']}")
         cmds.scaleConstraint(globalCtrl, self.driversGrp, n = f"{self.driversGrp}{config.suffix['scaleCon']}")
@@ -381,7 +381,7 @@ class RibbonMaker:
         self.addBlendshapeControls()
         self.groupAndClean()
 
-        print(f"\n [ribbonMaker] '{self.name}' built successfully. \n ")
+        print(f"[ribbonMaker] '{self.name}' built successfully. \n ")
         return {
             "ribbonGrp":    self.ribbonGrp,
             "bindJoints":   self.BindJoints,

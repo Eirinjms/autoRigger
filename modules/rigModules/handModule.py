@@ -11,7 +11,7 @@ def build(side, handOrder):
     size = config.bipedal
     suffix = config.suffix
     attrs = config.attrs
-    fingers = ['indexFng', 'middleFng', 'pinkyFng', 'thumb']
+    fingers = ['indexFng', 'middleFng', 'ringFng', 'pinkyFng', 'thumb']
 
     if cmds.ls("*FngMC*", type = 'joint'):
         metacarpals = True
@@ -26,7 +26,9 @@ def build(side, handOrder):
         index = string.ascii_uppercase[:3]
         fingerjoints = [f"{side}{fng}J{i}{suffix['joint']}" for i in index]
         if metacarpals:
-            mcJoint =  cmds.listRelatives(fingerjoints[0], parent = True, type='joint')[0]
+            if fng =="thumb":
+                continue
+            mcJoint = f"{side}{fng}MC{suffix['joint']}"
             if not mcJoint == wristJoint:
                 fingerjoints.insert(0, mcJoint)
 
@@ -94,6 +96,7 @@ def build(side, handOrder):
     cmds.addAttr(fistCtrl, ln = 'Fist_Curl', at = 'float', min = -1, max = 1, dv = 0, k = True)
 
     curlOffsetGrp = cmds.ls(f"{side}*{suffix['offsetGrp']}")
+    curlOffsetGrp = [grp for grp in curlOffsetGrp if "MC" not in grp]
 
     driver = f"{fistCtrl}.Fist_Curl"
 
@@ -129,8 +132,6 @@ def build(side, handOrder):
 
 
     cmds.addAttr(fistCtrl, ln = 'Splayed_Fingers', at = 'float', min = -1, max = 1, dv = 0, k = True)
-
-    curlOffsetGrp = cmds.ls(f"{side}*{suffix['offsetGrp']}")
 
     driver = f"{fistCtrl}.Splayed_Fingers"
 
@@ -173,8 +174,6 @@ def build(side, handOrder):
     #finger 5 also known as thumb
     cmds.addAttr(fistCtrl, ln = 'Thumb_Bend', at = 'float', min = -1, max = 1, dv = 0, k = True)
 
-    curlOffsetGrp = cmds.ls(f"{side}*{suffix['offsetGrp']}")
-
     driver = f"{fistCtrl}.Thumb_Bend"
 
 
@@ -188,8 +187,6 @@ def build(side, handOrder):
     #individual finger bend 1
 
     cmds.addAttr(fistCtrl, ln = 'Index_Finger_Bend', at = 'float', min = -1, max = 1, dv = 0, k = True)
-
-    curlOffsetGrp = cmds.ls(f"{side}*{suffix['offsetGrp']}")
 
     driver = f"{fistCtrl}.Index_Finger_Bend"
 
@@ -205,8 +202,6 @@ def build(side, handOrder):
 
     cmds.addAttr(fistCtrl, ln = 'Middle_Finger_Bend', at = 'float', min = -1, max = 1, dv = 0, k = True)
 
-    curlOffsetGrp = cmds.ls(f"{side}*{suffix['offsetGrp']}")
-
     driver = f"{fistCtrl}.Middle_Finger_Bend"
 
 
@@ -221,8 +216,6 @@ def build(side, handOrder):
 
     cmds.addAttr(fistCtrl, ln = 'Ring_Finger_Bend', at = 'float', min = -1, max = 1, dv = 0, k = True)
 
-    curlOffsetGrp = cmds.ls(f"{side}*{suffix['offsetGrp']}")
-
     driver = f"{fistCtrl}.Ring_Finger_Bend"
 
 
@@ -236,8 +229,6 @@ def build(side, handOrder):
 
     cmds.addAttr(fistCtrl, ln = 'Pinky_Finger_Bend', at = 'float', min = -1, max = 1, dv = 0, k = True)
 
-    curlOffsetGrp = cmds.ls(f"{side}*{suffix['offsetGrp']}")
-
     driver = f"{fistCtrl}.Pinky_Finger_Bend"
 
 
@@ -247,12 +238,52 @@ def build(side, handOrder):
             cmds.setDrivenKeyframe(grp, at = 'rotateZ', cd = driver, dv = 1, v = 50)
             cmds.setDrivenKeyframe(grp, at = 'rotateZ', cd = driver, dv = -1, v = -20)    
 
-                
-                
+
+    #_________________________________________________________
+    # Meta carpal setup! 
+    #_________________________________________________________
+    if metacarpals: 
+        """cmds.addAttr(fistCtrl, ln = 'Metacarpal_Rotation', at = 'enum', en = "__________ ", k = True)  
+        for finger in fingers:     
+            if finger == "thumb":
+                continue 
+
+            cmds.addAttr(fistCtrl, ln = f"{finger}_Metacarpal", at = 'enum', en = "__________ ", k = True)  
+            grp = f"{side}{finger}MC{config.suffix['offsetGrp']}"
+            nextInLine = f"{side}{finger}JA{config.suffix['joint']}"
+
+        
+            mdNode = cmds.shadingNode('multiplyDivide', au = True, n = f"{grp}_MD") 
+            cmds.addAttr(fistCtrl, ln = f"{finger}_MC_X", at = 'float', dv = 0.5 , min = 0, max = 1, k = True)
+            cmds.addAttr(fistCtrl, ln = f"{finger}_MC_Y", at = 'float', dv = 0.5 , min = 0, max = 1, k = True)
+
+            cmds.connectAttr(f"{nextInLine}.rotateX", f"{mdNode}.input1X")
+            cmds.connectAttr(f"{fistCtrl}.{finger}_MC_X", f"{mdNode}.input2X")
+            cmds.connectAttr(f"{mdNode}.outputX", f"{grp}.rotateX")
+
+            cmds.connectAttr(f"{nextInLine}.rotateY", f"{mdNode}.input1Y")
+            cmds.connectAttr(f"{fistCtrl}.{finger}_MC_Y", f"{mdNode}.input2Y")
+            cmds.connectAttr(f"{mdNode}.outputY", f"{grp}.rotateY")"""
+
+
+        ikfkctrl = f"{side}arm_FKIK_switch_CTRL"
+
+        cmds.addAttr(ikfkctrl, ln = "MC_Controls_Vis", at = 'bool', dv = 0, k = True)
+
+        driver = f"{ikfkctrl}.MC_Controls_Vis"
+        driven = [ f"{side}{finger}MC{config.suffix['control']}" 
+                  for finger in fingers
+                  if finger != "thumb"]
+
+        for d in driven: 
+            driv = f"{d}Shape.visibility"
+            cmds.setDrivenKeyframe(driv, cd = driver, dv = 0, v = 0)
+            cmds.setDrivenKeyframe(driv, cd = driver, dv = 1, v = 1)
+                    
 
     #finalCleanup
     cmds.parentConstraint(wrist[0], fistCtrl, mo=True, n = f"{side}fist{suffix['parentCon']}")
-
+    
     cleanup.cleanupData['fist_CTRL_GRP'].append(fistCtrl)
     cleanup.cleanupData['handCTRL_GRP'].append(wrist[0])
 
@@ -262,3 +293,4 @@ def build(side, handOrder):
 
 
     print(f"[Hand Builder] : built for {side} side")
+

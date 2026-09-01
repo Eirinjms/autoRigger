@@ -6,6 +6,7 @@ from autoRigger.modules.rigModules import handModule, reverseFoot, twistSetup as
 import autoRigger.utils.config as config
 import autoRigger.utils.rigUtils as rigUtils
 import importlib
+import math
 
 importlib.reload(config)
 importlib.reload(handModule)
@@ -73,6 +74,8 @@ class limbBuild:
         self.attrs = config.attrs
         self.prefix = config.prefix
 
+        self.sides = side
+
         self.side = f"{side}_"
 
         self.limbType = limbType
@@ -99,6 +102,7 @@ class limbBuild:
 
         self.startJoints = self.joints[:-1]
         self.endJoints = self.joints[1:]
+
 
 
     def dupeJoints(self):
@@ -138,7 +142,7 @@ class limbBuild:
         '''
         The FK setup for selected limb, creates a parented chain
         '''
-        self.fkLocs, self.fkCtrls = rigUtils.fkCreator(self.fkJoints, "orient")
+        self.fkLocs, self.fkCtrls = rigUtils.fkCreator(self.fkJoints, "orient", 5)
 
 
     def ikSetup(self):
@@ -182,6 +186,167 @@ class limbBuild:
         cmds.orientConstraint(self.ikCtrl, self.ikJoints[-1], 
                               n = self.ikJoints[0].replace(self.suffix['joint'], self.suffix['orientCon']), 
                               mo = False)
+
+    def digitigradeDrivers(self):
+        """you need an joint chain that has equal lenght from the bone, paralel lengths
+        
+        step one: 
+        make proxy chain, 3 joints. start mid andd end. 
+        mid joint needs to have the length of the 3nd joint in og chain. 
+        end joints needs to have the length of the 2nd and 4th plussed"""
+
+        hip = om.MVector(cmds.xform(self.joints[0], q=True, ws=True, t=True))
+        knee = om.MVector(cmds.xform(self.joints[1], q=True, ws=True, t=True))
+        ankle = om.MVector(cmds.xform(self.joints[-1], q=True, ws=True, t=True))
+
+        K = abs(cmds.getAttr(f"{self.joints[2]}.translateX"))
+        HA = abs(cmds.getAttr(f"{self.joints[1]}.translateX")) + abs(cmds.getAttr(f"{self.joints[-1]}.translateX"))
+
+        direction = ankle - hip
+        D = direction.length()
+        direction.normalize()
+
+        toKnee = knee - hip
+        side = toKnee - direction * (direction * toKnee)
+        side.normalize()
+
+        x = (K**2 - HA**2 + D**2) / (2 * D)
+        y = math.sqrt(max(0.0, K**2 - x**2))
+
+        mid = hip + direction * x - side * y
+
+        cmds.select(clear=True)
+
+        self.driverJoints = []
+        names = ["start", "mid", "end"]
+
+        for pos, name in zip([hip, mid, ankle], names):
+            jnt = cmds.joint(
+                n=f"{self.side}{name}_driver_JNT",
+                p=tuple(pos)
+            )
+            self.driverJoints.append(jnt)
+            
+        cmds.select(self.driverJoints[0])
+
+        cmds.joint(e=True,
+                    oj="xyz",
+                    sao="yup",
+                    ch=True,
+                    zso=True)
+                
+
+        self.hockHelpers = []
+
+        for pos, name in zip([cmds.xform(self.joints[-1], q=True, ws=True, t=True), cmds.xform(self.joints[2], q=True, ws=True, t=True)], 
+                             ["start", "end"]):
+            joint = cmds.joint(p=pos, n = f"{self.side}{self.limbType}driverExtra_{name}{config.suffix['joint']}")
+            cmds.select(joint)
+            self.hockHelpers.append(joint)
+
+        cmds.hide(self.hockHelpers)
+
+    def digitigradeIKSetup(self):
+        """
+        ok so: 
+        Leg IK GRP: [hipctrl, anklectrl]
+        HipCtrl : none
+        ankleLoc : [revfeet locators in order-> ankle ctrl -> ikHandle3, ikHandle1, extraDriverJoints, hockLocator, ankleroll]
+        hockLocator : ikHandle5 and legik(?)
+        ankleroll locator : ikhandle 6 
+
+        """
+
+        hockLoc = cmds.spaceLocator(n = f"{self.side}hock{config.suffix['locator']}")[0]
+        hockCtrl, _ = shapes.fourWayArrowCtrl(name = f"{self.side}{self.limbType}hock{config.suffix['control']}", size =2)
+
+        self.ikLoc = cmds.spaceLocator(name = f"{self.side}ankle{config.suffix['locator']}")[0]
+        self.ikCtrl = shapes.cubeCtrl(name = f"{self.side}ankle{config.suffix['control']}", X = 5, Y= 5, Z = 5)
+
+
+        hipLoc = cmds.spaceLocator(name = f"{self.side}hip{config.suffix['locator']}")[0]
+        hipCtrl = cmds.circle(name = f"{self.side}hip{config.suffix['control']}", r = 8, nr = (1,0,0))[0]
+
+        ankleRollLoc = cmds.spaceLocator(name = f"{self.side}ankleRoll{config.suffix['locator']}")[0]
+        ankleRollCtrl = cmds.circle(n = f"{self.side}ankleRoll{config.suffix['control']}", r=5, nr = (1,0,0))[0]
+
+        parenting = {
+            hockLoc : hockCtrl,
+            hipLoc : hipCtrl,
+            self.ikLoc : self.ikCtrl,
+            ankleRollLoc : ankleRollCtrl,
+            self.ikCtrl : ankleRollLoc
+        }
+
+
+        for p, c in parenting.items():
+            cmds.parent(c, p)
+
+        cmds.matchTransform(hockLoc, self.joints[2])
+        cmds.matchTransform(self.ikLoc, self.joints[-1])
+        cmds.matchTransform(hipLoc, self.joints[0])
+
+        children = cmds.listRelatives(
+            self.joints[-1],
+            children=True,
+            type="joint") or []
+
+        startRevLoc = f"{self.side}backOfHeel_revLOC"
+        endRevLoc = f"{self.side}innerSideFoot_revLOC"
+        
+        if len(children) != 1:
+            toeHelper = cmds.joint(p = config.addedGuidePos(f"{self.side}frontFoot_revLOC"), 
+                    n = f"{self.side}{self.limbType}rollHelper{config.suffix['joint']}")
+            
+            cmds.parent(toeHelper, self.joints[-1])
+        else:
+            toeHelper = children[0]
+
+        self.ikHandle = cmds.ikHandle(n = f"{self.side}{self.limbType}base{config.suffix['ikHandle']}", 
+                                      sj = self.joints[0], 
+                                      ee=self.joints[2])[0]
+
+        driverIK = cmds.ikHandle(n = f"{self.side}{self.limbType}driver{config.suffix['ikHandle']}", 
+                                 sj = self.driverJoints[0], 
+                                 ee = self.driverJoints[-1])[0]
+
+        hockIK = cmds.ikHandle(n = f"{self.side}{self.limbType}hock{config.suffix['ikHandle']}", 
+                               sj = self.joints[2], 
+                               ee = self.joints[-1])[0]
+
+        hockHelperIK = cmds.ikHandle(n = f"{self.side}{self.limbType}hockHelper{config.suffix['ikHandle']}", 
+                                      sj =  self.hockHelpers[0], 
+                                      ee = self.hockHelpers[-1])[0]
+
+        toeIK = cmds.ikHandle(n = f"{self.side}{self.limbType}toe{config.suffix['ikHandle']}", 
+                              sj = self.joints[-1], 
+                              ee = toeHelper) [0]
+
+        self.ikHandleGrp = cmds.group(em = True, n = f"{self.side}{self.limbType}IK{config.suffix['group']}")
+
+        hierarchy = {
+            self.ikCtrl : [self.hockHelpers[0],
+                          hockLoc,
+                          driverIK,
+                          hockIK],
+            ankleRollCtrl : [toeIK],
+            hockCtrl : [self.ikHandle,
+                        hockHelperIK],
+            self.ikHandleGrp : [startRevLoc],
+            startRevLoc : [self.ikLoc],
+            endRevLoc : [self.ikLoc],
+                        }
+
+        for p, c in hierarchy.items():
+            cmds.parent(c, p)
+
+        cmds.parentConstraint(self.driverJoints[1], hockLoc, mo = True, n = f"{self.side}{self.limbType}_hockDriver{config.suffix['parentCon']}")
+        cmds.parentConstraint(hipLoc, self.joints[0], mo = True, n = f"{self.side}{self.limbType}_hipOG{config.suffix['parentCon']}")
+        cmds.parentConstraint(hipLoc, self.driverJoints[0], mo = True, n = f"{self.side}{self.limbType}_hipDriver{config.suffix['parentCon']}")
+        cmds.hide(self.driverJoints)
+
+        cleanup.cleanupData['hipLocs'].append(hipLoc)
+        cleanup.cleanupData['driverJointsLegs'][self.sides].extend(self.driverJoints)
 
     def ikFkSwitch(self):
         '''
@@ -233,6 +398,8 @@ class limbBuild:
                          k = False, 
                          cb = False)
 
+
+
     def ikfkBlends(self):
         '''
         Creates the IKFK blends, of selected variatiants
@@ -264,7 +431,12 @@ class limbBuild:
         self.ikGrp = cmds.group(n = f"{self.side}{self.limbType}{self.fkIK['ik']}{self.suffix['group']}", em = True)
 
         cmds.parent(self.fkLocs[0], self.fkGrp)
-        cmds.parent(self.ikHandle, self.ikLoc, self.ikGrp)
+        if self.digitigradeLegs and self.limbType == "leg":
+            ikHandle = self.ikHandleGrp
+            cmds.parent(ikHandle, self.ikGrp)
+        else:
+            ikHandle = self.ikHandle
+            cmds.parent(ikHandle, self.ikLoc, self.ikGrp)
 
         #########################################################################
 
@@ -456,11 +628,7 @@ class limbBuild:
         cmds.parent(self.ikBNDLoc,self.switch, IkswitchCtrl)
 
         cmds.hide(self.fkJoints, self.ikJoints, self.ikHandle)
-
-        if self.digitigradeLegs:
-            cmds.connectAttr("global_CTRL.rotateY", 
-                             f"{self.ikHandle}.twist")  #Assumes world rotations for global, change if needed
-
+ 
         cmds.parent(self.pvVizGRP, self.ikGrp)
 
         cleanup.cleanupData['FKIK_switches'].append(IkswitchCtrl)
@@ -476,7 +644,7 @@ class limbBuild:
             'arm' creates hand
 
         '''
-        if self.limbType == 'leg':
+        if self.limbType == 'leg' and not self.digitigradeLegs:
             reverseFoot.build(self.side, self.ikHandle, self.ikCtrl, self.switch, self.joints, self.digitigradeLegs)
         if self.limbType == 'arm':
             handModule.build(self.side, self.handOrder)
@@ -556,7 +724,7 @@ class limbBuild:
         for axis in "XYZ":
             if axis == "X" and self.side == "R_":
                 cmds.setAttr(f"{worldHandLoc}.rotate{axis}", 180)
-                print("tis worked")
+
             else: 
                 cmds.setAttr(f"{worldHandLoc}.rotate{axis}", 0)
 
@@ -615,6 +783,8 @@ class limbBuild:
     def twistSetup(self):
         axis = "X"
         names = ['Upper', 'Lower']
+        if self.limbType == 'leg' and self.digitigradeLegs: 
+            names = ['upperLeg', 'hock', 'lowerLeg']
 
         for sj, ej, n  in zip(self.startJoints, self.endJoints, names):
             twistSetup = twist.TwistJointsGeneration(axis, sj, ej, self.twistAmount, self.rotOrder, name = n)
@@ -626,6 +796,8 @@ class limbBuild:
             names = ['upperArm', 'lowerArm']
         if self.limbType == "leg":
             names = ['upperLeg', 'lowerLeg']
+        if self.limbType == 'leg' and self.digitigradeLegs: 
+            names = ['upperLeg', 'hock', 'lowerLeg']
 
         for sj, ej, name in zip(self.startJoints, self.endJoints, names):
             ribbonLimb = ribbon.RibbonMaker(name, 
@@ -657,7 +829,13 @@ class limbBuild:
     def buildLimb(self):
         self.dupeJoints()
         self.fkSetup()
-        self.ikSetup()
+
+        if self.digitigradeLegs and self.limbType == "leg":
+            self.digitigradeDrivers()
+            self.digitigradeIKSetup()
+        else:
+            self.ikSetup()
+
         self.ikFkSwitch()
         self.ikfkBlends()
         self.ikfkGroups()
@@ -680,11 +858,11 @@ class limbBuild:
         if self.limbType == 'leg':
             if self.twistLeg:
                 self.twistSetup()
-                print(f"\n [Twist Joints] : built {self.side}{self.limbType}\n ")
+                print(f"[Twist Joints] : built {self.side}{self.limbType}\n ")
 
             if self.stretchyLegs: 
                 self.squashNstretch()  
-                print(f"\n [Stretchy Joints] : built {self.side}{self.limbType}\n ")
+                print(f"[Stretchy Joints] : built {self.side}{self.limbType}\n ")
 
             if self.ribbonLeg:
                 self.ribbonCreation()
@@ -692,7 +870,7 @@ class limbBuild:
         if self.limbType == 'arm':
             if self.twistArm:
                 self.twistSetup()
-                print(f"\n [Twist Joints] : built {self.side}{self.limbType}\n ")
+                print(f"[Twist Joints] : built {self.side}{self.limbType}\n ")
                 
             if self.stretchyArms:
                 self.squashNstretch()
@@ -703,7 +881,7 @@ class limbBuild:
             
         self.cleanup()
         shapes.ctrlColour()
-        print("\n [LimbBuilder] :", self.side, self.limbType)
+        print(f"[LimbBuilder] : built {self.side}{self.limbType}\n ")
 
 def build_limb_set(legOrder, 
                    armOrder, 
@@ -753,6 +931,6 @@ def build_limb_set(legOrder,
             else: 
                 print(f"[limbBuilder] : limb {side}_{limb} does not exist")
     
-    print("\n All existing limbs built \n ")
+    print("All existing limbs built \n ")
 
         

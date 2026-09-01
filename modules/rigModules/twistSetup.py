@@ -109,12 +109,12 @@ class TwistJointsGeneration:
         cmds.connectAttr(f"{locatorStart}.worldInverseMatrix[0]", f"{multMtx}.matrixIn[1]")
 
         cmds.connectAttr(f"{multMtx}.matrixSum", f"{decomposeMtx}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMtx}.outputQuatX", f"{quatEuler}.inputQuatX")
+        cmds.connectAttr(f"{decomposeMtx}.outputQuat{self.axis}", f"{quatEuler}.inputQuat{self.axis}")
         cmds.connectAttr(f"{decomposeMtx}.outputQuatW", f"{quatEuler}.inputQuatW")
 
         for jnt, md in zip(self.twistJointsList, self.mdNodes):
-            cmds.connectAttr(f"{quatEuler}.outputRotateX", f"{md}.input1X")
-            cmds.connectAttr(f"{md}.outputX", f"{jnt}.rotateX")
+            cmds.connectAttr(f"{quatEuler}.outputRotate{self.axis}", f"{md}.input1X")
+            cmds.connectAttr(f"{md}.outputX", f"{jnt}.rotate{self.axis}")
 
         group = cmds.group(locatorStart,locatorEnd, n = f"{self.jointName}{config.suffix['group']}")
 
@@ -124,7 +124,7 @@ class TwistJointsGeneration:
         self.twistCreation()
         self.matrixTwistSetup()
 
-        print(f"[Twist joints] : built {self.jointName}")
+        print(f"[Twist joints] : built {self.jointName}\n ")
 
         return self.twistJointsList
             
