@@ -1,7 +1,5 @@
 import maya.cmds as cmds  # pyright: ignore[reportMissingImports]
 from autoRigger.utils.hierarchyModule import hierarchyManager
-
-
 import maya.cmds as cmds  # pyright: ignore[reportMissingImports]
 
 

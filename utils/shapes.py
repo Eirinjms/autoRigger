@@ -418,10 +418,17 @@ def ctrlColour():
                 cmds.setAttr(shape + ".overrideColor", 17)
 
             elif ctrl.startswith("L_"):
-                cmds.setAttr(shape + ".overrideColor", 6)
+                if "RBN" in ctrl or "twist" in ctrl:
+                    cmds.setAttr(shape + ".overrideColor", 18)
+                else:
+                    cmds.setAttr(shape + ".overrideColor", 6)
+
 
             elif ctrl.startswith("R_"):
-                cmds.setAttr(shape + ".overrideColor", 13)
+                if "RBN" in ctrl or "twist" in ctrl:
+                    cmds.setAttr(shape + ".overrideColor", 20)
+                else:
+                    cmds.setAttr(shape + ".overrideColor", 13)
 
         
     switches = cmds.ls("*switch*", type = "transform")

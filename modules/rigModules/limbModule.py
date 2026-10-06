@@ -303,24 +303,25 @@ class limbBuild:
             toeHelper = children[0]
 
         self.ikHandle = cmds.ikHandle(n = f"{self.side}{self.limbType}base{config.suffix['ikHandle']}", 
-                                      sj = self.joints[0], 
-                                      ee=self.joints[2])[0]
+                                      sj = self.ikJoints[0], 
+                                      ee=self.ikJoints[2])[0]
 
         driverIK = cmds.ikHandle(n = f"{self.side}{self.limbType}driver{config.suffix['ikHandle']}", 
                                  sj = self.driverJoints[0], 
                                  ee = self.driverJoints[-1])[0]
 
         hockIK = cmds.ikHandle(n = f"{self.side}{self.limbType}hock{config.suffix['ikHandle']}", 
-                               sj = self.joints[2], 
-                               ee = self.joints[-1])[0]
+                               sj = self.ikJoints[2], 
+                               ee = self.ikJoints[-1])[0]
 
         hockHelperIK = cmds.ikHandle(n = f"{self.side}{self.limbType}hockHelper{config.suffix['ikHandle']}", 
                                       sj =  self.hockHelpers[0], 
                                       ee = self.hockHelpers[-1])[0]
 
-        toeIK = cmds.ikHandle(n = f"{self.side}{self.limbType}toe{config.suffix['ikHandle']}", 
+        self.toeIK = cmds.ikHandle(n = f"{self.side}{self.limbType}toe{config.suffix['ikHandle']}", 
                               sj = self.joints[-1], 
                               ee = toeHelper) [0]
+        
 
         self.ikHandleGrp = cmds.group(em = True, n = f"{self.side}{self.limbType}IK{config.suffix['group']}")
 
@@ -329,7 +330,7 @@ class limbBuild:
                           hockLoc,
                           driverIK,
                           hockIK],
-            ankleRollCtrl : [toeIK],
+            ankleRollCtrl : [self.toeIK],
             hockCtrl : [self.ikHandle,
                         hockHelperIK],
             self.ikHandleGrp : [startRevLoc],
@@ -340,9 +341,11 @@ class limbBuild:
         for p, c in hierarchy.items():
             cmds.parent(c, p)
 
+
         cmds.parentConstraint(self.driverJoints[1], hockLoc, mo = True, n = f"{self.side}{self.limbType}_hockDriver{config.suffix['parentCon']}")
-        cmds.parentConstraint(hipLoc, self.joints[0], mo = True, n = f"{self.side}{self.limbType}_hipOG{config.suffix['parentCon']}")
+        #cmds.parentConstraint(hipLoc, self.joints[0], n = f"{self.side}{self.limbType}_hipOG{config.suffix['parentCon']}")
         cmds.parentConstraint(hipLoc, self.driverJoints[0], mo = True, n = f"{self.side}{self.limbType}_hipDriver{config.suffix['parentCon']}")
+
         cmds.hide(self.driverJoints)
 
         cleanup.cleanupData['hipLocs'].append(hipLoc)
@@ -420,7 +423,6 @@ class limbBuild:
 
                 cmds.connectAttr(f"{self.switch}.FKIK_Switch", f"{blend}.blender")
 
-
     def ikfkGroups(self):
         '''
         Grouping the IK and FK into their own groups and setups up visibility
@@ -457,7 +459,7 @@ class limbBuild:
         '''
         self.H = om.MVector(cmds.xform(self.ikJoints[0], q=True, ws=True, t=True))
         self.K = om.MVector(cmds.xform(self.ikJoints[1], q=True, ws=True, t=True))
-        self.A = om.MVector(cmds.xform(self.ikJoints[-1], q=True, ws=True, t=True))
+        self.A = om.MVector(cmds.xform(self.ikJoints[2], q=True, ws=True, t=True))
 
         HK = self.K - self.H
         HA = self.A - self.H
@@ -478,7 +480,6 @@ class limbBuild:
         '''
         Creates the poleVector control and parents it  
         '''
-
         self.pvLoc = cmds.spaceLocator(p = self.pv, n = f"{self.side}{self.limbType}_PV_LOC")[0]
         cmds.xform(self.pvLoc, cp = True)
 
@@ -493,7 +494,6 @@ class limbBuild:
         cmds.matchTransform(self.pvCtrl, self.pvLoc, pos = True, rot = True)
 
         pvCon = cmds.poleVectorConstraint(self.pvCtrl, self.ikHandle, n = self.ikJoints[0].replace(self.suffix['joint'], self.suffix['poleVectorCon']))
-
         cmds.makeIdentity(self.pvCtrl, apply = True, t = True)
 
         cmds.parent(self.pvLoc, self.ikGrp)
@@ -624,7 +624,6 @@ class limbBuild:
         
         '''
         IkswitchCtrl = cmds.group(em = True, w = True,n = f"{self.side}{self.limbType}_FKIK_switch{self.suffix['group']}") 
-
         cmds.parent(self.ikBNDLoc,self.switch, IkswitchCtrl)
 
         cmds.hide(self.fkJoints, self.ikJoints, self.ikHandle)
@@ -634,7 +633,6 @@ class limbBuild:
         cleanup.cleanupData['FKIK_switches'].append(IkswitchCtrl)
         cleanup.cleanupData[f"{self.limbType}_IK_GRP"].append(self.ikGrp)
         cleanup.cleanupData[f"{self.limbType}_FK_GRP"].append(self.fkGrp)
-
 
         
     def endlimb(self):  
@@ -648,6 +646,11 @@ class limbBuild:
             reverseFoot.build(self.side, self.ikHandle, self.ikCtrl, self.switch, self.joints, self.digitigradeLegs)
         if self.limbType == 'arm':
             handModule.build(self.side, self.handOrder)
+
+        if self.digitigradeLegs and self.limbType == 'leg':
+            driver = f"{self.switch}.FKIK_Switch"
+            cmds.setDrivenKeyframe(self.toeIK, at = 'ikBlend', cd = driver, dv = 0, v = 0)
+            cmds.setDrivenKeyframe(self.toeIK, at = 'ikBlend', cd = driver, dv = 1, v = 1)  
 
     def hipSpace(self):
         spineJnt = "C_spineJA_JNT"
@@ -715,7 +718,7 @@ class limbBuild:
         cmds.matchTransform(worldLoc, self.joints[-1], pos = True, rot = True)
 
         cmds.parent(rotationLayer, self.ikLoc)
-        cmds.parent(self.ikCtrl, rotationLayer)
+        cmds.orientConstraint(rotationLayer, self.ikCtrl, n = f"{rotationLayer}{config.suffix['orientCon']}")
 
         #cmds.parent(hipLoc, spineLoc)
         cmds.parent(clavSpaceLoc, self.clavCtrl)

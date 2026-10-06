@@ -27,6 +27,7 @@ cleanupData = {
         "leg_FK_GRP": [],
 
         "Ribbons_GRP": [],
+        "twistCtrl_GRP" : [],
 
         "rig_helper_GRP": [],
         "driverJointsLegs" : {
@@ -64,6 +65,9 @@ def cleanup():
        ribbonGrp = cmds.group(ribbonGrps, n = "Ribbons_GRP")
     else:
         ribbonGrp = []
+
+    twistCtrls = cleanupData['twistCtrl_GRP']
+    
 
     righelpergrp = config.RIG_HELPER_GRP
     if cmds.objExists(righelpergrp):
@@ -109,7 +113,7 @@ def cleanup():
     cmds.parent(legFKs, hipLocs, spineStart)
     cmds.parent(spineFK, spineStart, spineEnd, ikGrp, handGrps, headGRP, hipSpace, globalCtrl)
 
-    cmds.scaleConstraint(cleanupData["globalCtrl"], skeletonGrp, n = f"{skeletonGrp}{config.suffix['scaleCon']}")
+    cmds.scaleConstraint(cleanupData["globalCtrl"], deformersGrp, n = f"{skeletonGrp}{config.suffix['scaleCon']}")
 
     locs = cmds.ls("*LOC*", s = True)
     for loc in locs:

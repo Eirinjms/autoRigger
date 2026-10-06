@@ -16,7 +16,7 @@ import maya.cmds as cmds # pyright: ignore[reportMissingImports]
 import maya.OpenMayaUI as omui # pyright: ignore[reportMissingImports]
 #from maya.app.general.mayaMixin import MayaQWidgetDockableMixin as MQwidgetMixin # pyright: ignore[reportMissingImports]
 import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports]
-import maya.mel as mel
+import maya.mel as mel # pyright: ignore[reportMissingImports] 
 
 #my own modules
 from autoRigger.modules.builderModules import buildRig, locatorBasedFunctions as locFunc, jointGeneration as jointGen
@@ -629,6 +629,13 @@ class AutoRiggerUI(QtWidgets.QDialog):
         baseName = self.baseNameLocChain.text()
         sliderValue = self.locatorValue()
 
+        prefixCheck = prefix.upper()
+        baseNameCheck = baseName.lower()
+        if not "_" in prefixCheck:
+            prefixCheck = prefixCheck + "_"
+        if cmds.ls(f"{prefixCheck}{baseNameCheck}JA_GUIDE"):
+            return cmds.warning("Chain with specified name already exists, choose a new name")
+        
         instance = procLoc.procLocatorGenerator(sliderValue, baseName, prefix)
         
         return instance
@@ -638,8 +645,12 @@ class AutoRiggerUI(QtWidgets.QDialog):
         Creates a new procedural locator chain from the current UI values.
         Sets self.locGuidesCreated so the slider update knows its safe to run.
         """
+        generator = self.createInstanceLocChain()
 
-        self.generator = self.createInstanceLocChain()
+        if generator is None:
+            return
+
+        self.generator = generator
         self.generator.generateLocs()
 
         self.locGuidesCreated = True
@@ -887,25 +898,23 @@ class AutoRiggerUI(QtWidgets.QDialog):
         """
         with config.mayaUndo():
             if checked:
-                locs = cmds.ls("*_GUIDE", type='transform')
-                cmds.makeIdentity(locs, a = True, t = True, r = True)
+                locs = cmds.ls("*_GUIDE", type="transform")
+                cmds.makeIdentity(locs, a=True, t=True, r=True)
 
-            if not self.locatorList:
                 if not symmetry.locatorList:
                     checkBox.blockSignals(True)
                     try:
                         checkBox.setChecked(False)
-                    finally: 
+                    finally:
                         checkBox.blockSignals(False)
-                    
+
                     return cmds.warning("No locators found, please generate these first")
-                
-                else:
-                    symmetry.locator_symmetry()
+
+                symmetry.locator_symmetry()
 
             else:
                 symmetry.disconnectSymmetry()
-    
+                
     def unparentClicked(self): 
         """
         Unparents the full locator hierarchy for individual editing.
@@ -1198,7 +1207,7 @@ class AutoRiggerUI(QtWidgets.QDialog):
             chain = sel + children
 
             isLeg = "leg" in chain[0].lower()
-            chainlength = 4 if (self.digigradeCheck.isChecked() and isLeg) else 3
+            chainlength = 3
 
             if len(chain) < chainlength:
                 self.pvVisualizer.setChecked(False)
@@ -1280,6 +1289,10 @@ class AutoRiggerUI(QtWidgets.QDialog):
                 filePath = item.data(QtCore.Qt.UserRole)
 
                 spec = importlib.util.spec_from_file_location("customScript", filePath)
+                
+                if spec is None or spec.loader is None:
+                    raise ImportError(f"Could not load module from {filePath}")
+                
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)
 

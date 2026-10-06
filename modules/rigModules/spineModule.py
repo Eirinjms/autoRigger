@@ -50,6 +50,7 @@ class spineBuilder:
                 source = f"{joint}" 
 
                 if not cmds.objExists(source):
+                    print(f"[spineBuilder] : {source} does not exist, skipping")
                     cmds.warning(f"{source} does not exist, skipping")
                     continue
                 

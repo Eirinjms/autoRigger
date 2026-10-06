@@ -1,5 +1,5 @@
 import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
-import maya.mel as mel
+import maya.mel as mel # pyright: ignore[reportMissingImports] 
 import autoRigger.modules.rigModules.spineModule as spineModule
 import autoRigger.modules.rigModules.limbModule as limbModule
 import autoRigger.modules.rigModules.headModule as headModule

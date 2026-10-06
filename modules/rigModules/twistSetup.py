@@ -71,8 +71,7 @@ class TwistJointsGeneration:
                 config.setRotationOrder([jnt], 0)
             
             cmds.makeIdentity(jnt, apply = True, r = True)
-            
-
+                    
         cmds.select(clear=True)
         for jnt in self.twistJointsList:
             cmds.parent(jnt, self.startJoint)
@@ -97,8 +96,8 @@ class TwistJointsGeneration:
         cmds.matchTransform(locatorStart, self.startJoint, rot = True)
         cmds.matchTransform(locatorEnd, self.startJoint, rot = True)
 
-        cmds.parentConstraint(self.startJoint, locatorStart)
-        cmds.parentConstraint(self.endJoint, locatorEnd)
+        cmds.parentConstraint(self.startJoint, locatorStart, )
+        cmds.parentConstraint(self.endJoint, locatorEnd,)
         
         multMtx = cmds.createNode('multMatrix', name = self.startJoint.replace("JNT", "MM"))
         decomposeMtx = cmds.createNode('decomposeMatrix', name = self.startJoint.replace("JNT", "DM"))

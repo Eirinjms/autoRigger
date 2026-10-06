@@ -1,7 +1,7 @@
 import autoRigger.modules.uiModules.UIConnections as con
 import autoRigger.utils.config as config
-from PySide6 import QtWidgets
-import maya.cmds as cmds 
+from PySide6 import QtWidgets # pyright: ignore[reportMissingImports] 
+import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
 import importlib
 
 importlib.reload(con)

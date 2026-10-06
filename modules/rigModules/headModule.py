@@ -22,6 +22,7 @@ def headBuild(neckOrder):
     for joint in joints: 
         jnt = f"{prefix['center']}{joint}{suffix['joint']}"
         if not cmds.objExists(jnt):
+            print(f"[headBuilder]: {jnt} does not exist, check scene")
             cmds.warning(f"{jnt} does not exist, check scene")
             continue
         alljoints.append(jnt)

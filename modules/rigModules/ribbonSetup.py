@@ -1,7 +1,7 @@
 import maya.cmds as cmds  # pyright: ignore[reportMissingImports]
 import maya.api.OpenMaya as om # pyright: ignore[reportMissingImports]
 import maya.mel as mel
-import autoRigger.utils.config as config  # pyright: ignore[reportMissingImports]
+from autoRigger.utils import config, shapes  # pyright: ignore[reportMissingImports]
 import autoRigger.modules.rigModules.cleanup as cleanup
 
 class RibbonMaker:
@@ -27,6 +27,7 @@ class RibbonMaker:
         self.switch = switch
 
         self.name = f"{self.side}{self.limbName}_RBN"
+        
 
     def lengthOfRibbon(self):
         """Calculates the distance between the chosen joints."""
@@ -210,7 +211,7 @@ class RibbonMaker:
             cmds.parent(loc, self.startLoc)
 
             cmds.matchTransform(loc, joint, pos = True, rot = True)
-            ctrl = cmds.circle(n = f"{joint}{config.suffix['control']}", r = 4, nr = (1,0,0))[0]
+            ctrl = cmds.circle(n = joint.replace(config.suffix['joint'], config.suffix['control']), r = 7, nr = (1,0,0))[0]
             self.ctrls.append(ctrl)
             
             cmds.matchTransform(ctrl, joint, rot = True, pos = True)    
@@ -229,7 +230,7 @@ class RibbonMaker:
 
     def bindRibbon(self):
         """Binds the driver joints to the NURBS plane via a skin cluster."""
-        cmds.skinCluster(
+        self.skin = cmds.skinCluster(
             self.driverJoints,
             self.RibbonPlane,                 
             toSelectedBones=True,
@@ -237,7 +238,7 @@ class RibbonMaker:
             skinMethod=0,                         
             normalizeWeights=1,
             name=f"{self.name}{self.suffix['skinCluster']}",
-        )
+        )[0]
 
     def groupAndClean(self):
         """
@@ -258,13 +259,11 @@ class RibbonMaker:
         cmds.parent(self.RibbonPlane, self.geoGrp)
         cmds.parent(self.ribbonFollicles,self.folliclesGrp)
         cmds.parent(self.driverJoints, self.driversGrp)
-        cmds.parent(self.ribbonDeformerGrp, self.ribbonGrp)
+        cmds.parent(self.ribbonDeformerGrp, self.twistGrp, self.ribbonGrp)
 
         cmds.setAttr(f"{self.ribbonGrp}.inheritsTransform", 0)
 
-        cmds.setAttr(f"{self.geoGrp}.visibility", 0)
-        cmds.setAttr(f"{self.folliclesGrp}.visibility", 0)
-        cmds.setAttr(f"{self.ribbonDeformerGrp}.visibility", 0)
+        cmds.hide(self.geoGrp, self.folliclesGrp, self.ribbonDeformerGrp, self.driversGrp)
 
         if not cmds.isConnected(f"{self.switch}.Ribbon_Ctrls", 
                                 f"{self.startLoc}.visibility"):
@@ -296,22 +295,34 @@ class RibbonMaker:
         return self.twistBSplane, twistHandle
 
     def addCurveDeformer(self):
-        self.curveBSplane = cmds.duplicate(self.RibbonPlane, n = f"{self.name}_curve_blendshape")
+        """self.curveBSplane = cmds.duplicate(self.RibbonPlane, n = f"{self.name}_curve_blendshape")
+        
+        #cmds.matchTransform(self.curveBSplane,  pos=True, rot=True)
         cmds.xform(self.curveBSplane, t = [0, 0, -20], r = True, ws = True)
-        wireCurve = cmds.curve()
-        ##make a cluster pr start mid and end follicle. and rebuild the curve but keep start and end position. 
+
+        mid = len(self.driverJoints) // 2
+        pos = [cmds.xform(self.driverJoints[0], q = True, t = True, ws = True),
+               cmds.xform(self.driverJoints[mid], q = True, t = True, ws = True),
+               cmds.xform(self.driverJoints[-1], q = True, t = True, ws = True)]
+        
+        wireCurve = cmds.curve(p = pos, n = f"{self.side}{self.limbName}_curve", d =2)
+
+        for i in range(3):
+            cl = cmds.cluster(f"{wireCurve}.cv[{i}]")
+            ctrl = cmds.circle(n = f"{self.side}{self.limbName}")
+            cmds.matchTransform(ctrl, cl)
+            cmds.parentConstraint(ctrl, cl)
+
         self.wireDef = cmds.wire(
                         self.curveBSplane,
                         w=wireCurve,
                         n=f"{self.name}_wireDef")[0]
-        
-        cmds.matchTransform(self.curveBSplane, pos=True, rot=True)
-
         return self.curveBSplane, self.wireDef
-
+"""
 
     def addBlendshapeControls(self):
-        deformerBS = cmds.blendShape(self.sineBSplane, self.twistBSplane, self.RibbonPlane, n = f"{self.name}_deformer_BS" )
+        deformerBS = cmds.blendShape(self.sineBSplane, self.twistBSplane, self.RibbonPlane, n = f"{self.name}_deformer_BS" )[0]
+        cmds.reorderDeformers(self.skin, deformerBS, self.RibbonPlane)
 
         if not cmds.attributeQuery("Ribbon_Deformers", node=self.switch, exists=True):  
             cmds.addAttr(self.switch, ln = "Ribbon_Deformers", at = "enum", en = "____________", k = True)
@@ -323,25 +334,75 @@ class RibbonMaker:
                         at="bool",
                         dv=0,
                         k=True)
-
+            cmds.addAttr(
+                                    self.switch,
+                                    ln="Twist_Ctrls",
+                                    at="bool",
+                                    dv=0,
+                                    k=True)
         cmds.connectAttr(
             f"{self.switch}.Ribbon_Ctrls",
             f"{self.startLoc}.visibility",
             force=True)
-            
-        """        cmds.addAttr(self.switch, ln = "Twist_controls", at = "enum", en = "____________", k = True)
-                cmds.addAttr(self.switch, ln = f"{self.side}{self.limbName}Twist_Upper", at = "double", dv = 0, k = True)
-                cmds.addAttr(self.switch, ln = f"{self.side}{self.limbName}Twist_Lower", at = "double", dv = 0, k = True)
-        """
-        #cmds.connectAttr(f"{self.endJoint}.rotateX", f"{self.twistDef}.endAngle")
-        #cmds.connectAttr(f"{self.startJoint}.rotateX", f"{self.twistDef}.startAngle")
-        #print(cmds.connectAttr(f"{self.endJoint}.rotateX", f"{self.twistDef}.endAngle"))
-
 
         if "upper" in self.limbName.lower():
             suffix = "Upper"
         else:
             suffix = "Lower"
+
+        for bs in [*self.sineBSplane, *self.twistBSplane]:
+            cmds.setAttr(f"{deformerBS}.{bs}", 1)
+
+
+        self.twistCtrlTop = shapes.squareCtrl(name = f"{self.side}{self.limbName}_twistStart{config.suffix['control']}", size = 6)
+        self.twistCtrlBottom = shapes.squareCtrl(name = f"{self.side}{self.limbName}_twistEnd{config.suffix['control']}", size = 6)
+
+        self.twistLocTop = cmds.spaceLocator(n= f"{self.side}{self.limbName}_twistStart{config.suffix['locator']}")[0]
+        self.twistLocBottom = cmds.spaceLocator(n = f"{self.side}{self.limbName}_twistEnd{config.suffix['locator']}")[0]
+
+        parenting = {
+            self.twistLocBottom : self.twistCtrlBottom,
+            self.twistLocTop : self.twistCtrlTop
+        }
+        for p,c in parenting.items(): 
+            cmds.parent(c, p)
+
+        cmds.matchTransform(self.twistLocBottom, self.endJoint)
+        cmds.matchTransform(self.twistLocTop, self.startJoint)
+
+        for ctrl in [self.twistCtrlTop, self.twistCtrlBottom]:
+            cmds.xform(ctrl,  ro = (0,0,90))
+            cmds.makeIdentity(ctrl, a = True, t = True, r = True)
+        
+        revNodeTop = cmds.shadingNode('reverse', au = True, n = f"{self.side}{self.limbName}REV")
+        revNodeBottom = cmds.shadingNode('reverse', au = True, n = f"{self.side}{self.limbName}REV")
+
+        offsetGrpTop = cmds.group(self.twistCtrlTop, n = f"{self.side}{self.limbName}_twistTop{config.suffix['offsetGrp']}")
+        offsetGrpBottom = cmds.group(self.twistCtrlBottom, n = f"{self.side}{self.limbName}_twistBtm{config.suffix['offsetGrp']}")
+
+        pmaTop = cmds.shadingNode('plusMinusAverage', au=True, n = f"{self.side}{self.limbName}PMA")
+        pmaBottom = cmds.shadingNode('plusMinusAverage', au=True, n = f"{self.side}{self.limbName}PMA")
+
+        for node, pma, ctrl, angle, offset, joint in zip([revNodeTop, revNodeBottom], 
+                                     [pmaTop, pmaBottom],
+                                     [self.twistCtrlTop, self.twistCtrlBottom], 
+                                     ["startAngle", "endAngle"],
+                                     [offsetGrpTop, offsetGrpBottom],
+                                     [self.startJoint, self.endJoint]):
+            
+            cmds.connectAttr(f"{ctrl}.rotateX", f"{pma}.input1D[0]")
+            cmds.connectAttr(f"{offset}.rotateX", f"{pma}.input1D[1]")
+
+            cmds.connectAttr(f"{pma}.output1D", f"{node}.inputX")
+            cmds.connectAttr(f"{node}.outputX", f"{self.twistDef}.{angle}")
+            cmds.parentConstraint(joint, offset, mo = True, n = f"{self.side}{offset}{config.suffix['parentCon']}")
+            
+            cmds.setDrivenKeyframe(f"{ctrl}.visibility", cd = f"{self.switch}.Twist_Ctrls", dv = 0, v = 0)
+            cmds.setDrivenKeyframe(f"{ctrl}.visibility", cd = f"{self.switch}.Twist_Ctrls", dv = 1, v = 1)
+
+        self.twistGrp = cmds.group(self.twistLocBottom, self.twistLocTop, n = f"{self.side}{self.limbName}twist{config.suffix['group']}")
+        cleanup.cleanupData['twistCtrl_GRP'].append(self.twistGrp)
+
 
         cmds.addAttr(self.switch, 
                     ln = f"{self.side}{self.limbName}_Sine", 
@@ -365,7 +426,8 @@ class RibbonMaker:
                     dv = 0, 
                     k = True)
 
-    
+            cmds.connectAttr(f"{self.switch}.{ln}", f"{self.sineDef}.{nn.lower()}")
+
 
 
     def build(self):
