@@ -32,8 +32,6 @@ def mirrorLocators(self, sel):
 
         cmds.makeIdentity(a = True, t = True, s = True, r = True)
 
-
-
 def locator_symmetry(self): 
 
     self.leftAttrs = []

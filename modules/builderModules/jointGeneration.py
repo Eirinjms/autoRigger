@@ -1,6 +1,6 @@
 import os
 import json
-import maya.cmds as cmds
+import maya.cmds as cmds # pyright: ignore[reportMissingImports] 
 import autoRigger.utils.config as config
 
 
