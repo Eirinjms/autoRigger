@@ -443,7 +443,7 @@ class spiderLegs:
         
         Parameters: 
             spineJnt: passed on from the spine module
-        returns: alot of things im gnna guess. 
+            returns: alot of things im gnna guess. 
         '''
         localSpace = cmds.spaceLocator(n = f"{self.side}{self.limbType}{self.legIndex}_localSpace{config.suffix['locator']}")
         cmds.parent(localSpace, self.ikGrp)
@@ -468,7 +468,7 @@ class spiderLegs:
         
         Parameters: 
             spineJnt: passed on from the spine module
-        returns: alot of things im gnna guess. 
+            returns: alot of things im gnna guess. 
         '''
         pvSpaceLoc = cmds.spaceLocator(n = f"{self.side}{self.limbType}{self.legIndex}_pv_Space{self.suffix['locator']}")[0]
         

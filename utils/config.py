@@ -143,7 +143,6 @@ def addedGuidePos(locator):
     return finalpos
 
      
-
 def findRoots(nodes):
     """
     Returns all root nodes from a list of transforms.

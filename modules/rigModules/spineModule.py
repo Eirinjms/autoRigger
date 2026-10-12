@@ -28,7 +28,7 @@ class spineBuilder:
         self.spineJointsAmount = len(spineJoints)
         
         self.spineRoot = spineJoints[0]
-        self.spineMiddle = spineJoints[len(spineJoints)//2] #ty stack overflow
+        self.spineMiddle = spineJoints[len(spineJoints)//2] 
         self.spineEnd = spineJoints[-1]
 
         self.fkJoints = []

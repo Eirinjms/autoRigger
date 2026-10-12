@@ -4,7 +4,6 @@ import importlib
 
 importlib.reload(shapes)
 
-##refactor this so that the modules fill in this dict instead of finding everything w maya cmds
 cleanupData_spider = {
         "globalCtrl"        : [],
 
@@ -104,7 +103,8 @@ def cleanup():
                 prosomaConnection : [coxaGrp],
 
                 cog               : [abdomenFks,
-                                     fkGrp],
+                                     fkGrp,
+                                     prosomaConnection],
 
                 prosomaEnd        : [cheliceraeFK_Grp],
 
@@ -115,7 +115,6 @@ def cleanup():
 
                 globalCtrl        : [ikGrp,
                                         deformersGrp,
-                                        prosomaConnection,
                                         cogLoc],
                 }
 

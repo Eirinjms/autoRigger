@@ -100,6 +100,8 @@ class AutoRiggerUI(QtWidgets.QDialog):
         self.locatorHier = hier.hierarchyManager(self.locatorList, False, 'transform')
         self.revFeetHier = hier.hierarchyManager(self.revFeetLocList, False, 'transform')
         self.jointHier = hier.hierarchyManager(self.jointsList, True, 'joint')
+
+        
         self.jointOrient = jointOrient
 
         self.procSpine = ProceduralSpineCreation.ProceduralSpine()

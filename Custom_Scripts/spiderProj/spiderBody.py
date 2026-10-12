@@ -40,7 +40,7 @@ def cog():
 def cheliceraeBuild():
     chelicerae_fkLocs = []
     chelicerae_fkCtrls = []
-    for side in list(config.prefix.values())[:2]: 
+    for side in list(config.prefix.values())[:2]:
         cheliceraeJoints = [f"{side}cheliceraeJ{i}{config.suffix['joint']}" for i in "AB"]
         fkLocs, fkCtrls = rigUtils.fkCreator(cheliceraeJoints, "orient", 5)
         chelicerae_fkLocs.append(fkLocs)
